@@ -1,0 +1,1118 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowTask</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Lora:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #FAF8F5;
+  --surface: #FFFFFF;
+  --surface-2: #F3F0EB;
+  --border: #E5E0D8;
+  --text: #1C1917;
+  --text-2: #6B6560;
+  --text-3: #A49E98;
+  --accent: #5A7A5F;
+  --accent-2: #EBF2EC;
+  --must: #C05A22;
+  --must-2: #FDF0E8;
+  --habit-0: #EAE6DF;
+  --habit-1: #A8C5A0;
+  --habit-2: #4A7C59;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.07);
+  --r: 8px;
+  --sidebar: 230px;
+}
+[data-theme="dark"] {
+  --bg: #18150F;
+  --surface: #211D15;
+  --surface-2: #2A251C;
+  --border: #38322A;
+  --text: #EDE8E0;
+  --text-2: #9A9188;
+  --text-3: #5A5248;
+  --accent: #7AAF80;
+  --accent-2: #1C2E1F;
+  --must: #E07840;
+  --must-2: #2A1508;
+  --habit-0: #2A251C;
+  --shadow-sm: 0 1px 4px rgba(0,0,0,.3);
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh; overflow: hidden;
+  font-size: 14px; line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+#root { height: 100vh; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* Layout */
+.app { display: flex; height: 100vh; }
+.sidebar {
+  width: var(--sidebar); min-width: var(--sidebar);
+  background: var(--surface); border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+  overflow-y: auto; padding: 14px 0;
+}
+.main { flex: 1; overflow-y: auto; padding: 36px 48px; max-width: 880px; }
+
+/* Sidebar */
+.s-logo {
+  padding: 4px 18px 18px;
+  font-family: 'Lora', serif; font-size: 17px; font-weight: 600;
+  color: var(--accent); letter-spacing: -0.3px;
+  display: flex; align-items: center; gap: 7px;
+}
+.s-lbl {
+  font-size: 10px; font-weight: 700; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--text-3);
+  padding: 10px 18px 3px;
+}
+.s-divider { border: none; border-top: 1px solid var(--border); margin: 8px 0; }
+.nav {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; margin: 0 8px;
+  border-radius: 6px; cursor: pointer;
+  color: var(--text-2); font-size: 13px; font-weight: 500;
+  transition: all .12s; background: none; border: none;
+  width: calc(100% - 16px); text-align: left;
+}
+.nav:hover { background: var(--surface-2); color: var(--text); }
+.nav.on { background: var(--accent-2); color: var(--accent); font-weight: 600; }
+.nav-badge {
+  margin-left: auto; font-size: 10px; font-weight: 700;
+  background: var(--accent); color: #fff;
+  padding: 1px 6px; border-radius: 10px;
+}
+.nav-badge.must { background: var(--must); }
+
+/* Page header */
+.ph { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px; }
+.ph-title { font-family: 'Lora', serif; font-size: 22px; font-weight: 600; letter-spacing: -.4px; }
+.ph-sub { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 13px; border-radius: 6px;
+  font-size: 13px; font-weight: 500; font-family: inherit;
+  cursor: pointer; border: none; transition: all .12s;
+}
+.btn-p { background: var(--accent); color: #fff; }
+.btn-p:hover { filter: brightness(1.08); }
+.btn-g { background: transparent; color: var(--text-2); border: 1px solid var(--border); }
+.btn-g:hover { background: var(--surface-2); color: var(--text); }
+.btn-s { padding: 4px 9px; font-size: 11.5px; }
+.btn:disabled { opacity: .35; cursor: default; }
+
+/* Cards */
+.card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; margin-bottom: 14px; overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+.card-head {
+  padding: 12px 16px; display: flex; align-items: center;
+  justify-content: space-between; border-bottom: 1px solid var(--border);
+}
+.card-head h3 { font-size: 13.5px; font-weight: 600; display: flex; align-items: center; gap: 7px; }
+.card.must-card { border-color: var(--must); }
+.card.must-card .card-head { background: var(--must-2); border-bottom-color: var(--must); }
+.card.must-card .card-head h3 { color: var(--must); }
+
+/* Task row */
+.task-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 9px 14px; transition: background .1s; cursor: default;
+  border-bottom: 1px solid var(--border);
+}
+.task-row:last-child { border-bottom: none; }
+.task-row:hover { background: var(--surface-2); }
+.cb {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 1.5px solid var(--border); flex-shrink: 0;
+  margin-top: 2px; cursor: pointer; transition: all .12s;
+  display: flex; align-items: center; justify-content: center;
+}
+.cb.done { background: var(--accent); border-color: var(--accent); }
+.cb.done::after { content: '✓'; color: #fff; font-size: 9px; font-weight: 700; }
+.t-title { font-size: 13.5px; line-height: 1.4; flex: 1; }
+.t-title.done { text-decoration: line-through; color: var(--text-3); }
+.t-meta { display: flex; gap: 5px; align-items: center; margin-top: 3px; flex-wrap: wrap; }
+.badge {
+  font-size: 10px; font-weight: 600; padding: 1px 6px;
+  border-radius: 4px; letter-spacing: .02em;
+}
+.b-low { background: var(--surface-2); color: var(--text-3); }
+.b-high { background: #FEF3E2; color: #9A5A10; }
+[data-theme="dark"] .b-high { background: #2A1C08; color: #D4883A; }
+.b-rec { background: var(--accent-2); color: var(--accent); }
+.b-proj { background: var(--surface-2); color: var(--text-2); }
+
+/* Add task form */
+.add-form {
+  padding: 12px 14px; background: var(--surface-2);
+  border-top: 1px solid var(--border);
+}
+.input {
+  width: 100%; padding: 7px 11px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 13px; outline: none;
+  transition: border-color .12s;
+}
+.input:focus { border-color: var(--accent); }
+.textarea { resize: vertical; min-height: 60px; }
+
+/* Habit grid */
+.hgrid { display: grid; grid-template-rows: repeat(7,13px); grid-auto-flow: column; gap: 3px; width: max-content; }
+.hcell {
+  width: 13px; height: 13px; border-radius: 3px;
+  cursor: pointer; transition: transform .1s;
+}
+.hcell:hover { transform: scale(1.25); }
+.hcell.s0 { background: var(--habit-0); }
+.hcell.s1 { background: var(--habit-1); }
+.hcell.s2 { background: var(--habit-2); }
+.hcell.future { background: transparent; cursor: default; pointer-events: none; }
+.hcell.istoday { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* Plan assign btns */
+.asgn {
+  display: inline-flex; align-items: center;
+  padding: 3px 9px; border-radius: 5px; font-size: 11px;
+  font-weight: 600; cursor: pointer; border: 1px solid var(--border);
+  background: transparent; color: var(--text-3);
+  font-family: inherit; transition: all .12s;
+}
+.asgn.on { border-color: var(--accent); background: var(--accent-2); color: var(--accent); }
+.asgn.must-on { border-color: var(--must); background: var(--must-2); color: var(--must); }
+.asgn:hover:not(.on):not(.must-on) { border-color: var(--text-3); color: var(--text-2); }
+
+/* Empty state */
+.empty { text-align: center; padding: 56px 0; color: var(--text-3); }
+.empty-icon { font-size: 36px; margin-bottom: 12px; }
+
+/* select */
+.sel {
+  padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--surface); color: var(--text);
+  font-family: inherit; font-size: 12px; outline: none; cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useRef, useMemo, useReducer } = React;
+
+// ─── utils ───────────────────────────────────────────────────
+const uid = () => Math.random().toString(36).slice(2, 8);
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+// ─── seed ────────────────────────────────────────────────────
+function buildSeed() {
+  const habits = [
+    { id: 'h1', name: 'Learn German', subtitle: '30 min a day', log: {} },
+    { id: 'h2', name: 'Read a book', subtitle: '30 min a day', log: {} },
+    { id: 'h3', name: 'No eating after 20:00', subtitle: 'Daily discipline', log: {} },
+    { id: 'h4', name: 'Full task review', subtitle: 'Twice a week', log: {} },
+  ];
+  const now = new Date();
+  habits.forEach(h => {
+    for (let i = 90; i >= 1; i--) {
+      const d = new Date(now); d.setDate(d.getDate() - i);
+      const r = Math.random();
+      h.log[d.toISOString().slice(0,10)] = r < .18 ? 0 : r < .48 ? 1 : 2;
+    }
+  });
+  return {
+    theme: 'light',
+    view: 'today',
+    projects: [
+      {
+        id:'p1', name:'Alerting Service', group:'Work',
+        description:'Build a robust alerting service monitoring system metrics and notifying via Slack, email, and PagerDuty.',
+        notes:'',
+        tasks:[
+          {id:'t1',title:'Design alert schema & threshold config',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+          {id:'t2',title:'Implement Slack integration',complexity:'high',recurring:false,notes:'Use Slack Bolt SDK',assignedToday:true,assignedWeek:true,mustHave:true,completed:false},
+          {id:'t3',title:'Write unit tests for threshold evaluator',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:true,mustHave:false,completed:false},
+          {id:'t4',title:'Setup CI/CD pipeline',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:true},
+        ]
+      },
+      {
+        id:'p2', name:'Demo with Cortex', group:'Work',
+        description:'Prepare and deliver a compelling demo showcasing Cortex capabilities to the CTO and data team leads.',
+        notes:'Deadline: end of May. Confirm stakeholders list with Marta.',
+        tasks:[
+          {id:'t5',title:'Define demo storyline & key messages',complexity:'high',recurring:false,notes:'',assignedToday:true,assignedWeek:true,mustHave:true,completed:false},
+          {id:'t6',title:'Build demo environment',complexity:'high',recurring:false,notes:'',assignedToday:false,assignedWeek:true,mustHave:false,completed:false},
+          {id:'t7',title:'Rehearse walkthrough 3×',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+        ]
+      },
+      {
+        id:'p3', name:'AI Assisted Workflow', group:'Work',
+        description:'Implement an AI-assisted workflow helping data teams discover, document, and develop data products faster.',
+        notes:'Research dbt + LLM integrations. Talk to Marta about requirements first.',
+        tasks:[
+          {id:'t8',title:'Research LLM-based data discovery tools',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+          {id:'t9',title:'Draw workflow diagram',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+          {id:'t10',title:'Draft technical specification',complexity:'high',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+        ]
+      },
+      {
+        id:'p4', name:'German Driving License', group:'Personal',
+        description:'Pass the German Führerschein Class B. Theory exam booked May 15. ~14 practical lessons needed.',
+        notes:'Fahrschule: Auto Müller, call Monday mornings. Need passport photo for exam.',
+        tasks:[
+          {id:'t11',title:'Study theory modules 1–5',complexity:'low',recurring:true,notes:'',assignedToday:false,assignedWeek:true,mustHave:false,completed:false},
+          {id:'t12',title:'Book next driving lesson',complexity:'low',recurring:false,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:true},
+          {id:'t13',title:'Complete online practice tests',complexity:'low',recurring:true,notes:'',assignedToday:false,assignedWeek:false,mustHave:false,completed:false},
+        ]
+      },
+    ],
+    habits,
+  };
+}
+
+const STORE = 'flowtask_v2';
+function load() {
+  try { const s = localStorage.getItem(STORE); if (s) return JSON.parse(s); } catch(e){}
+  return buildSeed();
+}
+function save(s) { try { localStorage.setItem(STORE, JSON.stringify(s)); } catch(e){} }
+
+// ─── reducer ─────────────────────────────────────────────────
+function mapTask(projects, taskId, fn) {
+  return projects.map(p => ({...p, tasks: p.tasks.map(t => t.id===taskId ? fn(t) : t)}));
+}
+function reducer(state, action) {
+  let next = state;
+  switch(action.type) {
+    case 'VIEW': next = {...state, view: action.v}; break;
+    case 'THEME': {
+      const t = state.theme==='light'?'dark':'light';
+      document.documentElement.setAttribute('data-theme', t);
+      next = {...state, theme: t}; break;
+    }
+    case 'TOGGLE_TASK':
+      next = {...state, projects: mapTask(state.projects, action.id, t=>({...t,completed:!t.completed}))}; break;
+    case 'SET_TODAY':
+      next = {...state, projects: mapTask(state.projects, action.id, t=>({
+        ...t, assignedToday: action.v, mustHave: action.v ? t.mustHave : false
+      }))}; break;
+    case 'SET_WEEK':
+      next = {...state, projects: mapTask(state.projects, action.id, t=>({...t, assignedWeek: action.v}))}; break;
+    case 'SET_MUST':
+      next = {...state, projects: mapTask(state.projects, action.id, t=>({
+        ...t, mustHave: action.v, assignedToday: action.v ? true : t.assignedToday
+      }))}; break;
+    case 'ADD_TASK':
+      next = {...state, projects: state.projects.map(p => p.id===action.pid
+        ? {...p, tasks:[...p.tasks, action.task]} : p)}; break;
+    case 'EDIT_TASK':
+      next = {...state, projects: mapTask(state.projects, action.id, t=>({...t, ...action.patch}))}; break;
+    case 'REORDER_TASK': {
+      next = {...state, projects: state.projects.map(p => {
+        if (p.id !== action.pid) return p;
+        const tasks = [...p.tasks];
+        const i = tasks.findIndex(t=>t.id===action.id);
+        const j = action.dir==='up' ? i-1 : i+1;
+        if (i<0 || j<0 || j>=tasks.length) return p;
+        [tasks[i],tasks[j]] = [tasks[j],tasks[i]];
+        return {...p, tasks};
+      })}; break;
+    }
+    case 'SET_NOTE':
+      next = {...state, projects: state.projects.map(p => p.id===action.pid ? {...p, notes:action.v} : p)}; break;
+    case 'SET_DESC':
+      next = {...state, projects: state.projects.map(p => p.id===action.pid ? {...p, description:action.v} : p)}; break;
+    case 'SET_HABIT':
+      next = {...state, habits: state.habits.map(h => h.id===action.hid
+        ? {...h, log:{...h.log,[action.date]:action.v}} : h)}; break;
+    default: break;
+  }
+  save(next); return next;
+}
+
+// ─── icons ───────────────────────────────────────────────────
+function Ic({n,s=15,c='currentColor'}) {
+  const P = {
+    today: <path d="M5 1v2h6V1h1.5v2H14a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h1.5V1H5zm8 5H3v8h10V6z" fill={c}/>,
+    plan:  <><path d="M2 3h12v2H2zm0 4h12v2H2zm0 4h7v2H2z" fill={c}/><path d="M13 11l3 2-3 2v-4z" fill={c}/></>,
+    review:<><circle cx="8" cy="8" r="5.5" stroke={c} strokeWidth="1.5" fill="none"/><path d="M8 5.5v3l1.5 1.5" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+    habits:<><rect x="1" y="3" width="4" height="4" rx="1" fill={c}/><rect x="6" y="3" width="4" height="4" rx="1" fill={c} opacity=".6"/><rect x="11" y="3" width="4" height="4" rx="1" fill={c} opacity=".3"/><rect x="1" y="9" width="4" height="4" rx="1" fill={c} opacity=".6"/><rect x="6" y="9" width="4" height="4" rx="1" fill={c}/><rect x="11" y="9" width="4" height="4" rx="1" fill={c} opacity=".6"/></>,
+    folder:<path d="M2 4a1 1 0 0 1 1-1h4.5l2 2H14a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4z" fill={c}/>,
+    plus:  <path d="M8 3v10M3 8h10" stroke={c} strokeWidth="2" strokeLinecap="round" fill="none"/>,
+    moon:  <path d="M13 9A7 7 0 0 1 5 3a7 7 0 1 0 8 6z" fill={c}/>,
+    sun:   <><circle cx="8" cy="8" r="2.5" fill={c}/><path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4l1.4-1.4M11 5l1.4-1.4" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+    fire:  <path d="M8 2s-4 4-4 7a4 4 0 0 0 8 0c0-2.5-2-5-2-5s-.5 2-2 2C8 4 9 2 8 2z" fill={c}/>,
+    check: <path d="M3 8l3.5 3.5L13 5" stroke={c} strokeWidth="2" strokeLinecap="round" fill="none"/>,
+    note:  <><rect x="2" y="2" width="12" height="12" rx="1.5" stroke={c} strokeWidth="1.5" fill="none"/><path d="M5 6h6M5 9h4" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none"/></>,
+  };
+  return <svg width={s} height={s} viewBox="0 0 16 16" style={{flexShrink:0}}>{P[n]}</svg>;
+}
+
+// ─── AddTaskForm ──────────────────────────────────────────────
+function AddTaskForm({onAdd, onCancel}) {
+  const [title,setTitle] = useState('');
+  const [cx,setCx] = useState('low');
+  const [rec,setRec] = useState(false);
+  const [notes,setNotes] = useState('');
+  const submit = () => {
+    if (!title.trim()) return;
+    onAdd({id:uid(),title:title.trim(),complexity:cx,recurring:rec,notes,assignedToday:false,assignedWeek:false,mustHave:false,completed:false});
+  };
+  return (
+    <div className="add-form">
+      <input className="input" placeholder="Task title…" value={title}
+        onChange={e=>setTitle(e.target.value)} onKeyDown={e=>e.key==='Enter'&&submit()} autoFocus
+        style={{marginBottom:7}}/>
+      <textarea className="input textarea" placeholder="Notes (optional)" value={notes}
+        onChange={e=>setNotes(e.target.value)} style={{minHeight:48,marginBottom:7}}/>
+      <div style={{display:'flex',gap:7,alignItems:'center',flexWrap:'wrap'}}>
+        <select className="sel" value={cx} onChange={e=>setCx(e.target.value)}>
+          <option value="low">Low complexity</option>
+          <option value="high">High complexity</option>
+        </select>
+        <label style={{display:'flex',alignItems:'center',gap:4,fontSize:12,color:'var(--text-2)',cursor:'pointer'}}>
+          <input type="checkbox" checked={rec} onChange={e=>setRec(e.target.checked)} style={{accentColor:'var(--accent)'}}/>
+          Recurring
+        </label>
+        <div style={{flex:1}}/>
+        <button className="btn btn-g btn-s" onClick={onCancel}>Cancel</button>
+        <button className="btn btn-p btn-s" onClick={submit}>Add task</button>
+      </div>
+    </div>
+  );
+}
+
+// ─── TaskRow ─────────────────────────────────────────────────
+function TaskRow({task, onToggle, showProject, project, right}) {
+  return (
+    <div className="task-row">
+      <div className={`cb ${task.completed?'done':''}`} onClick={()=>onToggle(task.id)}/>
+      <div style={{flex:1, minWidth:0}}>
+        <div className={`t-title ${task.completed?'done':''}`}>{task.title}</div>
+        <div className="t-meta">
+          {showProject && project && <span className="badge b-proj">{project.name}</span>}
+          <span className={`badge ${task.complexity==='high'?'b-high':'b-low'}`}>{task.complexity}</span>
+          {task.recurring && <span className="badge b-rec">↺ recurring</span>}
+          {task.notes && <span style={{fontSize:10,color:'var(--text-3)'}}>· note</span>}
+        </div>
+      </div>
+      {right}
+    </div>
+  );
+}
+
+// ─── TODAY VIEW ───────────────────────────────────────────────
+function TodayView({state, dispatch}) {
+  const must=[], today=[], week=[];
+  state.projects.forEach(p => p.tasks.forEach(t => {
+    if (t.completed) return;
+    if (t.mustHave && t.assignedToday) must.push({t,p});
+    else if (t.assignedToday) today.push({t,p});
+    else if (t.assignedWeek) week.push({t,p});
+  }));
+  const toggle = id => dispatch({type:'TOGGLE_TASK',id});
+  const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  return (
+    <div>
+      <div className="ph">
+        <div><div className="ph-title">Today</div><div className="ph-sub">{dateStr}</div></div>
+        <button className="btn btn-g btn-s" onClick={()=>dispatch({type:'VIEW',v:'plan'})}>
+          <Ic n="plan" s={13}/> Plan my day
+        </button>
+      </div>
+
+      {must.length===0 && today.length===0 && week.length===0 ? (
+        <div className="empty">
+          <div className="empty-icon">🌱</div>
+          <div style={{fontWeight:600,marginBottom:5}}>Nothing planned yet</div>
+          <div style={{fontSize:12,marginBottom:20}}>Use Plan mode to pick your tasks for today.</div>
+          <button className="btn btn-p" onClick={()=>dispatch({type:'VIEW',v:'plan'})}>Open Plan mode</button>
+        </div>
+      ) : null}
+
+      {must.length > 0 && (
+        <div className="card must-card">
+          <div className="card-head">
+            <h3><Ic n="fire" s={14} c="var(--must)"/> Must Have Today
+              <span style={{fontWeight:400,fontSize:11,opacity:.7}}>({must.length}/2)</span>
+            </h3>
+            <span style={{fontSize:10,color:'var(--must)',fontWeight:600,letterSpacing:'.04em'}}>START HERE</span>
+          </div>
+          {must.map(({t,p})=><TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle}/>)}
+        </div>
+      )}
+
+      {today.length > 0 && (
+        <div className="card">
+          <div className="card-head"><h3><Ic n="today" s={13}/> Today ({today.length})</h3></div>
+          {today.map(({t,p})=><TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle}/>)}
+        </div>
+      )}
+
+      {week.length > 0 && (
+        <div className="card">
+          <div className="card-head"><h3><Ic n="plan" s={13}/> This Week ({week.length})</h3></div>
+          {week.map(({t,p})=><TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle}/>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── PLAN VIEW ────────────────────────────────────────────────
+function PlanView({state, dispatch}) {
+  const [tab, setTab] = useState('today');
+  const [addingTo, setAddingTo] = useState(null);
+  const mustCount = state.projects.flatMap(p=>p.tasks).filter(t=>t.mustHave&&t.assignedToday&&!t.completed).length;
+
+  const setToday = (id, v) => dispatch({type:'SET_TODAY',id,v});
+  const setWeek  = (id, v) => dispatch({type:'SET_WEEK',id,v});
+  const setMust  = (id, v) => {
+    if (v && mustCount >= 2) { alert('Max 2 Must Have tasks per day.'); return; }
+    dispatch({type:'SET_MUST',id,v});
+  };
+
+  return (
+    <div>
+      <div className="ph">
+        <div>
+          <div className="ph-title">Plan</div>
+          <div className="ph-sub">Assign tasks to today or this week</div>
+        </div>
+        <div style={{display:'flex',gap:10,alignItems:'center'}}>
+          <span style={{fontSize:11,color:'var(--text-3)'}}>
+            Must-haves: <strong style={{color:'var(--must)'}}>{mustCount}/2</strong>
+          </span>
+          <div style={{display:'flex',background:'var(--surface-2)',borderRadius:6,padding:2,gap:2}}>
+            {['today','week'].map(t=>(
+              <button key={t} className={`btn btn-s ${tab===t?'btn-p':'btn-g'}`}
+                style={{border:'none'}} onClick={()=>setTab(t)}>
+                {t==='today'?'Today':'This week'}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {state.projects.map(p => {
+        const open = p.tasks.filter(t=>!t.completed);
+        return (
+          <div key={p.id} className="card">
+            <div className="card-head">
+              <h3>
+                <Ic n="folder" s={13} c="var(--accent)"/>
+                <span style={{fontSize:10,color:'var(--text-3)',fontWeight:400}}>{p.group} /</span>
+                {' '}{p.name}
+              </h3>
+              <button className="btn btn-g btn-s" onClick={()=>setAddingTo(addingTo===p.id?null:p.id)}>
+                <Ic n="plus" s={11}/> Task
+              </button>
+            </div>
+
+            {open.length===0 && addingTo!==p.id && (
+              <div style={{padding:'12px 16px',color:'var(--text-3)',fontSize:12}}>No open tasks.</div>
+            )}
+
+            {open.map(t => (
+              <div key={t.id} className="task-row" style={{alignItems:'center'}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div className="t-title">{t.title}</div>
+                  <div className="t-meta">
+                    <span className={`badge ${t.complexity==='high'?'b-high':'b-low'}`}>{t.complexity}</span>
+                    {t.recurring&&<span className="badge b-rec">↺</span>}
+                  </div>
+                </div>
+                <div style={{display:'flex',gap:5,flexShrink:0}}>
+                  {tab==='today' ? (
+                    <>
+                      <button
+                        className={`asgn ${t.mustHave&&t.assignedToday?'must-on':''}`}
+                        style={{opacity:(!t.mustHave||!t.assignedToday)&&mustCount>=2?.35:1}}
+                        onClick={()=>setMust(t.id,!(t.mustHave&&t.assignedToday))}
+                        title="Mark as Must Have (max 2/day)"
+                      >🔥 Must</button>
+                      <button
+                        className={`asgn ${t.assignedToday?'on':''}`}
+                        onClick={()=>setToday(t.id,!t.assignedToday)}
+                      >{t.assignedToday?'✓ Today':'+ Today'}</button>
+                    </>
+                  ) : (
+                    <button
+                      className={`asgn ${t.assignedWeek?'on':''}`}
+                      onClick={()=>setWeek(t.id,!t.assignedWeek)}
+                    >{t.assignedWeek?'✓ Week':'+ Week'}</button>
+                  )}
+                </div>
+              </div>
+            ))}
+
+            {addingTo===p.id && (
+              <AddTaskForm
+                onAdd={task=>{dispatch({type:'ADD_TASK',pid:p.id,task});setAddingTo(null);}}
+                onCancel={()=>setAddingTo(null)}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── ReviewTaskRow (editable + reorderable) ────────────────────
+function ReviewTaskRow({task, pid, dispatch, isFirst, isLast}) {
+  const [editing, setEditing] = useState(false);
+  const [title, setTitle] = useState(task.title);
+  const [notes, setNotes] = useState(task.notes||'');
+  const [cx, setCx] = useState(task.complexity);
+
+  const save = () => {
+    dispatch({type:'EDIT_TASK', id:task.id, patch:{title:title.trim()||task.title, notes, complexity:cx}});
+    setEditing(false);
+  };
+
+  return (
+    <div style={{display:'flex',gap:8,padding:'7px 16px',borderTop:'1px solid var(--border)',alignItems:'flex-start'}}>
+      <div className="cb" onClick={()=>dispatch({type:'TOGGLE_TASK',id:task.id})} style={{marginTop:3}}/>
+
+      <div style={{flex:1,minWidth:0}}>
+        {editing ? (
+          <div>
+            <input className="input" value={title} onChange={e=>setTitle(e.target.value)}
+              onKeyDown={e=>e.key==='Enter'&&save()} autoFocus style={{fontSize:13,marginBottom:5,padding:'5px 8px'}}/>
+            <textarea className="input textarea" value={notes} onChange={e=>setNotes(e.target.value)}
+              placeholder="Notes…" style={{fontSize:12,minHeight:44,marginBottom:6}}/>
+            <div style={{display:'flex',gap:6,alignItems:'center'}}>
+              <select className="sel" value={cx} onChange={e=>setCx(e.target.value)}>
+                <option value="low">Low complexity</option>
+                <option value="high">High complexity</option>
+              </select>
+              <div style={{flex:1}}/>
+              <button className="btn btn-g btn-s" onClick={()=>{setTitle(task.title);setNotes(task.notes||'');setCx(task.complexity);setEditing(false);}}>Cancel</button>
+              <button className="btn btn-p btn-s" onClick={save}>Save</button>
+            </div>
+          </div>
+        ) : (
+          <div onClick={()=>setEditing(true)} style={{cursor:'text'}} title="Click to edit">
+            <div style={{fontSize:13}}>{task.title}</div>
+            {task.notes && <div style={{fontSize:11,color:'var(--text-3)',marginTop:1}}>{task.notes}</div>}
+          </div>
+        )}
+      </div>
+
+      {!editing && (
+        <>
+          <span className={`badge ${task.complexity==='high'?'b-high':'b-low'}`} style={{marginTop:2}}>{task.complexity}</span>
+          <div style={{display:'flex',flexDirection:'column',gap:1,marginTop:0}}>
+            <button className="btn btn-g" style={{padding:'1px 5px',fontSize:9,lineHeight:1}} disabled={isFirst}
+              onClick={()=>dispatch({type:'REORDER_TASK',pid,id:task.id,dir:'up'})} title="Move up">▲</button>
+            <button className="btn btn-g" style={{padding:'1px 5px',fontSize:9,lineHeight:1}} disabled={isLast}
+              onClick={()=>dispatch({type:'REORDER_TASK',pid,id:task.id,dir:'down'})} title="Move down">▼</button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ─── REVIEW VIEW ──────────────────────────────────────────────
+function ReviewView({state, dispatch}) {
+  const projects = state.projects;
+  const TOTAL = 5 * 60 * projects.length; // total session budget
+  const [idx, setIdx] = useState(0);
+  const [left, setLeft] = useState(TOTAL);
+  const [running, setRunning] = useState(true);
+  const [done, setDone] = useState(false);
+  const [addingTask, setAddingTask] = useState(false);
+  const iRef = useRef(null);
+  const p = projects[idx];
+
+  const [noteVal, setNoteVal] = useState(p?.notes||'');
+  useEffect(()=>{ setNoteVal(p?.notes||''); setAddingTask(false); }, [idx]);
+
+  useEffect(()=>{
+    clearInterval(iRef.current);
+    if (!running || done) return;
+    iRef.current = setInterval(()=>{
+      setLeft(t=>{
+        if (t <= 1) { setRunning(false); setDone(true); return 0; }
+        return t-1;
+      });
+    },1000);
+    return ()=>clearInterval(iRef.current);
+  },[running, done]);
+
+  if (!p) return null;
+  const totalMins = Math.floor(TOTAL/60);
+  const mins = Math.floor(left/60), secs = left%60;
+  const pct = left/TOTAL;
+  const R=30, C=2*Math.PI*R;
+  const dash = pct*C;
+  const timerColor = left < 120 ? 'var(--must)' : 'var(--accent)';
+
+  if (done) return (
+    <div>
+      <div className="ph"><div className="ph-title">Review</div></div>
+      <div className="empty">
+        <div className="empty-icon">✅</div>
+        <div style={{fontWeight:600,marginBottom:6}}>Session complete!</div>
+        <div style={{fontSize:12,marginBottom:20}}>You've used your full {totalMins}-minute review budget.</div>
+        <button className="btn btn-p" onClick={()=>{setDone(false);setLeft(TOTAL);setIdx(0);setRunning(true);}}>
+          Start new session
+        </button>
+      </div>
+    </div>
+  );
+
+  const openTasks = p.tasks.filter(t=>!t.completed);
+  const doneTasks = p.tasks.filter(t=>t.completed);
+
+  return (
+    <div>
+      <div className="ph">
+        <div>
+          <div className="ph-title">Review</div>
+          <div className="ph-sub">Project {idx+1} of {projects.length} · {totalMins} min total session</div>
+        </div>
+        <div style={{display:'flex',gap:8}}>
+          <button className="btn btn-g btn-s" onClick={()=>setRunning(r=>!r)}>
+            {running?'⏸ Pause':'▶ Resume'}
+          </button>
+        </div>
+      </div>
+
+      {/* Progress track */}
+      <div style={{display:'flex',gap:5,marginBottom:26}}>
+        {projects.map((proj,i)=>(
+          <div key={proj.id} onClick={()=>setIdx(i)}
+            style={{height:4,flex:1,borderRadius:2,cursor:'pointer',transition:'background .3s',
+              background: i<idx?'var(--accent)': i===idx?timerColor:'var(--border)'}}/>
+        ))}
+      </div>
+
+      <div style={{display:'grid',gridTemplateColumns:'1fr 110px',gap:24,alignItems:'start'}}>
+        <div>
+          <div className="card">
+            <div className="card-head">
+              <h3>
+                <Ic n="folder" s={13} c="var(--accent)"/>
+                <span style={{fontSize:10,color:'var(--text-3)',fontWeight:400}}>{p.group} /</span>
+                {' '}{p.name}
+              </h3>
+            </div>
+
+            {p.description && (
+              <div style={{padding:'11px 16px',color:'var(--text-2)',fontSize:13,lineHeight:1.7,borderBottom:'1px solid var(--border)'}}>
+                {p.description}
+              </div>
+            )}
+
+            {/* Open tasks */}
+            <div style={{borderBottom:'1px solid var(--border)'}}>
+              <div style={{padding:'10px 16px 6px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                <span style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text-3)'}}>
+                  Open tasks ({openTasks.length})
+                </span>
+                <button className="btn btn-g btn-s" onClick={()=>setAddingTask(t=>!t)}>
+                  <Ic n="plus" s={11}/> Add
+                </button>
+              </div>
+              {openTasks.length===0 && !addingTask && (
+                <div style={{padding:'4px 16px 12px',fontSize:12,color:'var(--text-3)'}}>All clear ✓</div>
+              )}
+              {openTasks.map((t,ti)=>(
+                <ReviewTaskRow key={t.id} task={t} pid={p.id} dispatch={dispatch}
+                  isFirst={ti===0} isLast={ti===openTasks.length-1}/>
+              ))}
+              {addingTask && (
+                <AddTaskForm
+                  onAdd={task=>{dispatch({type:'ADD_TASK',pid:p.id,task});setAddingTask(false);}}
+                  onCancel={()=>setAddingTask(false)}
+                />
+              )}
+            </div>
+
+            {/* Done tasks */}
+            {doneTasks.length > 0 && (
+              <div style={{borderBottom:'1px solid var(--border)'}}>
+                <div style={{padding:'10px 16px 6px',fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text-3)'}}>
+                  Completed ({doneTasks.length})
+                </div>
+                {doneTasks.map(t=>(
+                  <div key={t.id} style={{display:'flex',gap:8,padding:'4px 16px',borderTop:'1px solid var(--border)'}}>
+                    <span style={{color:'var(--accent)',fontSize:11,marginTop:2}}>✓</span>
+                    <span style={{fontSize:13,color:'var(--text-3)',textDecoration:'line-through'}}>{t.title}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Notes */}
+            <div style={{padding:'12px 16px'}}>
+              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--text-3)',marginBottom:7}}>Notes</div>
+              <textarea className="input textarea" value={noteVal}
+                onChange={e=>setNoteVal(e.target.value)}
+                onBlur={()=>dispatch({type:'SET_NOTE',pid:p.id,v:noteVal})}
+                placeholder="Project notes, links, ideas…" style={{fontSize:13,minHeight:80}}/>
+            </div>
+          </div>
+        </div>
+
+        {/* Timer */}
+        <div style={{textAlign:'center',paddingTop:4}}>
+          <svg width="80" height="80" style={{display:'block',margin:'0 auto'}}>
+            <circle cx="40" cy="40" r={R} fill="none" stroke="var(--border)" strokeWidth="5"/>
+            <circle cx="40" cy="40" r={R} fill="none"
+              stroke={timerColor} strokeWidth="5"
+              strokeDasharray={`${dash} ${C}`} strokeLinecap="round"
+              style={{transformOrigin:'center',transform:'rotate(-90deg)',transition:'stroke-dasharray 1s linear,stroke .3s'}}/>
+            <text x="40" y="36" textAnchor="middle"
+              style={{fontSize:15,fontWeight:700,fill:'var(--text)',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+              {mins}:{secs.toString().padStart(2,'0')}
+            </text>
+            <text x="40" y="50" textAnchor="middle"
+              style={{fontSize:9,fill:'var(--text-3)',fontFamily:"'Plus Jakarta Sans',sans-serif"}}>
+              remaining
+            </text>
+          </svg>
+          <div style={{marginTop:12,display:'flex',flexDirection:'column',gap:6}}>
+            <button className="btn btn-g btn-s" disabled={idx===0}
+              onClick={()=>setIdx(i=>i-1)} style={{width:'100%'}}>← Prev</button>
+            <button className="btn btn-p btn-s" disabled={idx===projects.length-1}
+              onClick={()=>setIdx(i=>i+1)} style={{width:'100%'}}>Next →</button>
+          </div>
+          <div style={{marginTop:14,fontSize:10,color:'var(--text-3)',lineHeight:1.5,textAlign:'center'}}>
+            Session budget<br/>for all projects
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── HABITS VIEW ──────────────────────────────────────────────
+const DOW_LABELS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const WEEKS = 16;
+
+function buildDays() {
+  const now = new Date(); now.setHours(0,0,0,0);
+  // Go back to find Monday WEEKS weeks ago
+  const start = new Date(now);
+  start.setDate(start.getDate() - WEEKS*7 + 1);
+  // Align to Monday
+  const dow = start.getDay();
+  const offset = dow===0 ? 1 : (dow===1 ? 0 : -(dow-1));
+  start.setDate(start.getDate() + offset);
+  const days = [];
+  const d = new Date(start);
+  while (d <= now || days.length % 7 !== 0) {
+    days.push(d.toISOString().slice(0,10));
+    d.setDate(d.getDate()+1);
+    if (days.length > WEEKS*7+7) break;
+  }
+  return days;
+}
+
+function HabitsView({state, dispatch}) {
+  const todayKey = todayISO();
+  const days = useMemo(buildDays, []);
+  // Week column starts
+  const weekStarts = useMemo(()=>days.filter((_,i)=>i%7===0),[days]);
+
+  const cycle = (hid, date) => {
+    const h = state.habits.find(h=>h.id===hid);
+    const cur = h?.log[date]||0;
+    dispatch({type:'SET_HABIT',hid,date,v:(cur+1)%3});
+  };
+
+  const streak = (h) => {
+    let s=0, d=new Date();
+    while(true) {
+      const k=d.toISOString().slice(0,10);
+      if ((h.log[k]||0)>0){s++;d.setDate(d.getDate()-1);}else break;
+      if(s>365)break;
+    }
+    return s;
+  };
+
+  return (
+    <div>
+      <div className="ph"><div className="ph-title">Habits</div></div>
+
+      {state.habits.map(h=>{
+        const str = streak(h);
+        const total = Object.values(h.log).filter(v=>v>0).length;
+        const todayState = h.log[todayKey]||0;
+
+        return (
+          <div key={h.id} className="card">
+            <div className="card-head" style={{flexWrap:'wrap',gap:10}}>
+              <div>
+                <h3 style={{marginBottom:2}}>{h.name}</h3>
+                <div style={{fontSize:11,color:'var(--text-3)',fontWeight:400}}>{h.subtitle}</div>
+              </div>
+              <div style={{display:'flex',gap:20,alignItems:'center',marginLeft:'auto'}}>
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontFamily:"'Lora',serif",fontSize:20,fontWeight:600,color:str>0?'var(--accent)':'var(--text-3)'}}>{str}</div>
+                  <div style={{fontSize:9,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.06em'}}>streak</div>
+                </div>
+                <div style={{textAlign:'center'}}>
+                  <div style={{fontFamily:"'Lora',serif",fontSize:20,fontWeight:600,color:'var(--text-2)'}}>{total}</div>
+                  <div style={{fontSize:9,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.06em'}}>total</div>
+                </div>
+                <div>
+                  <div style={{fontSize:9,color:'var(--text-3)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:5,textAlign:'center'}}>Today</div>
+                  <div style={{display:'flex',gap:4}}>
+                    {[0,1,2].map(s=>(
+                      <div key={s} onClick={()=>cycle(h.id,todayKey)} title={['Not done','Minimal','Complete'][s]}
+                        style={{width:24,height:24,borderRadius:5,cursor:'pointer',transition:'all .15s',
+                          background:s===0?'var(--habit-0)':s===1?'var(--habit-1)':'var(--habit-2)',
+                          opacity:s===todayState?1:.28,
+                          border:`2px solid ${s===todayState?'var(--text-2)':'transparent'}`}}/>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style={{padding:'12px 16px 14px'}}>
+              {/* Month labels row */}
+              <div style={{display:'flex',marginBottom:3,marginLeft:28}}>
+                <div style={{display:'grid',gridTemplateColumns:`repeat(${weekStarts.length},16px)`,gap:3,width:'max-content'}}>
+                  {weekStarts.map((w,wi)=>{
+                    const d=new Date(w);
+                    const label = d.getDate()<=7 ? d.toLocaleDateString('en-US',{month:'short'}) : '';
+                    return <div key={wi} style={{fontSize:9,color:'var(--text-3)',width:13,textAlign:'center'}}>{label}</div>;
+                  })}
+                </div>
+              </div>
+
+              <div style={{display:'flex',gap:5}}>
+                {/* Day labels */}
+                <div style={{display:'flex',flexDirection:'column',gap:3,paddingTop:0}}>
+                  {DOW_LABELS.map(dl=>(
+                    <div key={dl} style={{fontSize:9,color:'var(--text-3)',height:13,lineHeight:'13px',width:20,textAlign:'right'}}>{dl}</div>
+                  ))}
+                </div>
+
+                {/* Grid */}
+                <div style={{overflowX:'auto',paddingBottom:2}}>
+                  <div className="hgrid">
+                    {days.map(dateKey=>{
+                      const isFuture = dateKey > todayKey;
+                      const isToday = dateKey === todayKey;
+                      const val = isFuture ? 0 : (h.log[dateKey]||0);
+                      return (
+                        <div key={dateKey}
+                          className={`hcell s${val} ${isFuture?'future':''} ${isToday?'istoday':''}`}
+                          onClick={()=>!isFuture&&cycle(h.id,dateKey)}
+                          title={`${dateKey}: ${['Not done','Minimal','Complete'][val]}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div style={{display:'flex',gap:6,alignItems:'center',marginTop:8,justifyContent:'flex-end'}}>
+                <span style={{fontSize:9,color:'var(--text-3)'}}>Less</span>
+                {[0,1,2].map(s=>(
+                  <div key={s} style={{width:11,height:11,borderRadius:2,background:s===0?'var(--habit-0)':s===1?'var(--habit-1)':'var(--habit-2)'}}/>
+                ))}
+                <span style={{fontSize:9,color:'var(--text-3)'}}>More</span>
+                <span style={{fontSize:9,color:'var(--text-3)',marginLeft:8}}>Click cell to cycle: none → minimal → complete</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── PROJECT VIEW ─────────────────────────────────────────────
+function ProjectView({project, dispatch}) {
+  const [addingTask, setAddingTask] = useState(false);
+  const [editDesc, setEditDesc] = useState(false);
+  const [desc, setDesc] = useState(project.description);
+  const [notes, setNotes] = useState(project.notes);
+  useEffect(()=>{ setDesc(project.description); setNotes(project.notes); setAddingTask(false); },[project.id]);
+  const open = project.tasks.filter(t=>!t.completed);
+  const done = project.tasks.filter(t=>t.completed);
+  const toggle = id => dispatch({type:'TOGGLE_TASK',id});
+
+  return (
+    <div>
+      <div className="ph">
+        <div>
+          <div style={{fontSize:10,color:'var(--text-3)',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',marginBottom:4}}>{project.group}</div>
+          <div className="ph-title">{project.name}</div>
+        </div>
+        <button className="btn btn-g btn-s" onClick={()=>setAddingTask(t=>!t)}>
+          <Ic n="plus" s={12}/> Add task
+        </button>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <h3><Ic n="note" s={13}/>Description</h3>
+          <button className="btn btn-g btn-s" onClick={()=>{
+            if(editDesc) dispatch({type:'SET_DESC',pid:project.id,v:desc});
+            setEditDesc(e=>!e);
+          }}>{editDesc?'Save':'Edit'}</button>
+        </div>
+        <div style={{padding:'11px 16px'}}>
+          {editDesc
+            ? <textarea className="input textarea" value={desc} onChange={e=>setDesc(e.target.value)} style={{fontSize:13}}/>
+            : <div style={{fontSize:13,color:'var(--text-2)',lineHeight:1.7}}>
+                {desc||<span style={{color:'var(--text-3)'}}>No description. Click Edit to add one.</span>}
+              </div>
+          }
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <h3>Open tasks ({open.length})</h3>
+          <button className="btn btn-g btn-s" onClick={()=>setAddingTask(t=>!t)}>
+            <Ic n="plus" s={11}/> Add
+          </button>
+        </div>
+        {open.map(t=><TaskRow key={t.id} task={t} onToggle={toggle}/>)}
+        {addingTask && (
+          <AddTaskForm
+            onAdd={task=>{dispatch({type:'ADD_TASK',pid:project.id,task});setAddingTask(false);}}
+            onCancel={()=>setAddingTask(false)}
+          />
+        )}
+        {open.length===0&&!addingTask&&(
+          <div style={{padding:'13px 16px',color:'var(--text-3)',fontSize:12}}>All tasks done! 🎉</div>
+        )}
+      </div>
+
+      {done.length > 0 && (
+        <div className="card">
+          <div className="card-head"><h3 style={{color:'var(--text-3)'}}>Completed ({done.length})</h3></div>
+          {done.map(t=><TaskRow key={t.id} task={t} onToggle={toggle}/>)}
+        </div>
+      )}
+
+      <div className="card">
+        <div className="card-head"><h3><Ic n="note" s={13}/>Notes</h3></div>
+        <div style={{padding:'11px 16px'}}>
+          <textarea className="input textarea" value={notes}
+            onChange={e=>setNotes(e.target.value)}
+            onBlur={()=>dispatch({type:'SET_NOTE',pid:project.id,v:notes})}
+            placeholder="Notes, links, ideas…" style={{fontSize:13,minHeight:90}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SIDEBAR ──────────────────────────────────────────────────
+function Sidebar({state, dispatch}) {
+  const go = v => dispatch({type:'VIEW',v});
+  const allTasks = state.projects.flatMap(p=>p.tasks);
+  const mustCount = allTasks.filter(t=>t.mustHave&&t.assignedToday&&!t.completed).length;
+  const todayCount = allTasks.filter(t=>t.assignedToday&&!t.completed).length;
+  const groups = {};
+  state.projects.forEach(p=>{ if(!groups[p.group]) groups[p.group]=[]; groups[p.group].push(p); });
+
+  const N = ({v,icon,label,badge,badgeCls}) => (
+    <button className={`nav ${state.view===v?'on':''}`} onClick={()=>go(v)}>
+      <Ic n={icon} s={14}/> {label}
+      {badge!=null && <span className={`nav-badge ${badgeCls||''}`}>{badge}</span>}
+    </button>
+  );
+
+  return (
+    <div className="sidebar">
+      <div className="s-logo">
+        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <rect width="20" height="20" rx="5" fill="var(--accent)"/>
+          <path d="M5 7h10M5 10h7M5 13h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+        </svg>
+        FlowTask
+      </div>
+
+      <N v="today" icon="today" label="Today"
+        badge={todayCount>0?todayCount:null}
+        badgeCls={mustCount>0?'must':''}/>
+      <N v="plan"   icon="plan"   label="Plan"/>
+      <N v="review" icon="review" label="Review"/>
+      <N v="habits" icon="habits" label="Habits"/>
+
+      <hr className="s-divider"/>
+
+      {Object.entries(groups).map(([grp,ps])=>(
+        <div key={grp}>
+          <div className="s-lbl">{grp}</div>
+          {ps.map(p=>(
+            <button key={p.id}
+              className={`nav ${state.view==='project/'+p.id?'on':''}`}
+              onClick={()=>go('project/'+p.id)}>
+              <Ic n="folder" s={13}/>
+              <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{p.name}</span>
+            </button>
+          ))}
+        </div>
+      ))}
+
+      <div style={{flex:1}}/>
+      <hr className="s-divider"/>
+      <button className="nav" onClick={()=>dispatch({type:'THEME'})}>
+        <Ic n={state.theme==='dark'?'sun':'moon'} s={14}/>
+        {state.theme==='dark'?'Light mode':'Dark mode'}
+      </button>
+    </div>
+  );
+}
+
+// ─── APP ──────────────────────────────────────────────────────
+function App() {
+  const [state, dispatch] = useReducer(reducer, null, load);
+  useEffect(()=>{ document.documentElement.setAttribute('data-theme', state.theme); }, []);
+
+  const projectId = state.view.startsWith('project/') ? state.view.split('/')[1] : null;
+  const project = projectId ? state.projects.find(p=>p.id===projectId) : null;
+
+  return (
+    <div className="app">
+      <Sidebar state={state} dispatch={dispatch}/>
+      <div className="main">
+        {state.view==='today'  && <TodayView  state={state} dispatch={dispatch}/>}
+        {state.view==='plan'   && <PlanView   state={state} dispatch={dispatch}/>}
+        {state.view==='review' && <ReviewView state={state} dispatch={dispatch}/>}
+        {state.view==='habits' && <HabitsView state={state} dispatch={dispatch}/>}
+        {project && <ProjectView project={project} dispatch={dispatch}/>}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
