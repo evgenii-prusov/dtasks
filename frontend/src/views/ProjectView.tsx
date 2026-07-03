@@ -1,13 +1,23 @@
 import { useEffect, useState } from 'react'
-import { useCreateTask, useUpdateProject } from '../api/hooks'
+import { useNavigate } from '@tanstack/react-router'
+import { useCreateTask, useDeleteProject, useUpdateProject } from '../api/hooks'
 import type { Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
 
 export function ProjectView({ project }: { project: Project }) {
+  const navigate = useNavigate()
   const updateProject = useUpdateProject()
+  const deleteProject = useDeleteProject()
   const createTask = useCreateTask()
+
+  const removeProject = () => {
+    if (confirm(`Delete project "${project.name}" and all its tasks?`)) {
+      deleteProject.mutate(project.id)
+      navigate({ to: '/' })
+    }
+  }
 
   const [addingTask, setAddingTask] = useState(false)
   const [editDesc, setEditDesc] = useState(false)
@@ -33,9 +43,18 @@ export function ProjectView({ project }: { project: Project }) {
           </div>
           <div className="ph-title">{project.name}</div>
         </div>
-        <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
-          <Ic n="plus" s={12} /> Add task
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
+            <Ic n="plus" s={12} /> Add task
+          </button>
+          <button
+            className="btn btn-g btn-s btn-danger"
+            onClick={removeProject}
+            title="Delete project"
+          >
+            <Ic n="trash" s={12} />
+          </button>
+        </div>
       </div>
 
       <div className="card">
