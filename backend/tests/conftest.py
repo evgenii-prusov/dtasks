@@ -1,12 +1,26 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import os
+import tempfile
+from collections.abc import AsyncIterator, Awaitable, Callable
 
 import pytest
 from litestar.testing import AsyncTestClient
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-from app import main
+# Auth config reads these at import time, so they must be set before the app import.
+os.environ.setdefault("DTASKS_INVITE_CODE", "test-invite-code")
+os.environ.setdefault("DTASKS_AUTH_RATE_LIMIT", "1000000")
+os.environ.setdefault("DTASKS_SESSION_DIR", tempfile.mkdtemp(prefix="dtasks-test-sessions-"))
+
+from app import db as app_db  # noqa: E402
+from app import main  # noqa: E402
+
+TEST_INVITE_CODE = os.environ["DTASKS_INVITE_CODE"]
+DEFAULT_EMAIL = "test@example.com"
+DEFAULT_PASSWORD = "password123"
+
+MakeClient = Callable[..., Awaitable[AsyncTestClient]]
 
 
 @pytest.fixture
@@ -18,19 +32,55 @@ def anyio_backend() -> str:
 async def db(monkeypatch: pytest.MonkeyPatch, tmp_path) -> AsyncIterator[async_sessionmaker]:
     """Point the app at a throwaway SQLite file so tests never touch real data.
 
-    The app's lifespan reads ``main.engine`` / ``main.session_factory`` at call
-    time, so patching them here makes the whole HTTP stack use the temp DB.
+    The app reads ``app.db.engine`` / ``app.db.session_factory`` at call time,
+    so patching them here makes the whole HTTP stack use the temp DB.
     """
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.sqlite'}")
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    monkeypatch.setattr(main, "engine", engine)
-    monkeypatch.setattr(main, "session_factory", session_factory)
+    monkeypatch.setattr(app_db, "engine", engine)
+    monkeypatch.setattr(app_db, "session_factory", session_factory)
     yield session_factory
     await engine.dispose()
 
 
+async def signup(client: AsyncTestClient, email: str, password: str = DEFAULT_PASSWORD) -> None:
+    resp = await client.post(
+        "/api/auth/signup",
+        json={"email": email, "password": password, "invite_code": TEST_INVITE_CODE},
+    )
+    assert resp.status_code == 201, resp.text
+
+
 @pytest.fixture
-async def client(db: async_sessionmaker) -> AsyncIterator[AsyncTestClient]:
-    """AsyncTestClient whose lifespan creates tables and seeds the temp DB."""
+async def anon_client(db: async_sessionmaker) -> AsyncIterator[AsyncTestClient]:
+    """Client with no session; its lifespan creates tables on the temp DB."""
     async with AsyncTestClient(app=main.app) as client:
         yield client
+
+
+@pytest.fixture
+async def client(db: async_sessionmaker) -> AsyncIterator[AsyncTestClient]:
+    """Client signed up as the default user, with starter data seeded at signup."""
+    async with AsyncTestClient(app=main.app) as client:
+        await signup(client, DEFAULT_EMAIL)
+        yield client
+
+
+@pytest.fixture
+async def make_client(db: async_sessionmaker) -> AsyncIterator[MakeClient]:
+    """Factory producing an authenticated client per email.
+
+    Each user needs its own AsyncTestClient because the cookie jar is per client.
+    """
+    clients: list[AsyncTestClient] = []
+
+    async def _make(email: str, password: str = DEFAULT_PASSWORD) -> AsyncTestClient:
+        client = AsyncTestClient(app=main.app)
+        await client.__aenter__()
+        clients.append(client)
+        await signup(client, email, password)
+        return client
+
+    yield _make
+    for client in clients:
+        await client.__aexit__(None, None, None)

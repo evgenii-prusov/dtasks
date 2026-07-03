@@ -9,9 +9,11 @@ from litestar.config.cors import CORSConfig
 from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from . import db
+from .auth import auth_router, session_auth, session_store
 from .models import Base, Habit, HabitLog, Project, Task
 from .schemas import (
     UNSET,
@@ -28,28 +30,16 @@ from .schemas import (
     project_out,
     task_out,
 )
-from .seed import seed_if_empty
 
-DB_PATH = Path(__file__).resolve().parent.parent / "jedi_tracker.sqlite"
 MUST_HAVE_LIMIT = 2
-
-engine = create_async_engine(f"sqlite+aiosqlite:///{DB_PATH}")
-session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
 
 @asynccontextmanager
 async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
-    async with engine.begin() as conn:
+    async with db.engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    async with session_factory() as session:
-        await seed_if_empty(session)
     yield
-    await engine.dispose()
-
-
-async def provide_session() -> AsyncGenerator[AsyncSession, None]:
-    async with session_factory() as session:
-        yield session
+    await db.engine.dispose()
 
 
 async def _get_task(session: AsyncSession, task_id: int) -> Task:
@@ -255,6 +245,7 @@ def not_found_handler(request: Request, exc: NotFoundException) -> Response:
 
 
 route_handlers: list = [
+    auth_router,
     list_projects,
     create_project,
     update_project,
@@ -273,8 +264,10 @@ if FRONTEND_DIST.is_dir():
 
 app = Litestar(
     route_handlers=route_handlers,
-    dependencies={"session": provide_session},
+    dependencies={"session": db.provide_session},
     lifespan=[lifespan],
+    on_app_init=[session_auth.on_app_init],
+    stores={"sessions": session_store()},
     cors_config=CORSConfig(allow_origins=["http://localhost:5173"]),
     exception_handlers={NotFoundException: not_found_handler},
 )

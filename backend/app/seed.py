@@ -3,16 +3,13 @@ from __future__ import annotations
 import random
 from datetime import date, timedelta
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import Habit, HabitLog, Project, Task
 
 
-async def seed_if_empty(session: AsyncSession) -> None:
-    if (await session.execute(select(Project.id).limit(1))).first() is not None:
-        return
-
+async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
+    """Give a freshly signed-up user a small demo workspace. Does not commit."""
     projects = [
         Project(
             name="Alerting Service",
@@ -116,6 +113,10 @@ async def seed_if_empty(session: AsyncSession) -> None:
             state = 0 if r < 0.18 else 1 if r < 0.48 else 2
             habit.logs.append(HabitLog(day=today - timedelta(days=i), state=state))
 
+    for project in projects:
+        project.user_id = user_id
+    for habit in habits:
+        habit.user_id = user_id
+
     session.add_all(projects)
     session.add_all(habits)
-    await session.commit()
