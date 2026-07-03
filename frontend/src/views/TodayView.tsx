@@ -1,12 +1,11 @@
 import { Link } from '@tanstack/react-router'
-import { useProjects, useUpdateTask } from '../api/hooks'
+import { useProjects } from '../api/hooks'
 import type { Project, Task } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 
 export function TodayView() {
   const { data: projects = [] } = useProjects()
-  const updateTask = useUpdateTask()
 
   const must: { t: Task; p: Project }[] = []
   const today: { t: Task; p: Project }[] = []
@@ -18,11 +17,6 @@ export function TodayView() {
       else if (t.assigned_today) today.push({ t, p })
       else if (t.assigned_week) week.push({ t, p })
     }
-  }
-
-  const toggle = (id: number) => {
-    const task = projects.flatMap((p) => p.tasks).find((t) => t.id === id)
-    if (task) updateTask.mutate({ id, patch: { completed: !task.completed } })
   }
 
   const dateStr = new Date().toLocaleDateString('en-US', {
@@ -66,7 +60,15 @@ export function TodayView() {
             </span>
           </div>
           {must.map(({ t, p }) => (
-            <TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              project={p}
+              showProject
+              checkable
+              editable
+              deletable
+            />
           ))}
         </div>
       )}
@@ -79,7 +81,15 @@ export function TodayView() {
             </h3>
           </div>
           {today.map(({ t, p }) => (
-            <TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              project={p}
+              showProject
+              checkable
+              editable
+              deletable
+            />
           ))}
         </div>
       )}
@@ -92,7 +102,15 @@ export function TodayView() {
             </h3>
           </div>
           {week.map(({ t, p }) => (
-            <TaskRow key={t.id} task={t} project={p} showProject onToggle={toggle} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              project={p}
+              showProject
+              checkable
+              editable
+              deletable
+            />
           ))}
         </div>
       )}

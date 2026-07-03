@@ -1,126 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  useCreateTask,
-  useProjects,
-  useReorderTask,
-  useUpdateProject,
-  useUpdateTask,
-} from '../api/hooks'
-import type { Complexity, Task } from '../api/types'
+import { useCreateTask, useProjects, useUpdateProject } from '../api/hooks'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
+import { TaskRow } from '../components/TaskRow'
 
 const MINUTES_PER_PROJECT = 5
-
-function ReviewTaskRow({
-  task,
-  isFirst,
-  isLast,
-}: {
-  task: Task
-  isFirst: boolean
-  isLast: boolean
-}) {
-  const updateTask = useUpdateTask()
-  const reorderTask = useReorderTask()
-  const [editing, setEditing] = useState(false)
-  const [title, setTitle] = useState(task.title)
-  const [notes, setNotes] = useState(task.notes || '')
-  const [complexity, setComplexity] = useState<Complexity>(task.complexity)
-
-  const save = () => {
-    updateTask.mutate({
-      id: task.id,
-      patch: { title: title.trim() || task.title, notes, complexity },
-    })
-    setEditing(false)
-  }
-  const cancel = () => {
-    setTitle(task.title)
-    setNotes(task.notes || '')
-    setComplexity(task.complexity)
-    setEditing(false)
-  }
-
-  return (
-    <div className="flex items-start gap-2 border-t border-line px-4 py-[7px]">
-      <div
-        className="cb mt-[3px]"
-        onClick={() => updateTask.mutate({ id: task.id, patch: { completed: !task.completed } })}
-      />
-
-      <div className="min-w-0 flex-1">
-        {editing ? (
-          <div>
-            <input
-              className="input mb-[5px] px-2 py-[5px] text-[13px]"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && save()}
-              autoFocus
-            />
-            <textarea
-              className="input textarea mb-1.5 min-h-11 text-xs"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes…"
-            />
-            <div className="flex items-center gap-1.5">
-              <select
-                className="sel"
-                value={complexity}
-                onChange={(e) => setComplexity(e.target.value as Complexity)}
-              >
-                <option value="low">Low complexity</option>
-                <option value="high">High complexity</option>
-              </select>
-              <div className="flex-1" />
-              <button className="btn btn-g btn-s" onClick={cancel}>
-                Cancel
-              </button>
-              <button className="btn btn-p btn-s" onClick={save}>
-                Save
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div onClick={() => setEditing(true)} className="cursor-text" title="Click to edit">
-            <div className="text-[13px]">{task.title}</div>
-            {task.notes && <div className="mt-px text-[11px] text-ink-3">{task.notes}</div>}
-          </div>
-        )}
-      </div>
-
-      {!editing && (
-        <>
-          <span
-            className={`badge mt-0.5 ${task.complexity === 'high' ? 'b-high' : 'b-low'}`}
-          >
-            {task.complexity}
-          </span>
-          <div className="flex flex-col gap-px">
-            <button
-              className="btn btn-g px-[5px] py-px text-[9px] leading-none"
-              disabled={isFirst}
-              onClick={() => reorderTask.mutate({ id: task.id, direction: 'up' })}
-              title="Move up"
-            >
-              ▲
-            </button>
-            <button
-              className="btn btn-g px-[5px] py-px text-[9px] leading-none"
-              disabled={isLast}
-              onClick={() => reorderTask.mutate({ id: task.id, direction: 'down' })}
-              title="Move down"
-            >
-              ▼
-            </button>
-          </div>
-        </>
-      )}
-    </div>
-  )
-}
 
 export function ReviewView() {
   const { data: projects = [] } = useProjects()
@@ -266,9 +150,13 @@ export function ReviewView() {
                 <div className="px-4 pt-1 pb-3 text-xs text-ink-3">All clear ✓</div>
               )}
               {openTasks.map((t, ti) => (
-                <ReviewTaskRow
+                <TaskRow
                   key={t.id}
                   task={t}
+                  checkable
+                  editable
+                  reorderable
+                  deletable
                   isFirst={ti === 0}
                   isLast={ti === openTasks.length - 1}
                 />

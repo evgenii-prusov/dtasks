@@ -57,6 +57,28 @@ export function useCreateTask() {
   })
 }
 
+export function useDeleteTask() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.deleteTask(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      const previous = qc.getQueryData<Project[]>(['projects'])
+      if (previous) {
+        qc.setQueryData(
+          ['projects'],
+          previous.map((p) => ({ ...p, tasks: p.tasks.filter((t) => t.id !== id) })),
+        )
+      }
+      return { previous }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['projects'], ctx.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
 export function useReorderTask() {
   const qc = useQueryClient()
   return useMutation({

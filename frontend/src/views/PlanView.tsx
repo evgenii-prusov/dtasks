@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { mustHaveCount, useCreateTask, useProjects, useUpdateTask } from '../api/hooks'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
+import { TaskRow } from '../components/TaskRow'
 
 const MUST_LIMIT = 2
 
@@ -71,54 +72,57 @@ export function PlanView() {
               <div className="px-4 py-3 text-xs text-ink-3">No open tasks.</div>
             )}
 
-            {open.map((t) => (
-              <div key={t.id} className="task-row items-center">
-                <div className="min-w-0 flex-1">
-                  <div className="t-title">{t.title}</div>
-                  <div className="t-meta">
-                    <span className={`badge ${t.complexity === 'high' ? 'b-high' : 'b-low'}`}>
-                      {t.complexity}
-                    </span>
-                    {t.recurring && <span className="badge b-rec">↺</span>}
-                  </div>
-                </div>
-                <div className="flex shrink-0 gap-[5px]">
-                  {tab === 'today' ? (
-                    <>
+            {open.map((t, i) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                editable
+                reorderable
+                deletable
+                isFirst={i === 0}
+                isLast={i === open.length - 1}
+                right={
+                  <div className="flex shrink-0 gap-[5px]">
+                    {tab === 'today' ? (
+                      <>
+                        <button
+                          className={`asgn ${t.must_have && t.assigned_today ? 'must-on' : ''}`}
+                          style={{
+                            opacity:
+                              (!t.must_have || !t.assigned_today) && mustCount >= MUST_LIMIT
+                                ? 0.35
+                                : 1,
+                          }}
+                          onClick={() => setMust(t.id, !(t.must_have && t.assigned_today))}
+                          title="Mark as Must Have (max 2/day)"
+                        >
+                          🔥 Must
+                        </button>
+                        <button
+                          className={`asgn ${t.assigned_today ? 'on' : ''}`}
+                          onClick={() =>
+                            updateTask.mutate({
+                              id: t.id,
+                              patch: { assigned_today: !t.assigned_today },
+                            })
+                          }
+                        >
+                          {t.assigned_today ? '✓ Today' : '+ Today'}
+                        </button>
+                      </>
+                    ) : (
                       <button
-                        className={`asgn ${t.must_have && t.assigned_today ? 'must-on' : ''}`}
-                        style={{
-                          opacity:
-                            (!t.must_have || !t.assigned_today) && mustCount >= MUST_LIMIT
-                              ? 0.35
-                              : 1,
-                        }}
-                        onClick={() => setMust(t.id, !(t.must_have && t.assigned_today))}
-                        title="Mark as Must Have (max 2/day)"
-                      >
-                        🔥 Must
-                      </button>
-                      <button
-                        className={`asgn ${t.assigned_today ? 'on' : ''}`}
+                        className={`asgn ${t.assigned_week ? 'on' : ''}`}
                         onClick={() =>
-                          updateTask.mutate({ id: t.id, patch: { assigned_today: !t.assigned_today } })
+                          updateTask.mutate({ id: t.id, patch: { assigned_week: !t.assigned_week } })
                         }
                       >
-                        {t.assigned_today ? '✓ Today' : '+ Today'}
+                        {t.assigned_week ? '✓ Week' : '+ Week'}
                       </button>
-                    </>
-                  ) : (
-                    <button
-                      className={`asgn ${t.assigned_week ? 'on' : ''}`}
-                      onClick={() =>
-                        updateTask.mutate({ id: t.id, patch: { assigned_week: !t.assigned_week } })
-                      }
-                    >
-                      {t.assigned_week ? '✓ Week' : '+ Week'}
-                    </button>
-                  )}
-                </div>
-              </div>
+                    )}
+                  </div>
+                }
+              />
             ))}
 
             {addingTo === p.id && (

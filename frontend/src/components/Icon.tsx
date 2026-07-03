@@ -12,6 +12,7 @@ export type IconName =
   | 'fire'
   | 'check'
   | 'note'
+  | 'trash'
 
 const paths = (c: string): Record<IconName, ReactNode> => ({
   today: (
@@ -74,6 +75,16 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       <rect x="2" y="2" width="12" height="12" rx="1.5" stroke={c} strokeWidth="1.5" fill="none" />
       <path d="M5 6h6M5 9h4" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
     </>
+  ),
+  trash: (
+    <path
+      d="M3 4h10M6.5 4V2.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1V4M4.5 4l.6 9a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-9"
+      stroke={c}
+      strokeWidth="1.3"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
   ),
 })
 

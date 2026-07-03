@@ -23,6 +23,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     }
     throw new ApiError(res.status, detail)
   }
+  if (res.status === 204) return undefined as T
   return res.json() as Promise<T>
 }
 
@@ -37,6 +38,7 @@ export const api = {
     }),
   updateTask: (id: number, patch: TaskPatch) =>
     request<Task>(`/api/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  deleteTask: (id: number) => request<void>(`/api/tasks/${id}`, { method: 'DELETE' }),
   reorderTask: (id: number, direction: 'up' | 'down') =>
     request<Task[]>(`/api/tasks/${id}/reorder`, {
       method: 'POST',
