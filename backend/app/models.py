@@ -1,0 +1,71 @@
+from __future__ import annotations
+
+from datetime import date
+
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    group: Mapped[str] = mapped_column(String(100), default="Work")
+    description: Mapped[str] = mapped_column(Text, default="")
+    notes: Mapped[str] = mapped_column(Text, default="")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+
+    tasks: Mapped[list[Task]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+        order_by="Task.position",
+    )
+
+
+class Task(Base):
+    __tablename__ = "tasks"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    title: Mapped[str] = mapped_column(String(500))
+    notes: Mapped[str] = mapped_column(Text, default="")
+    complexity: Mapped[str] = mapped_column(String(10), default="low")  # low | high
+    recurring: Mapped[bool] = mapped_column(Boolean, default=False)
+    assigned_today: Mapped[bool] = mapped_column(Boolean, default=False)
+    assigned_week: Mapped[bool] = mapped_column(Boolean, default=False)
+    must_have: Mapped[bool] = mapped_column(Boolean, default=False)
+    completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    position: Mapped[int] = mapped_column(Integer, default=0)
+
+    project: Mapped[Project] = relationship(back_populates="tasks")
+
+
+class Habit(Base):
+    __tablename__ = "habits"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    name: Mapped[str] = mapped_column(String(200))
+    subtitle: Mapped[str] = mapped_column(String(200), default="")
+    position: Mapped[int] = mapped_column(Integer, default=0)
+
+    logs: Mapped[list[HabitLog]] = relationship(
+        back_populates="habit",
+        cascade="all, delete-orphan",
+    )
+
+
+class HabitLog(Base):
+    __tablename__ = "habit_logs"
+    __table_args__ = (UniqueConstraint("habit_id", "day", name="uq_habit_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    habit_id: Mapped[int] = mapped_column(ForeignKey("habits.id", ondelete="CASCADE"))
+    day: Mapped[date] = mapped_column(Date)
+    state: Mapped[int] = mapped_column(Integer, default=0)  # 0 none | 1 minimal | 2 complete
+
+    habit: Mapped[Habit] = relationship(back_populates="logs")

@@ -1,25 +1,74 @@
-# CODING AGENTS: READ THIS FIRST
+# FlowTask — Jedi Techniques task tracker
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+A task tracker inspired by Maxim Dorofeev's *Jedi Techniques*, built from the
+Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats/`).
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+**Core ideas:**
 
-## What you should do — IMPORTANT
+- **Today** — the day's working set, with a **Must Have** section (max 2 tasks,
+  marked 🔥) so you always know where to start.
+- **Plan** — browse every open task grouped by project and assign it to Today or
+  This Week; the 2-must-have limit is enforced by the backend.
+- **Review** — walk through all projects against a single session-wide countdown
+  (5 min × number of projects). Description, open tasks (checkable, editable
+  inline, reorderable), completed tasks, and editable notes per project.
+- **Habits** — GitHub-style contribution grid (16 weeks) with three states per
+  day (none / minimal / complete), streak and total counters, click any past
+  cell to cycle its state.
 
-**Read the chat transcripts first.** There are 1 chat transcript(s) in `chats/`. The transcripts show the full back-and-forth between the user and the design assistant — they tell you **what the user actually wants** and **where they landed** after iterating. Don't skip them. The final HTML files are the output, but the chat is where the intent lives.
+Plus per-project pages and a light/dark theme toggle.
 
-**Read `project/FlowTask.html` in full.** The user had this file open when they triggered the handoff, so it's almost certainly the primary design they want built. Read it top to bottom — don't skim. Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Stack
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+- **Backend:** Python, [Litestar](https://litestar.dev), SQLAlchemy 2 (async), SQLite
+- **Frontend:** React 19, TypeScript, TanStack Router + Query, Tailwind CSS 4, Vite
 
-## About the design files
+## Development
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+Backend (API on `:8000`, database is created and seeded on first start):
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+```sh
+cd backend
+uv sync
+uv run litestar --app app.main:app run --port 8000
+```
 
-## Bundle contents
+Frontend (dev server on `:5173`, proxies `/api` to the backend):
 
-- `README.md` — this file
-- `chats/` — conversation transcripts (read these!)
-- `project/` — the `jedi-tracker` project files (HTML prototypes, assets, components)
+```sh
+cd frontend
+npm install
+npm run dev
+```
+
+## Production
+
+Build the frontend, then the Litestar app serves it as static files with an
+SPA fallback:
+
+```sh
+cd frontend && npm run build
+cd ../backend && uv run litestar --app app.main:app run --port 8000
+# open http://localhost:8000
+```
+
+## API
+
+| Method | Path                          | Purpose                                    |
+| ------ | ----------------------------- | ------------------------------------------ |
+| GET    | `/api/projects`               | All projects with their tasks              |
+| PATCH  | `/api/projects/{id}`          | Update name / group / description / notes  |
+| POST   | `/api/projects/{id}/tasks`    | Create a task                              |
+| PATCH  | `/api/tasks/{id}`             | Update any task field (enforces must-have limit, returns 409 above it) |
+| POST   | `/api/tasks/{id}/reorder`     | Move a task up/down within its project     |
+| GET    | `/api/habits`                 | All habits with their day logs             |
+| PUT    | `/api/habits/{id}/log`        | Set a day's state (0 none / 1 minimal / 2 complete) |
+
+Rules mirrored from the design: marking a task Must Have also assigns it to
+Today; removing it from Today clears Must Have; at most 2 active Must Have
+tasks per day.
+
+## Design source
+
+- `project/FlowTask.html` — the original HTML/CSS/JS prototype (design system source of truth)
+- `chats/` — the design conversation transcripts
