@@ -3,18 +3,34 @@ from __future__ import annotations
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Any
 
-from litestar import Litestar, Request, Response, delete, get, patch, post, put
+from litestar import Litestar
+from litestar import Request
+from litestar import Response
+from litestar import delete
+from litestar import get
+from litestar import patch
+from litestar import post
+from litestar import put
 from litestar.config.cors import CORSConfig
-from litestar.exceptions import ClientException, NotFoundException
+from litestar.exceptions import ClientException
+from litestar.exceptions import NotFoundException
 from litestar.static_files import create_static_files_router
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from . import db
-from .auth import auth_router, session_auth, session_store
-from .models import Base, Habit, HabitLog, Project, Task
+from .auth import auth_router
+from .auth import session_auth
+from .auth import session_store
+from .models import Base
+from .models import Habit
+from .models import HabitLog
+from .models import Project
+from .models import Task
+from .models import User
 from .schemas import (
     UNSET,
     HabitLogPayload,
@@ -42,42 +58,60 @@ async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
     await db.engine.dispose()
 
 
-async def _get_task(session: AsyncSession, task_id: int) -> Task:
-    task = await session.get(Task, task_id)
+def provide_user(request: Request[User, Any, Any]) -> User:
+    return request.user
+
+
+async def _get_task(session: AsyncSession, task_id: int, user_id: int) -> Task:
+    task = (
+        await session.execute(
+            select(Task)
+            .join(Project)
+            .where(Task.id == task_id, Project.user_id == user_id)
+        )
+    ).scalar_one_or_none()
     if task is None:
-        raise NotFoundException(detail=f"Task {task_id} not found")
+        raise NotFoundException(detail="Task not found")
     return task
 
 
-async def _get_project(session: AsyncSession, project_id: int) -> Project:
+async def _get_project(session: AsyncSession, project_id: int, user_id: int) -> Project:
     project = (
         await session.execute(
-            select(Project).where(Project.id == project_id).options(selectinload(Project.tasks))
+            select(Project)
+            .where(Project.id == project_id, Project.user_id == user_id)
+            .options(selectinload(Project.tasks))
         )
     ).scalar_one_or_none()
     if project is None:
-        raise NotFoundException(detail=f"Project {project_id} not found")
+        raise NotFoundException(detail="Project not found")
     return project
 
 
-async def _active_must_have_count(session: AsyncSession, exclude_task_id: int) -> int:
+async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, user_id: int) -> int:
     rows = await session.execute(
-        select(Task.id).where(
+        select(Task.id)
+        .join(Project)
+        .where(
             Task.must_have.is_(True),
             Task.assigned_today.is_(True),
             Task.completed.is_(False),
             Task.id != exclude_task_id,
+            Project.user_id == user_id,
         )
     )
     return len(rows.all())
 
 
 @get("/api/projects")
-async def list_projects(session: AsyncSession) -> list[ProjectOut]:
+async def list_projects(session: AsyncSession, user: User) -> list[ProjectOut]:
     projects = (
         (
             await session.execute(
-                select(Project).options(selectinload(Project.tasks)).order_by(Project.position)
+                select(Project)
+                .where(Project.user_id == user.id)
+                .options(selectinload(Project.tasks))
+                .order_by(Project.position)
             )
         )
         .scalars()
@@ -87,13 +121,19 @@ async def list_projects(session: AsyncSession) -> list[ProjectOut]:
 
 
 @post("/api/projects")
-async def create_project(data: ProjectCreate, session: AsyncSession) -> ProjectOut:
+async def create_project(data: ProjectCreate, session: AsyncSession, user: User) -> ProjectOut:
     name = data.name.strip()
     if not name:
         raise ClientException(detail="name must not be empty")
-    positions = (await session.execute(select(Project.position))).scalars().all()
+    positions = (
+        await session.execute(select(Project.position).where(Project.user_id == user.id))
+    ).scalars().all()
     project = Project(
-        name=name, group=data.group, position=max(positions, default=-1) + 1, tasks=[]
+        user_id=user.id,
+        name=name,
+        group=data.group,
+        position=max(positions, default=-1) + 1,
+        tasks=[],
     )
     session.add(project)
     await session.commit()
@@ -101,8 +141,10 @@ async def create_project(data: ProjectCreate, session: AsyncSession) -> ProjectO
 
 
 @patch("/api/projects/{project_id:int}")
-async def update_project(project_id: int, data: ProjectPatch, session: AsyncSession) -> ProjectOut:
-    project = await _get_project(session, project_id)
+async def update_project(
+    project_id: int, data: ProjectPatch, session: AsyncSession, user: User
+) -> ProjectOut:
+    project = await _get_project(session, project_id, user.id)
     for field in ("name", "group", "description", "notes"):
         value = getattr(data, field)
         if value is not UNSET:
@@ -112,15 +154,17 @@ async def update_project(project_id: int, data: ProjectPatch, session: AsyncSess
 
 
 @delete("/api/projects/{project_id:int}", status_code=204)
-async def delete_project(project_id: int, session: AsyncSession) -> None:
-    project = await _get_project(session, project_id)
+async def delete_project(project_id: int, session: AsyncSession, user: User) -> None:
+    project = await _get_project(session, project_id, user.id)
     await session.delete(project)
     await session.commit()
 
 
 @post("/api/projects/{project_id:int}/tasks")
-async def create_task(project_id: int, data: TaskCreate, session: AsyncSession) -> TaskOut:
-    project = await _get_project(session, project_id)
+async def create_task(
+    project_id: int, data: TaskCreate, session: AsyncSession, user: User
+) -> TaskOut:
+    project = await _get_project(session, project_id, user.id)
     if data.complexity not in ("low", "high"):
         raise ClientException(detail="complexity must be 'low' or 'high'")
     task = Task(
@@ -139,8 +183,10 @@ async def create_task(project_id: int, data: TaskCreate, session: AsyncSession) 
 
 
 @patch("/api/tasks/{task_id:int}")
-async def update_task(task_id: int, data: TaskPatch, session: AsyncSession) -> TaskOut:
-    task = await _get_task(session, task_id)
+async def update_task(
+    task_id: int, data: TaskPatch, session: AsyncSession, user: User
+) -> TaskOut:
+    task = await _get_task(session, task_id, user.id)
 
     for field in ("title", "notes", "complexity", "recurring", "assigned_week", "completed"):
         value = getattr(data, field)
@@ -156,7 +202,7 @@ async def update_task(task_id: int, data: TaskPatch, session: AsyncSession) -> T
 
     if data.must_have is not UNSET:
         if data.must_have:
-            count = await _active_must_have_count(session, exclude_task_id=task.id)
+            count = await _active_must_have_count(session, exclude_task_id=task.id, user_id=user.id)
             if count >= MUST_HAVE_LIMIT:
                 raise ClientException(
                     detail=f"Max {MUST_HAVE_LIMIT} Must Have tasks per day.", status_code=409
@@ -171,18 +217,20 @@ async def update_task(task_id: int, data: TaskPatch, session: AsyncSession) -> T
 
 
 @delete("/api/tasks/{task_id:int}", status_code=204)
-async def delete_task(task_id: int, session: AsyncSession) -> None:
-    task = await _get_task(session, task_id)
+async def delete_task(task_id: int, session: AsyncSession, user: User) -> None:
+    task = await _get_task(session, task_id, user.id)
     await session.delete(task)
     await session.commit()
 
 
 @post("/api/tasks/{task_id:int}/reorder")
-async def reorder_task(task_id: int, data: ReorderPayload, session: AsyncSession) -> list[TaskOut]:
+async def reorder_task(
+    task_id: int, data: ReorderPayload, session: AsyncSession, user: User
+) -> list[TaskOut]:
     if data.direction not in ("up", "down"):
         raise ClientException(detail="direction must be 'up' or 'down'")
-    task = await _get_task(session, task_id)
-    project = await _get_project(session, task.project_id)
+    task = await _get_task(session, task_id, user.id)
+    project = await _get_project(session, task.project_id, user.id)
     tasks = sorted(project.tasks, key=lambda t: t.position)
     i = next(idx for idx, t in enumerate(tasks) if t.id == task.id)
     j = i - 1 if data.direction == "up" else i + 1
@@ -193,11 +241,14 @@ async def reorder_task(task_id: int, data: ReorderPayload, session: AsyncSession
 
 
 @get("/api/habits")
-async def list_habits(session: AsyncSession) -> list[HabitOut]:
+async def list_habits(session: AsyncSession, user: User) -> list[HabitOut]:
     habits = (
         (
             await session.execute(
-                select(Habit).options(selectinload(Habit.logs)).order_by(Habit.position)
+                select(Habit)
+                .where(Habit.user_id == user.id)
+                .options(selectinload(Habit.logs))
+                .order_by(Habit.position)
             )
         )
         .scalars()
@@ -207,14 +258,18 @@ async def list_habits(session: AsyncSession) -> list[HabitOut]:
 
 
 @put("/api/habits/{habit_id:int}/log")
-async def set_habit_log(habit_id: int, data: HabitLogPayload, session: AsyncSession) -> HabitOut:
+async def set_habit_log(
+    habit_id: int, data: HabitLogPayload, session: AsyncSession, user: User
+) -> HabitOut:
     habit = (
         await session.execute(
-            select(Habit).where(Habit.id == habit_id).options(selectinload(Habit.logs))
+            select(Habit)
+            .where(Habit.id == habit_id, Habit.user_id == user.id)
+            .options(selectinload(Habit.logs))
         )
     ).scalar_one_or_none()
     if habit is None:
-        raise NotFoundException(detail=f"Habit {habit_id} not found")
+        raise NotFoundException(detail="Habit not found")
     if data.state not in (0, 1, 2):
         raise ClientException(detail="state must be 0, 1 or 2")
 
@@ -264,7 +319,7 @@ if FRONTEND_DIST.is_dir():
 
 app = Litestar(
     route_handlers=route_handlers,
-    dependencies={"session": db.provide_session},
+    dependencies={"session": db.provide_session, "user": provide_user},
     lifespan=[lifespan],
     on_app_init=[session_auth.on_app_init],
     stores={"sessions": session_store()},

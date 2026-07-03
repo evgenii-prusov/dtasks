@@ -71,16 +71,31 @@ async def make_client(db: async_sessionmaker) -> AsyncIterator[MakeClient]:
     """Factory producing an authenticated client per email.
 
     Each user needs its own AsyncTestClient because the cookie jar is per client.
+    However, Litestar's AsyncTestClient drives the ASGI app's lifespan (and every
+    request) through a dedicated background-thread event loop ("blocking portal")
+    owned by that client instance, and a single Litestar app object cannot have its
+    lifespan entered concurrently from more than one such portal -- doing so hangs
+    or raises "Attempted to exit cancel scope in a different task" errors, since the
+    app's internal lifespan state is not reentrant. So only the first client created
+    here actually enters/exits the app (owning startup and shutdown); every
+    subsequent client reuses that first client's portal to run its requests on the
+    same event loop, while still keeping its own independent cookie jar.
     """
     clients: list[AsyncTestClient] = []
+    primary: AsyncTestClient | None = None
 
     async def _make(email: str, password: str = DEFAULT_PASSWORD) -> AsyncTestClient:
+        nonlocal primary
         client = AsyncTestClient(app=main.app)
-        await client.__aenter__()
+        if primary is None:
+            await client.__aenter__()
+            primary = client
+        else:
+            client.blocking_portal = primary.blocking_portal
         clients.append(client)
         await signup(client, email, password)
         return client
 
     yield _make
-    for client in clients:
-        await client.__aexit__(None, None, None)
+    if primary is not None:
+        await primary.__aexit__(None, None, None)
