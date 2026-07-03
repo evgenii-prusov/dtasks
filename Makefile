@@ -26,14 +26,14 @@ start: ## Start backend + frontend in the background
 	@if [ -f $(RUN_DIR)/backend.pid ] && kill -0 $$(cat $(RUN_DIR)/backend.pid) 2>/dev/null; then \
 		echo "backend already running (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	else \
-		setsid bash -c 'cd backend && exec uv run litestar --app app.main:app run --port 8000' > $(RUN_DIR)/backend.log 2>&1 & \
+		bash -c 'cd backend && exec uv run litestar --app app.main:app run --port 8000' > $(RUN_DIR)/backend.log 2>&1 & \
 		echo $$! > $(RUN_DIR)/backend.pid; \
 		echo "backend started (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	fi
 	@if [ -f $(RUN_DIR)/frontend.pid ] && kill -0 $$(cat $(RUN_DIR)/frontend.pid) 2>/dev/null; then \
 		echo "frontend already running (pid $$(cat $(RUN_DIR)/frontend.pid))"; \
 	else \
-		setsid bash -c 'cd frontend && exec npm run dev' > $(RUN_DIR)/frontend.log 2>&1 & \
+		bash -c 'cd frontend && exec npm run dev' > $(RUN_DIR)/frontend.log 2>&1 & \
 		echo $$! > $(RUN_DIR)/frontend.pid; \
 		echo "frontend started (pid $$(cat $(RUN_DIR)/frontend.pid))"; \
 	fi
@@ -43,12 +43,14 @@ start: ## Start backend + frontend in the background
 stop: ## Stop backend + frontend
 	@if [ -f $(RUN_DIR)/backend.pid ]; then \
 		pid=$$(cat $(RUN_DIR)/backend.pid); \
-		kill -TERM -$$pid 2>/dev/null && echo "stopped backend (pid $$pid)" || echo "backend not running"; \
+		pkill -TERM -P $$pid 2>/dev/null; \
+		kill -TERM $$pid 2>/dev/null && echo "stopped backend (pid $$pid)" || echo "backend not running"; \
 		rm -f $(RUN_DIR)/backend.pid; \
 	else echo "backend not running"; fi
 	@if [ -f $(RUN_DIR)/frontend.pid ]; then \
 		pid=$$(cat $(RUN_DIR)/frontend.pid); \
-		kill -TERM -$$pid 2>/dev/null && echo "stopped frontend (pid $$pid)" || echo "frontend not running"; \
+		pkill -TERM -P $$pid 2>/dev/null; \
+		kill -TERM $$pid 2>/dev/null && echo "stopped frontend (pid $$pid)" || echo "frontend not running"; \
 		rm -f $(RUN_DIR)/frontend.pid; \
 	else echo "frontend not running"; fi
 
