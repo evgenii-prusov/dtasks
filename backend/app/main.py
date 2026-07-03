@@ -17,6 +17,7 @@ from .schemas import (
     UNSET,
     HabitLogPayload,
     HabitOut,
+    ProjectCreate,
     ProjectOut,
     ProjectPatch,
     ReorderPayload,
@@ -93,6 +94,20 @@ async def list_projects(session: AsyncSession) -> list[ProjectOut]:
         .all()
     )
     return [project_out(p) for p in projects]
+
+
+@post("/api/projects")
+async def create_project(data: ProjectCreate, session: AsyncSession) -> ProjectOut:
+    name = data.name.strip()
+    if not name:
+        raise ClientException(detail="name must not be empty")
+    positions = (await session.execute(select(Project.position))).scalars().all()
+    project = Project(
+        name=name, group=data.group, position=max(positions, default=-1) + 1, tasks=[]
+    )
+    session.add(project)
+    await session.commit()
+    return project_out(project)
 
 
 @patch("/api/projects/{project_id:int}")
@@ -241,6 +256,7 @@ def not_found_handler(request: Request, exc: NotFoundException) -> Response:
 
 route_handlers: list = [
     list_projects,
+    create_project,
     update_project,
     delete_project,
     create_task,
