@@ -1,6 +1,7 @@
 RUN_DIR := .run
 
 .PHONY: help install install-backend install-frontend \
+	test test-backend test-frontend \
 	dev-backend dev-frontend start stop restart status \
 	logs logs-backend logs-frontend clean
 
@@ -14,6 +15,14 @@ install-backend: ## Install backend dependencies (uv sync)
 
 install-frontend: ## Install frontend dependencies (npm install)
 	cd frontend && npm install
+
+test: test-backend test-frontend ## Run backend + frontend test suites
+
+test-backend: ## Run backend tests (pytest)
+	cd backend && uv run pytest
+
+test-frontend: ## Run frontend tests (vitest)
+	cd frontend && npm test
 
 dev-backend: ## Run backend in the foreground (Ctrl+C to stop)
 	cd backend && uv run litestar --app app.main:app run --port 8000
