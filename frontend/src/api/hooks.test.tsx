@@ -2,11 +2,11 @@ import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useDeleteProject } from './hooks'
+import { useCreateProject, useDeleteProject } from './hooks'
 import type { Project } from './types'
 
-function project(id: number, name: string): Project {
-  return { id, name, group: 'Work', description: '', notes: '', position: id, tasks: [] }
+function project(id: number, name: string, group = 'Work'): Project {
+  return { id, name, group, description: '', notes: '', position: id, tasks: [] }
 }
 
 function wrapper(qc: QueryClient) {
@@ -48,5 +48,35 @@ describe('useDeleteProject', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(qc.getQueryData<Project[]>(['projects'])).toEqual(initial)
+  })
+})
+
+describe('useCreateProject', () => {
+  it('POSTs the new project and invalidates the projects query on success', async () => {
+    const created = project(9, 'New Project', 'Personal')
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify(created), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+    const qc = new QueryClient()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useCreateProject(), { wrapper: wrapper(qc) })
+    result.current.mutate({ name: 'New Project', group: 'Personal' })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(created)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/projects',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'New Project', group: 'Personal' }),
+      }),
+    )
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projects'] })
   })
 })
