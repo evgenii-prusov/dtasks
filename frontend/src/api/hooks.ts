@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from './client'
-import type { Habit, Project, ProjectPatch, TaskCreate, TaskPatch } from './types'
+import type { Habit, Project, ProjectCreate, ProjectPatch, TaskCreate, TaskPatch } from './types'
 
 export function useProjects() {
   return useQuery({ queryKey: ['projects'], queryFn: api.listProjects })
@@ -84,6 +84,14 @@ export function useReorderTask() {
   return useMutation({
     mutationFn: ({ id, direction }: { id: number; direction: 'up' | 'down' }) =>
       api.reorderTask(id, direction),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useCreateProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (project: ProjectCreate) => api.createProject(project),
     onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
   })
 }

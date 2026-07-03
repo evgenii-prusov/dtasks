@@ -1,4 +1,12 @@
-import type { Habit, Project, ProjectPatch, Task, TaskCreate, TaskPatch } from './types'
+import type {
+  Habit,
+  Project,
+  ProjectCreate,
+  ProjectPatch,
+  Task,
+  TaskCreate,
+  TaskPatch,
+} from './types'
 
 export class ApiError extends Error {
   status: number
@@ -29,6 +37,8 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   listProjects: () => request<Project[]>('/api/projects'),
+  createProject: (project: ProjectCreate) =>
+    request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(project) }),
   updateProject: (id: number, patch: ProjectPatch) =>
     request<Project>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteProject: (id: number) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),

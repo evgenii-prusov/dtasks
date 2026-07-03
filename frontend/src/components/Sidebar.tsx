@@ -1,7 +1,11 @@
-import { Link } from '@tanstack/react-router'
-import { useProjects, mustHaveCount } from '../api/hooks'
+import { useRef, useState } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { ApiError } from '../api/client'
+import { useCreateProject, useProjects, mustHaveCount } from '../api/hooks'
 import { useTheme } from '../theme'
 import { Ic, type IconName } from './Icon'
+
+const DEFAULT_GROUPS = ['Work', 'Personal']
 
 function NavLink({
   to,
@@ -27,15 +31,54 @@ function NavLink({
 export function Sidebar() {
   const { data: projects = [] } = useProjects()
   const { theme, toggle } = useTheme()
+  const createProject = useCreateProject()
+  const navigate = useNavigate()
+
+  const [addingGroup, setAddingGroup] = useState<string | null>(null)
+  const [newName, setNewName] = useState('')
+  const submittingRef = useRef(false)
 
   const allTasks = projects.flatMap((p) => p.tasks)
   const mustCount = mustHaveCount(projects)
   const todayCount = allTasks.filter((t) => t.assigned_today && !t.completed).length
 
   const groups = new Map<string, typeof projects>()
+  for (const g of DEFAULT_GROUPS) groups.set(g, [])
   for (const p of projects) {
     if (!groups.has(p.group)) groups.set(p.group, [])
     groups.get(p.group)!.push(p)
+  }
+
+  const startAdding = (group: string) => {
+    setAddingGroup(group)
+    setNewName('')
+  }
+  const cancelAdding = () => {
+    setAddingGroup(null)
+    setNewName('')
+  }
+  const submitAdding = (group: string) => {
+    if (submittingRef.current) return
+    const name = newName.trim()
+    if (!name) {
+      cancelAdding()
+      return
+    }
+    submittingRef.current = true
+    createProject.mutate(
+      { name, group },
+      {
+        onSuccess: (project) => {
+          submittingRef.current = false
+          cancelAdding()
+          navigate({ to: '/projects/$projectId', params: { projectId: String(project.id) } })
+        },
+        onError: (err) => {
+          submittingRef.current = false
+          alert(err instanceof ApiError ? err.message : 'Could not create the project.')
+        },
+      },
+    )
   }
 
   return (
@@ -63,7 +106,16 @@ export function Sidebar() {
 
       {[...groups.entries()].map(([group, ps]) => (
         <div key={group}>
-          <div className="s-lbl">{group}</div>
+          <div className="s-lbl flex items-center justify-between pr-2">
+            <span>{group}</span>
+            <button
+              className="text-ink-3 hover:text-accent"
+              onClick={() => startAdding(group)}
+              title={`Add project to ${group}`}
+            >
+              <Ic n="plus" s={11} />
+            </button>
+          </div>
           {ps.map((p) => (
             <Link
               key={p.id}
@@ -76,6 +128,22 @@ export function Sidebar() {
               <span className="overflow-hidden text-ellipsis whitespace-nowrap">{p.name}</span>
             </Link>
           ))}
+          {addingGroup === group && (
+            <div className="px-[18px] py-1">
+              <input
+                autoFocus
+                className="input w-full px-2 py-1 text-[12px]"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') submitAdding(group)
+                  if (e.key === 'Escape') cancelAdding()
+                }}
+                onBlur={() => submitAdding(group)}
+                placeholder="Project name…"
+              />
+            </div>
+          )}
         </div>
       ))}
 
