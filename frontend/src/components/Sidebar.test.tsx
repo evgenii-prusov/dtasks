@@ -15,6 +15,7 @@ vi.mock('@tanstack/react-router', () => ({
 function renderSidebar(projects: Project[] = []) {
   const qc = new QueryClient()
   qc.setQueryData(['projects'], projects)
+  qc.setQueryData(['auth', 'me'], { id: 1, email: 'user@example.com' })
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   )
@@ -154,5 +155,29 @@ describe('Sidebar project groups', () => {
     await waitFor(() => expect(window.alert).toHaveBeenCalled())
     expect(screen.getByPlaceholderText('Project name…')).toHaveValue('Alpha')
     expect(navigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('Sidebar account', () => {
+  it("shows the signed-in user's email", () => {
+    renderSidebar([])
+
+    expect(screen.getByText('user@example.com')).toBeInTheDocument()
+  })
+
+  it('logs out, clears cached data and navigates to /welcome', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    const qc = renderSidebar([])
+
+    await userEvent.click(screen.getByRole('button', { name: 'Log out' }))
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/welcome' }))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/logout',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(qc.getQueryData(['auth', 'me'])).toBeUndefined()
   })
 })

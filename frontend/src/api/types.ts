@@ -61,3 +61,19 @@ export interface ProjectCreate {
   name: string
   group?: string
 }
+
+export interface User {
+  id: number
+  email: string
+}
+
+export interface SignupPayload {
+  email: string
+  password: string
+  invite_code: string
+}
+
+export interface LoginPayload {
+  email: string
+  password: string
+}
