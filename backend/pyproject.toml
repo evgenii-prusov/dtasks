@@ -5,7 +5,7 @@ description = "FlowTask — task tracker with habits, plan and review modes (Jed
 requires-python = ">=3.11"
 dependencies = [
     "litestar[standard]>=2.13",
-    "sqlalchemy>=2.0",
+    "sqlalchemy[asyncio]>=2.0",
     "aiosqlite>=0.20",
 ]
 
