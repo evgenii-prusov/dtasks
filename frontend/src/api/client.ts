@@ -1,11 +1,14 @@
 import type {
   Habit,
+  LoginPayload,
   Project,
   ProjectCreate,
   ProjectPatch,
+  SignupPayload,
   Task,
   TaskCreate,
   TaskPatch,
+  User,
 } from './types'
 
 export class ApiError extends Error {
@@ -36,6 +39,12 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  authMe: () => request<User>('/api/auth/me'),
+  signup: (payload: SignupPayload) =>
+    request<User>('/api/auth/signup', { method: 'POST', body: JSON.stringify(payload) }),
+  login: (payload: LoginPayload) =>
+    request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
+  logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   listProjects: () => request<Project[]>('/api/projects'),
   createProject: (project: ProjectCreate) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(project) }),

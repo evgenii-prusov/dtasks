@@ -1,6 +1,64 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useNavigate } from '@tanstack/react-router'
 import { api, ApiError } from './client'
-import type { Habit, Project, ProjectCreate, ProjectPatch, TaskCreate, TaskPatch } from './types'
+import type {
+  Habit,
+  LoginPayload,
+  Project,
+  ProjectCreate,
+  ProjectPatch,
+  SignupPayload,
+  TaskCreate,
+  TaskPatch,
+} from './types'
+
+/** Session query, shared by useCurrentUser and the router's auth guards. */
+export const currentUserQueryOptions = queryOptions({
+  queryKey: ['auth', 'me'],
+  queryFn: api.authMe,
+  retry: false,
+  staleTime: Infinity,
+})
+
+export function useCurrentUser() {
+  return useQuery(currentUserQueryOptions)
+}
+
+export function useSignup() {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: (payload: SignupPayload) => api.signup(payload),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] })
+      navigate({ to: '/' })
+    },
+  })
+}
+
+export function useLogin() {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: (payload: LoginPayload) => api.login(payload),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ['auth', 'me'] })
+      navigate({ to: '/' })
+    },
+  })
+}
+
+export function useLogout() {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  return useMutation({
+    mutationFn: () => api.logout(),
+    onSuccess: () => {
+      qc.clear()
+      navigate({ to: '/welcome' })
+    },
+  })
+}
 
 export function useProjects() {
   return useQuery({ queryKey: ['projects'], queryFn: api.listProjects })
