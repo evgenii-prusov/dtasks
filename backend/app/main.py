@@ -106,6 +106,13 @@ async def update_project(project_id: int, data: ProjectPatch, session: AsyncSess
     return project_out(project)
 
 
+@delete("/api/projects/{project_id:int}", status_code=204)
+async def delete_project(project_id: int, session: AsyncSession) -> None:
+    project = await _get_project(session, project_id)
+    await session.delete(project)
+    await session.commit()
+
+
 @post("/api/projects/{project_id:int}/tasks")
 async def create_task(project_id: int, data: TaskCreate, session: AsyncSession) -> TaskOut:
     project = await _get_project(session, project_id)
@@ -235,6 +242,7 @@ def not_found_handler(request: Request, exc: NotFoundException) -> Response:
 route_handlers: list = [
     list_projects,
     update_project,
+    delete_project,
     create_task,
     update_task,
     delete_task,

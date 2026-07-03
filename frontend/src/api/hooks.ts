@@ -97,6 +97,28 @@ export function useUpdateProject() {
   })
 }
 
+export function useDeleteProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.deleteProject(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      const previous = qc.getQueryData<Project[]>(['projects'])
+      if (previous) {
+        qc.setQueryData(
+          ['projects'],
+          previous.filter((p) => p.id !== id),
+        )
+      }
+      return { previous }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['projects'], ctx.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
 export function useSetHabitLog() {
   const qc = useQueryClient()
   return useMutation({
