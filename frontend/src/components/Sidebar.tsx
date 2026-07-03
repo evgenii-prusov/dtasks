@@ -1,7 +1,13 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
 import { ApiError } from '../api/client'
-import { useCreateProject, useProjects, mustHaveCount } from '../api/hooks'
+import {
+  useCreateProject,
+  useCurrentUser,
+  useLogout,
+  useProjects,
+  mustHaveCount,
+} from '../api/hooks'
 import { useTheme } from '../theme'
 import { Ic, type IconName } from './Icon'
 
@@ -30,8 +36,10 @@ function NavLink({
 
 export function Sidebar() {
   const { data: projects = [] } = useProjects()
+  const { data: user } = useCurrentUser()
   const { theme, toggle } = useTheme()
   const createProject = useCreateProject()
+  const logout = useLogout()
   const navigate = useNavigate()
 
   const [addingGroup, setAddingGroup] = useState<string | null>(null)
@@ -149,6 +157,20 @@ export function Sidebar() {
 
       <div className="flex-1" />
       <hr className="s-divider" />
+      {user && (
+        <>
+          <div
+            className="overflow-hidden px-[18px] pb-1 text-[11px] text-ellipsis whitespace-nowrap text-ink-3"
+            title={user.email}
+          >
+            {user.email}
+          </div>
+          <button className="nav" onClick={() => logout.mutate()} disabled={logout.isPending}>
+            <Ic n="logout" s={14} />
+            Log out
+          </button>
+        </>
+      )}
       <button className="nav" onClick={toggle}>
         <Ic n={theme === 'dark' ? 'sun' : 'moon'} s={14} />
         {theme === 'dark' ? 'Light mode' : 'Dark mode'}

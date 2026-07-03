@@ -1,12 +1,23 @@
 import type { ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
-import { afterEach, describe, expect, it, vi } from 'vitest'
-import { useCreateProject, useDeleteProject } from './hooks'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { ApiError } from './client'
+import { useCreateProject, useDeleteProject, useLogin, useLogout, useSignup } from './hooks'
 import type { Project } from './types'
+
+const navigate = vi.fn()
+vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 
 function project(id: number, name: string, group = 'Work'): Project {
   return { id, name, group, description: '', notes: '', position: id, tasks: [] }
+}
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'content-type': 'application/json' },
+  })
 }
 
 function wrapper(qc: QueryClient) {
@@ -15,6 +26,7 @@ function wrapper(qc: QueryClient) {
   )
 }
 
+beforeEach(() => navigate.mockClear())
 afterEach(() => vi.restoreAllMocks())
 
 describe('useDeleteProject', () => {
@@ -78,5 +90,121 @@ describe('useCreateProject', () => {
       }),
     )
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projects'] })
+  })
+})
+
+describe('useSignup', () => {
+  it('POSTs the signup payload, invalidates the auth query and navigates home', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(json({ id: 1, email: 'new@example.com' }, 201))
+    const qc = new QueryClient()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useSignup(), { wrapper: wrapper(qc) })
+    result.current.mutate({
+      email: 'new@example.com',
+      password: 'password123',
+      invite_code: 'secret',
+    })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/signup',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          email: 'new@example.com',
+          password: 'password123',
+          invite_code: 'secret',
+        }),
+      }),
+    )
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['auth', 'me'] })
+    expect(navigate).toHaveBeenCalledWith({ to: '/' })
+  })
+
+  it('surfaces the ApiError when signup is rejected and stays put', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(json({ detail: 'Invalid invite code' }, 403))
+    const qc = new QueryClient()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useSignup(), { wrapper: wrapper(qc) })
+    result.current.mutate({ email: 'x@y.com', password: 'password123', invite_code: 'wrong' })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    const err = result.current.error
+    expect(err).toBeInstanceOf(ApiError)
+    expect((err as ApiError).status).toBe(403)
+    expect((err as ApiError).message).toBe('Invalid invite code')
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('useLogin', () => {
+  it('POSTs credentials, invalidates the auth query and navigates home', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(json({ id: 1, email: 'user@example.com' }))
+    const qc = new QueryClient()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useLogin(), { wrapper: wrapper(qc) })
+    result.current.mutate({ email: 'user@example.com', password: 'password123' })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/login',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ email: 'user@example.com', password: 'password123' }),
+      }),
+    )
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['auth', 'me'] })
+    expect(navigate).toHaveBeenCalledWith({ to: '/' })
+  })
+
+  it('surfaces the ApiError on bad credentials and leaves the cache untouched', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      json({ detail: 'Invalid email or password' }, 401),
+    )
+    const qc = new QueryClient()
+    qc.setQueryData(['projects'], [project(1, 'Keep')])
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useLogin(), { wrapper: wrapper(qc) })
+    result.current.mutate({ email: 'user@example.com', password: 'nope' })
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    const err = result.current.error
+    expect(err).toBeInstanceOf(ApiError)
+    expect((err as ApiError).status).toBe(401)
+    expect((err as ApiError).message).toBe('Invalid email or password')
+    expect(qc.getQueryData<Project[]>(['projects'])).toEqual([project(1, 'Keep')])
+    expect(invalidateSpy).not.toHaveBeenCalled()
+    expect(navigate).not.toHaveBeenCalled()
+  })
+})
+
+describe('useLogout', () => {
+  it('POSTs /api/auth/logout, clears the query cache and navigates to /welcome', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    const qc = new QueryClient()
+    qc.setQueryData(['projects'], [project(1, 'Keep')])
+    qc.setQueryData(['auth', 'me'], { id: 1, email: 'user@example.com' })
+
+    const { result } = renderHook(() => useLogout(), { wrapper: wrapper(qc) })
+    result.current.mutate()
+
+    await waitFor(() => expect(navigate).toHaveBeenCalledWith({ to: '/welcome' }))
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/auth/logout',
+      expect.objectContaining({ method: 'POST' }),
+    )
+    expect(qc.getQueryData(['projects'])).toBeUndefined()
+    expect(qc.getQueryData(['auth', 'me'])).toBeUndefined()
   })
 })
