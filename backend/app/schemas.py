@@ -48,6 +48,11 @@ class TaskCreate(msgspec.Struct):
     recurring: bool = False
 
 
+class ProjectCreate(msgspec.Struct):
+    name: str
+    group: str = "Work"
+
+
 class TaskPatch(msgspec.Struct):
     title: str | msgspec.UnsetType = UNSET
     notes: str | msgspec.UnsetType = UNSET
