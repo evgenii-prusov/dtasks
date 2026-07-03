@@ -41,6 +41,22 @@ class HabitOut(msgspec.Struct):
     log: dict[str, int]  # ISO date -> 0|1|2
 
 
+class UserOut(msgspec.Struct):
+    id: int
+    email: str
+
+
+class SignupPayload(msgspec.Struct):
+    email: str
+    password: str
+    invite_code: str
+
+
+class LoginPayload(msgspec.Struct):
+    email: str
+    password: str
+
+
 class TaskCreate(msgspec.Struct):
     title: str
     notes: str = ""
