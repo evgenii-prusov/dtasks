@@ -56,3 +56,8 @@ export interface ProjectPatch {
   description?: string
   notes?: string
 }
+
+export interface ProjectCreate {
+  name: string
+  group?: string
+}
