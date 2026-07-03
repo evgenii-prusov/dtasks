@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useCreateTask, useUpdateProject, useUpdateTask } from '../api/hooks'
+import { useCreateTask, useUpdateProject } from '../api/hooks'
 import type { Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
 
 export function ProjectView({ project }: { project: Project }) {
-  const updateTask = useUpdateTask()
   const updateProject = useUpdateProject()
   const createTask = useCreateTask()
 
@@ -24,10 +23,6 @@ export function ProjectView({ project }: { project: Project }) {
 
   const open = project.tasks.filter((t) => !t.completed)
   const done = project.tasks.filter((t) => t.completed)
-  const toggle = (id: number) => {
-    const task = project.tasks.find((t) => t.id === id)
-    if (task) updateTask.mutate({ id, patch: { completed: !task.completed } })
-  }
 
   return (
     <div>
@@ -81,8 +76,17 @@ export function ProjectView({ project }: { project: Project }) {
             <Ic n="plus" s={11} /> Add
           </button>
         </div>
-        {open.map((t) => (
-          <TaskRow key={t.id} task={t} onToggle={toggle} />
+        {open.map((t, i) => (
+          <TaskRow
+            key={t.id}
+            task={t}
+            checkable
+            editable
+            reorderable
+            deletable
+            isFirst={i === 0}
+            isLast={i === open.length - 1}
+          />
         ))}
         {addingTask && (
           <AddTaskForm
@@ -104,7 +108,7 @@ export function ProjectView({ project }: { project: Project }) {
             <h3 className="text-ink-3">Completed ({done.length})</h3>
           </div>
           {done.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={toggle} />
+            <TaskRow key={t.id} task={t} checkable />
           ))}
         </div>
       )}

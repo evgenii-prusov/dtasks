@@ -184,6 +184,11 @@ body {
     background: var(--surface-2);
     color: var(--text);
   }
+  .btn-danger:hover {
+    border-color: #c0392b;
+    color: #c0392b;
+    background: rgba(192, 57, 43, 0.08);
+  }
   .btn-s {
     padding: 4px 9px;
     font-size: 11.5px;

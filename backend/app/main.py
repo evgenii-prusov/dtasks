@@ -4,7 +4,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from litestar import Litestar, Request, Response, get, patch, post, put
+from litestar import Litestar, Request, Response, delete, get, patch, post, put
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
@@ -158,6 +158,13 @@ async def update_task(task_id: int, data: TaskPatch, session: AsyncSession) -> T
     return task_out(task)
 
 
+@delete("/api/tasks/{task_id:int}", status_code=204)
+async def delete_task(task_id: int, session: AsyncSession) -> None:
+    task = await _get_task(session, task_id)
+    await session.delete(task)
+    await session.commit()
+
+
 @post("/api/tasks/{task_id:int}/reorder")
 async def reorder_task(task_id: int, data: ReorderPayload, session: AsyncSession) -> list[TaskOut]:
     if data.direction not in ("up", "down"):
@@ -230,6 +237,7 @@ route_handlers: list = [
     update_project,
     create_task,
     update_task,
+    delete_task,
     reorder_task,
     list_habits,
     set_habit_log,
