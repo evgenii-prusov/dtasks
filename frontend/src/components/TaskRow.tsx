@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDeleteTask, useReorderTask, useUpdateTask } from '../api/hooks'
 import type { Complexity, Project, Task } from '../api/types'
 import { Ic } from './Icon'
@@ -26,6 +27,7 @@ export function TaskRow({
   deletable?: boolean
   right?: ReactNode
 }) {
+  const { t } = useTranslation()
   const updateTask = useUpdateTask()
   const reorderTask = useReorderTask()
   const deleteTask = useDeleteTask()
@@ -49,7 +51,7 @@ export function TaskRow({
   }
   const cancel = () => setEditing(false)
   const remove = () => {
-    if (confirm(`Delete "${task.title}"?`)) deleteTask.mutate(task.id)
+    if (confirm(t('task.confirmDelete', { title: task.title }))) deleteTask.mutate(task.id)
   }
 
   if (editable && editing) {
@@ -68,7 +70,7 @@ export function TaskRow({
             className="input textarea mb-1.5 min-h-11 text-xs"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder="Notes…"
+            placeholder={t('task.notesPlaceholder')}
           />
           <div className="flex items-center gap-1.5">
             <select
@@ -76,15 +78,15 @@ export function TaskRow({
               value={complexity}
               onChange={(e) => setComplexity(e.target.value as Complexity)}
             >
-              <option value="low">Low complexity</option>
-              <option value="high">High complexity</option>
+              <option value="low">{t('common.lowComplexity')}</option>
+              <option value="high">{t('common.highComplexity')}</option>
             </select>
             <div className="flex-1" />
             <button className="btn btn-g btn-s" onClick={cancel}>
-              Cancel
+              {t('common.cancel')}
             </button>
             <button className="btn btn-p btn-s" onClick={save}>
-              Save
+              {t('common.save')}
             </button>
           </div>
         </div>
@@ -103,16 +105,16 @@ export function TaskRow({
       <div
         className={`min-w-0 flex-1 ${editable ? 'cursor-text' : ''}`}
         onClick={editable ? startEdit : undefined}
-        title={editable ? 'Click to edit' : undefined}
+        title={editable ? t('task.clickToEdit') : undefined}
       >
         <div className={`t-title ${task.completed ? 'done' : ''}`}>{task.title}</div>
         <div className="t-meta">
           {showProject && project && <span className="badge b-proj">{project.name}</span>}
           <span className={`badge ${task.complexity === 'high' ? 'b-high' : 'b-low'}`}>
-            {task.complexity}
+            {task.complexity === 'high' ? t('task.complexityHigh') : t('task.complexityLow')}
           </span>
-          {task.recurring && <span className="badge b-rec">↺ recurring</span>}
-          {task.notes && <span className="text-[10px] text-ink-3">· note</span>}
+          {task.recurring && <span className="badge b-rec">{t('task.recurringBadge')}</span>}
+          {task.notes && <span className="text-[10px] text-ink-3">· {t('task.noteBadge')}</span>}
         </div>
       </div>
       {right}
@@ -122,7 +124,7 @@ export function TaskRow({
             className="btn btn-g px-[5px] py-px text-[9px] leading-none"
             disabled={isFirst}
             onClick={() => reorderTask.mutate({ id: task.id, direction: 'up' })}
-            title="Move up"
+            title={t('task.moveUp')}
           >
             ▲
           </button>
@@ -130,7 +132,7 @@ export function TaskRow({
             className="btn btn-g px-[5px] py-px text-[9px] leading-none"
             disabled={isLast}
             onClick={() => reorderTask.mutate({ id: task.id, direction: 'down' })}
-            title="Move down"
+            title={t('task.moveDown')}
           >
             ▼
           </button>
@@ -140,7 +142,7 @@ export function TaskRow({
         <button
           className="btn btn-g btn-danger shrink-0 px-[6px] py-[5px]"
           onClick={remove}
-          title="Delete task"
+          title={t('task.deleteTooltip')}
         >
           <Ic n="trash" s={12} />
         </button>

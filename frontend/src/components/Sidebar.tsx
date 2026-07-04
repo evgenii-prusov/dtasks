@@ -10,7 +10,7 @@ import {
   mustHaveCount,
 } from '../api/hooks'
 import { useTheme } from '../theme'
-import { useLanguage } from '../i18n'
+import { groupLabel, useLanguage } from '../i18n'
 import { Ic, type IconName } from './Icon'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
@@ -87,7 +87,7 @@ export function Sidebar() {
         },
         onError: (err) => {
           submittingRef.current = false
-          alert(err instanceof ApiError ? err.message : 'Could not create the project.')
+          alert(err instanceof ApiError ? err.message : t('sidebar.createProjectError'))
         },
       },
     )
@@ -119,11 +119,11 @@ export function Sidebar() {
       {[...groups.entries()].map(([group, ps]) => (
         <div key={group}>
           <div className="s-lbl flex items-center justify-between pr-2">
-            <span>{group}</span>
+            <span>{groupLabel(t, group)}</span>
             <button
               className="text-ink-3 hover:text-accent"
               onClick={() => startAdding(group)}
-              title={`Add project to ${group}`}
+              title={t('sidebar.addProjectTo', { group: groupLabel(t, group) })}
             >
               <Ic n="plus" s={11} />
             </button>
@@ -152,7 +152,7 @@ export function Sidebar() {
                   if (e.key === 'Escape') cancelAdding()
                 }}
                 onBlur={() => submitAdding(group)}
-                placeholder="Project name…"
+                placeholder={t('sidebar.projectNamePlaceholder')}
               />
             </div>
           )}
@@ -171,13 +171,13 @@ export function Sidebar() {
           </div>
           <button className="nav" onClick={() => logout.mutate()} disabled={logout.isPending}>
             <Ic n="logout" s={14} />
-            Log out
+            {t('sidebar.logout')}
           </button>
         </>
       )}
       <button className="nav" onClick={toggle}>
         <Ic n={theme === 'dark' ? 'sun' : 'moon'} s={14} />
-        {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        {theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
       </button>
       {/* Language names stay in their own language, so they live outside the catalogs. */}
       <button className="nav" onClick={toggleLang}>

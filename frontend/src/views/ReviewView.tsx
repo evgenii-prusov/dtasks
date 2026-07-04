@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCreateTask, useProjects, useUpdateProject } from '../api/hooks'
+import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
@@ -7,6 +9,7 @@ import { TaskRow } from '../components/TaskRow'
 const MINUTES_PER_PROJECT = 5
 
 export function ReviewView() {
+  const { t } = useTranslation()
   const { data: projects = [] } = useProjects()
   const updateProject = useUpdateProject()
   const createTask = useCreateTask()
@@ -64,14 +67,12 @@ export function ReviewView() {
     return (
       <div>
         <div className="ph">
-          <div className="ph-title">Review</div>
+          <div className="ph-title">{t('review.title')}</div>
         </div>
         <div className="empty">
           <div className="empty-icon">✅</div>
-          <div className="mb-1.5 font-semibold">Session complete!</div>
-          <div className="mb-5 text-xs">
-            You've used your full {totalMins}-minute review budget.
-          </div>
+          <div className="mb-1.5 font-semibold">{t('review.doneTitle')}</div>
+          <div className="mb-5 text-xs">{t('review.doneBody', { minutes: totalMins })}</div>
           <button
             className="btn btn-p"
             onClick={() => {
@@ -81,7 +82,7 @@ export function ReviewView() {
               setRunning(true)
             }}
           >
-            Start new session
+            {t('review.startNew')}
           </button>
         </div>
       </div>
@@ -94,14 +95,18 @@ export function ReviewView() {
     <div>
       <div className="ph">
         <div>
-          <div className="ph-title">Review</div>
+          <div className="ph-title">{t('review.title')}</div>
           <div className="ph-sub">
-            Project {idx + 1} of {projects.length} · {totalMins} min total session
+            {t('review.subtitle', {
+              current: idx + 1,
+              total: projects.length,
+              minutes: totalMins,
+            })}
           </div>
         </div>
         <div className="flex gap-2">
           <button className="btn btn-g btn-s" onClick={() => setRunning((r) => !r)}>
-            {running ? '⏸ Pause' : '▶ Resume'}
+            {running ? t('review.pause') : t('review.resume')}
           </button>
         </div>
       </div>
@@ -126,7 +131,10 @@ export function ReviewView() {
             <div className="card-head">
               <h3>
                 <Ic n="folder" s={13} c="var(--accent)" />
-                <span className="text-[10px] font-normal text-ink-3">{p.group} /</span> {p.name}
+                <span className="text-[10px] font-normal text-ink-3">
+                  {groupLabel(t, p.group)} /
+                </span>{' '}
+                {p.name}
               </h3>
             </div>
 
@@ -140,14 +148,14 @@ export function ReviewView() {
             <div className="border-b border-line">
               <div className="flex items-center justify-between px-4 pt-2.5 pb-1.5">
                 <span className="text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
-                  Open tasks ({openTasks.length})
+                  {t('common.openTasks')} ({openTasks.length})
                 </span>
-                <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
-                  <Ic n="plus" s={11} /> Add
+                <button className="btn btn-g btn-s" onClick={() => setAddingTask((a) => !a)}>
+                  <Ic n="plus" s={11} /> {t('common.add')}
                 </button>
               </div>
               {openTasks.length === 0 && !addingTask && (
-                <div className="px-4 pt-1 pb-3 text-xs text-ink-3">All clear ✓</div>
+                <div className="px-4 pt-1 pb-3 text-xs text-ink-3">{t('review.allClear')}</div>
               )}
               {openTasks.map((t, ti) => (
                 <TaskRow
@@ -176,7 +184,7 @@ export function ReviewView() {
             {doneTasks.length > 0 && (
               <div className="border-b border-line">
                 <div className="px-4 pt-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
-                  Completed ({doneTasks.length})
+                  {t('common.completed')} ({doneTasks.length})
                 </div>
                 {doneTasks.map((t) => (
                   <div key={t.id} className="flex gap-2 border-t border-line px-4 py-1">
@@ -190,14 +198,14 @@ export function ReviewView() {
             {/* Notes */}
             <div className="px-4 py-3">
               <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
-                Notes
+                {t('common.notes')}
               </div>
               <textarea
                 className="input textarea min-h-20 text-[13px]"
                 value={noteVal}
                 onChange={(e) => setNoteVal(e.target.value)}
                 onBlur={() => updateProject.mutate({ id: p.id, patch: { notes: noteVal } })}
-                placeholder="Project notes, links, ideas…"
+                placeholder={t('review.notesPlaceholder')}
               />
             </div>
           </div>
@@ -236,7 +244,7 @@ export function ReviewView() {
               textAnchor="middle"
               style={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
             >
-              remaining
+              {t('review.remaining')}
             </text>
           </svg>
           <div className="mt-3 flex flex-col gap-1.5">
@@ -245,20 +253,20 @@ export function ReviewView() {
               disabled={idx === 0}
               onClick={() => setIdx((i) => i - 1)}
             >
-              ← Prev
+              {t('review.prev')}
             </button>
             <button
               className="btn btn-p btn-s w-full"
               disabled={idx === projects.length - 1}
               onClick={() => setIdx((i) => i + 1)}
             >
-              Next →
+              {t('review.next')}
             </button>
           </div>
           <div className="mt-3.5 text-center text-[10px] leading-normal text-ink-3">
-            Session budget
+            {t('review.budgetLine1')}
             <br />
-            for all projects
+            {t('review.budgetLine2')}
           </div>
         </div>
       </div>
