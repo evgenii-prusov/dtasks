@@ -16,7 +16,8 @@ Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats
   day (none / minimal / complete), streak and total counters, click any past
   cell to cycle its state.
 
-Plus per-project pages and a light/dark theme toggle.
+Plus per-project pages, a light/dark theme toggle, and an English/Russian
+language toggle (persisted, defaulting to the browser language).
 
 ## Stack
 
