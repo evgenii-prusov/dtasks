@@ -1,19 +1,22 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useCreateTask, useDeleteProject, useUpdateProject } from '../api/hooks'
+import { groupLabel } from '../i18n'
 import type { Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
 
 export function ProjectView({ project }: { project: Project }) {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const createTask = useCreateTask()
 
   const removeProject = () => {
-    if (confirm(`Delete project "${project.name}" and all its tasks?`)) {
+    if (confirm(t('project.confirmDelete', { name: project.name }))) {
       deleteProject.mutate(project.id)
       navigate({ to: '/' })
     }
@@ -39,18 +42,18 @@ export function ProjectView({ project }: { project: Project }) {
       <div className="ph">
         <div>
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.07em] text-ink-3">
-            {project.group}
+            {groupLabel(t, project.group)}
           </div>
           <div className="ph-title">{project.name}</div>
         </div>
         <div className="flex items-center gap-1.5">
           <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
-            <Ic n="plus" s={12} /> Add task
+            <Ic n="plus" s={12} /> {t('common.addTask')}
           </button>
           <button
             className="btn btn-g btn-s btn-danger"
             onClick={removeProject}
-            title="Delete project"
+            title={t('project.deleteTooltip')}
           >
             <Ic n="trash" s={12} />
           </button>
@@ -61,7 +64,7 @@ export function ProjectView({ project }: { project: Project }) {
         <div className="card-head">
           <h3>
             <Ic n="note" s={13} />
-            Description
+            {t('project.description')}
           </h3>
           <button
             className="btn btn-g btn-s"
@@ -70,7 +73,7 @@ export function ProjectView({ project }: { project: Project }) {
               setEditDesc((e) => !e)
             }}
           >
-            {editDesc ? 'Save' : 'Edit'}
+            {editDesc ? t('common.save') : t('common.edit')}
           </button>
         </div>
         <div className="px-4 py-[11px]">
@@ -82,7 +85,7 @@ export function ProjectView({ project }: { project: Project }) {
             />
           ) : (
             <div className="text-[13px] leading-[1.7] text-ink-2">
-              {desc || <span className="text-ink-3">No description. Click Edit to add one.</span>}
+              {desc || <span className="text-ink-3">{t('project.noDescription')}</span>}
             </div>
           )}
         </div>
@@ -90,9 +93,11 @@ export function ProjectView({ project }: { project: Project }) {
 
       <div className="card">
         <div className="card-head">
-          <h3>Open tasks ({open.length})</h3>
-          <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
-            <Ic n="plus" s={11} /> Add
+          <h3>
+            {t('common.openTasks')} ({open.length})
+          </h3>
+          <button className="btn btn-g btn-s" onClick={() => setAddingTask((a) => !a)}>
+            <Ic n="plus" s={11} /> {t('common.add')}
           </button>
         </div>
         {open.map((t, i) => (
@@ -117,14 +122,16 @@ export function ProjectView({ project }: { project: Project }) {
           />
         )}
         {open.length === 0 && !addingTask && (
-          <div className="px-4 py-[13px] text-xs text-ink-3">All tasks done! 🎉</div>
+          <div className="px-4 py-[13px] text-xs text-ink-3">{t('project.allDone')}</div>
         )}
       </div>
 
       {done.length > 0 && (
         <div className="card">
           <div className="card-head">
-            <h3 className="text-ink-3">Completed ({done.length})</h3>
+            <h3 className="text-ink-3">
+              {t('common.completed')} ({done.length})
+            </h3>
           </div>
           {done.map((t) => (
             <TaskRow key={t.id} task={t} checkable />
@@ -136,7 +143,7 @@ export function ProjectView({ project }: { project: Project }) {
         <div className="card-head">
           <h3>
             <Ic n="note" s={13} />
-            Notes
+            {t('common.notes')}
           </h3>
         </div>
         <div className="px-4 py-[11px]">
@@ -145,7 +152,7 @@ export function ProjectView({ project }: { project: Project }) {
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             onBlur={() => updateProject.mutate({ id: project.id, patch: { notes } })}
-            placeholder="Notes, links, ideas…"
+            placeholder={t('project.notesPlaceholder')}
           />
         </div>
       </div>

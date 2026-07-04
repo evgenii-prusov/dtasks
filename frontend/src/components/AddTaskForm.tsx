@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { Complexity, TaskCreate } from '../api/types'
 
 export function AddTaskForm({
@@ -8,6 +9,7 @@ export function AddTaskForm({
   onAdd: (task: TaskCreate) => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation()
   const [title, setTitle] = useState('')
   const [complexity, setComplexity] = useState<Complexity>('low')
   const [recurring, setRecurring] = useState(false)
@@ -22,7 +24,7 @@ export function AddTaskForm({
     <div className="add-form">
       <input
         className="input mb-[7px]"
-        placeholder="Task title…"
+        placeholder={t('task.titlePlaceholder')}
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -30,7 +32,7 @@ export function AddTaskForm({
       />
       <textarea
         className="input textarea mb-[7px] min-h-12"
-        placeholder="Notes (optional)"
+        placeholder={t('task.notesOptionalPlaceholder')}
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
       />
@@ -40,8 +42,8 @@ export function AddTaskForm({
           value={complexity}
           onChange={(e) => setComplexity(e.target.value as Complexity)}
         >
-          <option value="low">Low complexity</option>
-          <option value="high">High complexity</option>
+          <option value="low">{t('common.lowComplexity')}</option>
+          <option value="high">{t('common.highComplexity')}</option>
         </select>
         <label className="flex cursor-pointer items-center gap-1 text-xs text-ink-2">
           <input
@@ -50,14 +52,14 @@ export function AddTaskForm({
             onChange={(e) => setRecurring(e.target.checked)}
             style={{ accentColor: 'var(--accent)' }}
           />
-          Recurring
+          {t('task.recurringCheckbox')}
         </label>
         <div className="flex-1" />
         <button className="btn btn-g btn-s" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button className="btn btn-p btn-s" onClick={submit}>
-          Add task
+          {t('common.addTask')}
         </button>
       </div>
     </div>

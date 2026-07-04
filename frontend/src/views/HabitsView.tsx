@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
 import type { Habit } from '../api/types'
 import { AddHabitForm } from '../components/AddHabitForm'
@@ -7,7 +8,6 @@ import { toISODate, todayISO } from '../lib/dates'
 
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKS = 16
-const STATE_LABELS = ['Not done', 'Minimal', 'Complete']
 
 function buildDays(): string[] {
   const now = new Date()
@@ -43,6 +43,7 @@ function streak(h: Habit): number {
 }
 
 export function HabitsView() {
+  const { t } = useTranslation()
   const { data: habits = [] } = useHabits()
   const setHabitLog = useSetHabitLog()
   const deleteHabit = useDeleteHabit()
@@ -53,6 +54,7 @@ export function HabitsView() {
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
   const weekStarts = useMemo(() => days.filter((_, i) => i % 7 === 0), [days])
+  const stateLabels = [t('habits.state0'), t('habits.state1'), t('habits.state2')]
 
   useEffect(() => {
     if (justAddedId == null) return
@@ -69,15 +71,15 @@ export function HabitsView() {
   }
 
   const remove = (h: Habit) => {
-    if (confirm(`Delete habit "${h.name}"?`)) deleteHabit.mutate(h.id)
+    if (confirm(t('habits.confirmDelete', { name: h.name }))) deleteHabit.mutate(h.id)
   }
 
   return (
     <div>
       <div className="ph">
-        <div className="ph-title">Habits</div>
+        <div className="ph-title">{t('habits.title')}</div>
         <button className="btn btn-g btn-s" onClick={() => setAddingHabit((a) => !a)}>
-          <Ic n="plus" s={12} /> Add
+          <Ic n="plus" s={12} /> {t('common.add')}
         </button>
       </div>
 
@@ -113,15 +115,19 @@ export function HabitsView() {
                   >
                     {str}
                   </div>
-                  <div className="text-[9px] uppercase tracking-[.06em] text-ink-3">streak</div>
+                  <div className="text-[9px] uppercase tracking-[.06em] text-ink-3">
+                    {t('habits.streak')}
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="font-serif text-xl font-semibold text-ink-2">{total}</div>
-                  <div className="text-[9px] uppercase tracking-[.06em] text-ink-3">total</div>
+                  <div className="text-[9px] uppercase tracking-[.06em] text-ink-3">
+                    {t('habits.total')}
+                  </div>
                 </div>
                 <div>
                   <div className="mb-[5px] text-center text-[9px] uppercase tracking-[.06em] text-ink-3">
-                    Today
+                    {t('habits.todayLabel')}
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="flex gap-1">
@@ -129,7 +135,7 @@ export function HabitsView() {
                         <div
                           key={s}
                           onClick={() => cycle(h, todayKey)}
-                          title={STATE_LABELS[s]}
+                          title={stateLabels[s]}
                           className="h-6 w-6 cursor-pointer rounded-[5px] transition-all duration-150"
                           style={{
                             background: `var(--habit-${s})`,
@@ -143,10 +149,10 @@ export function HabitsView() {
                       <button
                         className="habit-log-pulse"
                         onClick={() => cycle(h, todayKey)}
-                        title="Log habit for today"
+                        title={t('habits.logTooltip')}
                       >
                         <span className="habit-log-pulse-dot" aria-hidden="true" />
-                        Log today
+                        {t('habits.logToday')}
                       </button>
                     )}
                   </div>
@@ -154,7 +160,7 @@ export function HabitsView() {
                 <button
                   className="btn btn-g btn-s btn-danger"
                   onClick={() => remove(h)}
-                  title="Delete habit"
+                  title={t('habits.deleteTooltip')}
                 >
                   <Ic n="trash" s={12} />
                 </button>
@@ -206,7 +212,7 @@ export function HabitsView() {
                           key={dateKey}
                           className={`hcell s${val} ${isFuture ? 'future' : ''} ${isToday ? 'istoday' : ''}`}
                           onClick={() => !isFuture && cycle(h, dateKey)}
-                          title={`${dateKey}: ${STATE_LABELS[val]}`}
+                          title={`${dateKey}: ${stateLabels[val]}`}
                         />
                       )
                     })}
@@ -216,7 +222,7 @@ export function HabitsView() {
 
               {/* Legend */}
               <div className="mt-2 flex items-center justify-end gap-1.5">
-                <span className="text-[9px] text-ink-3">Less</span>
+                <span className="text-[9px] text-ink-3">{t('habits.less')}</span>
                 {([0, 1, 2] as const).map((s) => (
                   <div
                     key={s}
@@ -224,10 +230,8 @@ export function HabitsView() {
                     style={{ background: `var(--habit-${s})` }}
                   />
                 ))}
-                <span className="text-[9px] text-ink-3">More</span>
-                <span className="ml-2 text-[9px] text-ink-3">
-                  Click cell to cycle: none → minimal → complete
-                </span>
+                <span className="text-[9px] text-ink-3">{t('habits.more')}</span>
+                <span className="ml-2 text-[9px] text-ink-3">{t('habits.cycleHint')}</span>
               </div>
             </div>
           </div>

@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import { useLogin, useSignup } from '../api/hooks'
 
@@ -16,6 +17,7 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }
 }
 
 export function WelcomeView() {
+  const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -25,6 +27,16 @@ export function WelcomeView() {
 
   const pending = signup.isPending || login.isPending
   const error = mode === 'signup' ? signup.error : login.error
+
+  // Known backend failures get localized messages; other ApiErrors surface
+  // the backend's own text (e.g. password length), which stays English.
+  const errorText = (err: Error) => {
+    if (!(err instanceof ApiError)) return t('common.genericError')
+    if (err.status === 401) return t('welcome.errors.invalidCredentials')
+    if (err.status === 403) return t('welcome.errors.invalidInvite')
+    if (err.status === 409) return t('welcome.errors.emailExists')
+    return err.message
+  }
 
   const switchMode = (next: Mode) => {
     setMode(next)
@@ -50,15 +62,15 @@ export function WelcomeView() {
           DTask
         </div>
         <p className="mb-6 text-center text-[13px] leading-[1.6] text-ink-2">
-          Plan your day, focus on what must get done, and build habits that stick.
+          {t('welcome.tagline')}
         </p>
 
         <form className="card p-5" onSubmit={onSubmit}>
           <h2 className="mb-4 font-serif text-[16px] font-semibold">
-            {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+            {mode === 'signup' ? t('welcome.signupTitle') : t('welcome.loginTitle')}
           </h2>
 
-          <FieldLabel htmlFor="auth-email">Email</FieldLabel>
+          <FieldLabel htmlFor="auth-email">{t('welcome.email')}</FieldLabel>
           <input
             id="auth-email"
             type="email"
@@ -69,7 +81,7 @@ export function WelcomeView() {
             onChange={(e) => setEmail(e.target.value)}
           />
 
-          <FieldLabel htmlFor="auth-password">Password</FieldLabel>
+          <FieldLabel htmlFor="auth-password">{t('welcome.password')}</FieldLabel>
           <input
             id="auth-password"
             type="password"
@@ -82,7 +94,7 @@ export function WelcomeView() {
 
           {mode === 'signup' && (
             <>
-              <FieldLabel htmlFor="auth-invite">Invite code</FieldLabel>
+              <FieldLabel htmlFor="auth-invite">{t('welcome.inviteCode')}</FieldLabel>
               <input
                 id="auth-invite"
                 type="text"
@@ -97,44 +109,42 @@ export function WelcomeView() {
 
           {error && (
             <div className="mb-3 rounded-md bg-must-2 px-3 py-2 text-[12px] font-medium text-must">
-              {error instanceof ApiError
-                ? error.message
-                : 'Something went wrong. Please try again.'}
+              {errorText(error)}
             </div>
           )}
 
           <button type="submit" className="btn btn-p w-full justify-center" disabled={pending}>
             {mode === 'signup'
               ? signup.isPending
-                ? 'Creating account…'
-                : 'Create account'
+                ? t('welcome.creatingAccount')
+                : t('welcome.createAccount')
               : login.isPending
-                ? 'Logging in…'
-                : 'Log in'}
+                ? t('welcome.loggingIn')
+                : t('welcome.logIn')}
           </button>
         </form>
 
         <p className="mt-4 text-center text-[12px] text-ink-3">
           {mode === 'signup' ? (
             <>
-              Already have an account?{' '}
+              {t('welcome.haveAccount')}{' '}
               <button
                 type="button"
                 className="font-semibold text-accent hover:underline"
                 onClick={() => switchMode('login')}
               >
-                Log in
+                {t('welcome.logIn')}
               </button>
             </>
           ) : (
             <>
-              Need an account?{' '}
+              {t('welcome.needAccount')}{' '}
               <button
                 type="button"
                 className="font-semibold text-accent hover:underline"
                 onClick={() => switchMode('signup')}
               >
-                Sign up
+                {t('welcome.signUp')}
               </button>
             </>
           )}

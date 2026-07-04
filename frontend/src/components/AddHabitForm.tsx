@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import type { HabitCreate } from '../api/types'
 
 export function AddHabitForm({
@@ -8,6 +9,7 @@ export function AddHabitForm({
   onAdd: (habit: HabitCreate) => void
   onCancel: () => void
 }) {
+  const { t } = useTranslation()
   const [name, setName] = useState('')
   const [subtitle, setSubtitle] = useState('')
 
@@ -20,7 +22,7 @@ export function AddHabitForm({
     <div className="add-form">
       <input
         className="input mb-[7px]"
-        placeholder="Habit name…"
+        placeholder={t('habits.namePlaceholder')}
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -28,7 +30,7 @@ export function AddHabitForm({
       />
       <input
         className="input mb-[7px]"
-        placeholder="Subtitle (optional)"
+        placeholder={t('habits.subtitlePlaceholder')}
         value={subtitle}
         onChange={(e) => setSubtitle(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && submit()}
@@ -36,10 +38,10 @@ export function AddHabitForm({
       <div className="flex flex-wrap items-center gap-[7px]">
         <div className="flex-1" />
         <button className="btn btn-g btn-s" onClick={onCancel}>
-          Cancel
+          {t('common.cancel')}
         </button>
         <button className="btn btn-p btn-s" onClick={submit}>
-          Add habit
+          {t('habits.addHabit')}
         </button>
       </div>
     </div>
