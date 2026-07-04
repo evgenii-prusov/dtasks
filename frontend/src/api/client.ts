@@ -1,5 +1,6 @@
 import type {
   Habit,
+  HabitCreate,
   LoginPayload,
   Project,
   ProjectCreate,
@@ -65,6 +66,8 @@ export const api = {
       body: JSON.stringify({ direction }),
     }),
   listHabits: () => request<Habit[]>('/api/habits'),
+  createHabit: (habit: HabitCreate) =>
+    request<Habit>('/api/habits', { method: 'POST', body: JSON.stringify(habit) }),
   setHabitLog: (habitId: number, day: string, state: number) =>
     request<Habit>(`/api/habits/${habitId}/log`, {
       method: 'PUT',

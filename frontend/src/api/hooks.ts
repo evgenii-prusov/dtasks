@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { api, ApiError } from './client'
 import type {
   Habit,
+  HabitCreate,
   LoginPayload,
   Project,
   ProjectCreate,
@@ -204,6 +205,14 @@ export function useSetHabitLog() {
     onError: (_err, _vars, ctx) => {
       if (ctx?.previous) qc.setQueryData(['habits'], ctx.previous)
     },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+  })
+}
+
+export function useCreateHabit() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (habit: HabitCreate) => api.createHabit(habit),
     onSettled: () => qc.invalidateQueries({ queryKey: ['habits'] }),
   })
 }

@@ -33,6 +33,7 @@ from .models import Task
 from .models import User
 from .schemas import (
     UNSET,
+    HabitCreate,
     HabitLogPayload,
     HabitOut,
     ProjectCreate,
@@ -268,6 +269,26 @@ async def list_habits(session: AsyncSession, user: User) -> list[HabitOut]:
     return [habit_out(h) for h in habits]
 
 
+@post("/api/habits")
+async def create_habit(data: HabitCreate, session: AsyncSession, user: User) -> HabitOut:
+    name = data.name.strip()
+    if not name:
+        raise ClientException(detail="name must not be empty")
+    positions = (
+        await session.execute(select(Habit.position).where(Habit.user_id == user.id))
+    ).scalars().all()
+    habit = Habit(
+        user_id=user.id,
+        name=name,
+        subtitle=data.subtitle,
+        position=max(positions, default=-1) + 1,
+        logs=[],
+    )
+    session.add(habit)
+    await session.commit()
+    return habit_out(habit)
+
+
 @put("/api/habits/{habit_id:int}/log")
 async def set_habit_log(
     habit_id: int, data: HabitLogPayload, session: AsyncSession, user: User
@@ -328,6 +349,7 @@ route_handlers: list = [
     delete_task,
     reorder_task,
     list_habits,
+    create_habit,
     set_habit_log,
     delete_habit,
 ]
