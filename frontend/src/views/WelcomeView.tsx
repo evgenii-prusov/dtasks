@@ -47,7 +47,7 @@ export function WelcomeView() {
             <rect width="20" height="20" rx="5" fill="var(--accent)" />
             <path d="M5 7h10M5 10h7M5 13h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
           </svg>
-          FlowTask
+          DTask
         </div>
         <p className="mb-6 text-center text-[13px] leading-[1.6] text-ink-2">
           Plan your day, focus on what must get done, and build habits that stick.

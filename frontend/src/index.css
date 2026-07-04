@@ -1,6 +1,6 @@
 @import 'tailwindcss';
 
-/* ─── FlowTask design tokens ─────────────────────────────────── */
+/* ─── DTask design tokens ─────────────────────────────────── */
 :root {
   --bg: #faf8f5;
   --surface: #ffffff;
@@ -82,7 +82,7 @@ body {
   border-radius: 3px;
 }
 
-/* ─── component classes (ported from the FlowTask prototype) ── */
+/* ─── component classes (ported from the DTask prototype) ── */
 @layer components {
   .nav {
     display: flex;

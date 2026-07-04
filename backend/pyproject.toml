@@ -1,7 +1,7 @@
 [project]
 name = "jedi-tracker-backend"
 version = "0.1.0"
-description = "FlowTask — task tracker with habits, plan and review modes (Jedi Techniques)"
+description = "DTask — task tracker with habits, plan and review modes (Jedi Techniques)"
 requires-python = ">=3.11"
 dependencies = [
     "litestar[standard]>=2.13",
