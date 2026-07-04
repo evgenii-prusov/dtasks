@@ -123,20 +123,32 @@ export function HabitsView() {
                   <div className="mb-[5px] text-center text-[9px] uppercase tracking-[.06em] text-ink-3">
                     Today
                   </div>
-                  <div className="flex gap-1">
-                    {([0, 1, 2] as const).map((s) => (
-                      <div
-                        key={s}
+                  <div className="flex items-center gap-2">
+                    <div className="flex gap-1">
+                      {([0, 1, 2] as const).map((s) => (
+                        <div
+                          key={s}
+                          onClick={() => cycle(h, todayKey)}
+                          title={STATE_LABELS[s]}
+                          className="h-6 w-6 cursor-pointer rounded-[5px] transition-all duration-150"
+                          style={{
+                            background: `var(--habit-${s})`,
+                            opacity: s === todayState ? 1 : 0.28,
+                            border: `2px solid ${s === todayState ? 'var(--text-2)' : 'transparent'}`,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    {todayState === 0 && (
+                      <button
+                        className="btn btn-s"
+                        style={{ background: 'var(--habit-1)', color: 'var(--text-1)', border: 'none' }}
                         onClick={() => cycle(h, todayKey)}
-                        title={STATE_LABELS[s]}
-                        className="h-6 w-6 cursor-pointer rounded-[5px] transition-all duration-150"
-                        style={{
-                          background: `var(--habit-${s})`,
-                          opacity: s === todayState ? 1 : 0.28,
-                          border: `2px solid ${s === todayState ? 'var(--text-2)' : 'transparent'}`,
-                        }}
-                      />
-                    ))}
+                        title="Log habit for today"
+                      >
+                        Log
+                      </button>
+                    )}
                   </div>
                 </div>
                 <button
