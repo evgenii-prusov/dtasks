@@ -141,12 +141,12 @@ export function HabitsView() {
                     </div>
                     {todayState === 0 && (
                       <button
-                        className="btn btn-s"
-                        style={{ background: 'var(--habit-1)', color: 'var(--text-1)', border: 'none' }}
+                        className="habit-log-pulse"
                         onClick={() => cycle(h, todayKey)}
                         title="Log habit for today"
                       >
-                        Log
+                        <span className="habit-log-pulse-dot" aria-hidden="true" />
+                        Log today
                       </button>
                     )}
                   </div>
