@@ -31,6 +31,38 @@ beforeEach(() => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+describe('HabitsView add habit scroll-into-view', () => {
+  it('scrolls the newly created habit into view once it appears in the list', async () => {
+    const created = { id: 9, name: 'Read', subtitle: '', position: 1, log: {} }
+    let habitsAfterCreate: unknown[] = [{ id: 1, name: 'Existing', subtitle: '', position: 0, log: {} }]
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
+      if (init?.method === 'POST') {
+        habitsAfterCreate = [...habitsAfterCreate, created]
+        return new Response(JSON.stringify(created), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        })
+      }
+      return new Response(JSON.stringify(habitsAfterCreate), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    })
+    const scrollIntoViewMock = vi.fn()
+    vi.stubGlobal('Element', Element)
+    Element.prototype.scrollIntoView = scrollIntoViewMock
+
+    renderView(habitsAfterCreate as Habit[])
+
+    await userEvent.click(screen.getByText('Add'))
+    await userEvent.type(screen.getByPlaceholderText('Habit name…'), 'Read')
+    await userEvent.click(screen.getByText('Add habit'))
+
+    await waitFor(() => expect(screen.getByText('Read')).toBeInTheDocument())
+    await waitFor(() => expect(scrollIntoViewMock).toHaveBeenCalled())
+  })
+})
+
 describe('HabitsView add habit', () => {
   it('shows and hides the add-habit form via the toggle button', async () => {
     renderView()
