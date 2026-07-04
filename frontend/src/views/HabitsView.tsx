@@ -211,7 +211,6 @@ export function HabitsView() {
                           key={dateKey}
                           className={`hcell s${val} ${isFuture ? 'future' : ''} ${isToday ? 'istoday' : ''}`}
                           onClick={() => !isFuture && cycle(h, dateKey)}
-                          title={`${dateKey}: ${stateLabels[val]}`}
                         />
                       )
                     })}
