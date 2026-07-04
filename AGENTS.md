@@ -126,3 +126,23 @@ bd prime                # Refresh Beads context
 
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
+
+## Remote/Cloud Execution Sync
+
+Beads issue data lives in two layers. A remote/cloud executor (or any fresh clone) only sees an issue once **both** are synced — pushing just one is not enough:
+
+1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Sync with `bd dolt push`.
+2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git. A pre-commit hook regenerates it automatically before each commit.
+
+Before handing work on a new/updated issue to a remote or cloud agent, run all four:
+
+```bash
+git checkout -b <feature-branch>     # never push straight to main
+git add .beads/issues.jsonl
+git commit -m "..."
+bd dolt push                          # syncs the real Dolt data
+git push -u origin <feature-branch>
+gh pr create ...                      # if the remote executor needs main
+```
+
+If only `git push` happens (no `bd dolt push`), the remote clone's `bd` database will be missing the issue even though `issues.jsonl` looks up to date — this is the most common way this workflow silently breaks.
