@@ -4,9 +4,8 @@ import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../ap
 import type { Habit } from '../api/types'
 import { AddHabitForm } from '../components/AddHabitForm'
 import { Ic } from '../components/Icon'
-import { toISODate, todayISO } from '../lib/dates'
+import { formatMonthShort, toISODate, todayISO, weekdayShortLabels } from '../lib/dates'
 
-const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 const WEEKS = 16
 
 function buildDays(): string[] {
@@ -43,7 +42,7 @@ function streak(h: Habit): number {
 }
 
 export function HabitsView() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: habits = [] } = useHabits()
   const setHabitLog = useSetHabitLog()
   const deleteHabit = useDeleteHabit()
@@ -54,6 +53,7 @@ export function HabitsView() {
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
   const weekStarts = useMemo(() => days.filter((_, i) => i % 7 === 0), [days])
+  const dowLabels = useMemo(() => weekdayShortLabels(i18n.language), [i18n.language])
   const stateLabels = [t('habits.state0'), t('habits.state1'), t('habits.state2')]
 
   useEffect(() => {
@@ -176,8 +176,7 @@ export function HabitsView() {
                 >
                   {weekStarts.map((w, wi) => {
                     const d = new Date(w)
-                    const label =
-                      d.getDate() <= 7 ? d.toLocaleDateString('en-US', { month: 'short' }) : ''
+                    const label = d.getDate() <= 7 ? formatMonthShort(i18n.language, d) : ''
                     return (
                       <div key={wi} className="w-[13px] text-center text-[9px] text-ink-3">
                         {label}
@@ -190,7 +189,7 @@ export function HabitsView() {
               <div className="flex gap-[5px]">
                 {/* Day labels */}
                 <div className="flex flex-col gap-[3px]">
-                  {DOW_LABELS.map((dl) => (
+                  {dowLabels.map((dl) => (
                     <div
                       key={dl}
                       className="h-[13px] w-5 text-right text-[9px] leading-[13px] text-ink-3"

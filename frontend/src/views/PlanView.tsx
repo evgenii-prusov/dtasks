@@ -20,7 +20,7 @@ export function PlanView() {
 
   const setMust = (id: number, v: boolean) => {
     if (v && mustCount >= MUST_LIMIT) {
-      alert(t('plan.mustLimit', { max: MUST_LIMIT }))
+      alert(t('plan.mustLimit', { count: MUST_LIMIT }))
       return
     }
     updateTask.mutate({ id, patch: { must_have: v } })
