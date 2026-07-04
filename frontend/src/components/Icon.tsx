@@ -14,6 +14,7 @@ export type IconName =
   | 'note'
   | 'trash'
   | 'logout'
+  | 'globe'
 
 const paths = (c: string): Record<IconName, ReactNode> => ({
   today: (
@@ -96,6 +97,13 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       strokeLinejoin="round"
       fill="none"
     />
+  ),
+  globe: (
+    <>
+      <circle cx="8" cy="8" r="6" stroke={c} strokeWidth="1.4" fill="none" />
+      <ellipse cx="8" cy="8" rx="2.7" ry="6" stroke={c} strokeWidth="1.2" fill="none" />
+      <path d="M2 8h12" stroke={c} strokeWidth="1.2" fill="none" />
+    </>
   ),
 })
 

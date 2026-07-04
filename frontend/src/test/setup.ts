@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { afterEach } from 'vitest'
+import { afterEach, beforeEach } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
 // Node >=22 defines a global `localStorage` accessor that throws unless
@@ -31,6 +31,16 @@ class MemoryStorage implements Storage {
 Object.defineProperty(globalThis, 'localStorage', {
   configurable: true,
   value: new MemoryStorage(),
+})
+
+// Import i18n dynamically so its module-scope init runs against the
+// MemoryStorage patch above, not Node's throwing localStorage accessor.
+const { default: i18n } = await import('../i18n')
+
+// Tests assert English strings; reset any language a test switched to.
+beforeEach(async () => {
+  localStorage.clear()
+  await i18n.changeLanguage('en')
 })
 
 afterEach(() => cleanup())
