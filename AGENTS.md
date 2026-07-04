@@ -127,6 +127,14 @@ bd prime                # Refresh Beads context
 **Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
 <!-- END BEADS CODEX SETUP -->
 
+## Git Branching Convention
+
+Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.beads-hooks/`, `core.hooksPath=.beads-hooks`) and by GitHub branch protection on `main`. This is enforced mechanically — not just documented — so it applies regardless of which tool or agent runs `git commit`/`git push` (Claude Code, agy, Codex, plain `git`/`gh` CLI).
+
+- **Before your first commit for any change**, create/switch to a feature branch: `git checkout -b <descriptive-name>`. Don't wait until you're ready to push — branching after the fact requires history surgery (moving commits off `main`).
+- Land changes via `git push -u origin <branch>` + `gh pr create`.
+- If the pre-commit/pre-push hook fires, that's the intended behavior — branch instead of bypassing it. Rare, deliberate exceptions: `ALLOW_MAIN_COMMIT=1 git commit ...` / `ALLOW_MAIN_PUSH=1 git push ...`.
+
 ## Remote/Cloud Execution Sync
 
 Beads issue data lives in two layers. A remote/cloud executor (or any fresh clone) only sees an issue once **both** are synced — pushing just one is not enough:
