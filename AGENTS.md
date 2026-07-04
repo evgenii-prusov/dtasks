@@ -137,12 +137,14 @@ Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.be
 
 ## Remote/Cloud Execution Sync
 
-Beads issue data lives in two layers. A remote/cloud executor (or any fresh clone) only sees an issue once **both** are synced — pushing just one is not enough:
+Beads issue data lives in two layers, kept in sync differently depending which way work is flowing:
 
-1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Sync with `bd dolt push`.
-2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git. A pre-commit hook regenerates it automatically before each commit.
+1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Synced via `bd dolt push`/`bd dolt pull` over a special git ref (`refs/dolt/data`, which materializes as an `__dolt_remote_info__` branch on the remote).
+2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git via normal `refs/heads/*`. A pre-commit hook regenerates it automatically before each commit.
 
-Before handing work on a new/updated issue to a remote or cloud agent, run all four:
+### Handing new/updated issues TO a remote or cloud agent
+
+Run all four:
 
 ```bash
 git checkout -b <feature-branch>     # never push straight to main
@@ -154,3 +156,16 @@ gh pr create ...                      # if the remote executor needs main
 ```
 
 If only `git push` happens (no `bd dolt push`), the remote clone's `bd` database will be missing the issue even though `issues.jsonl` looks up to date — this is the most common way this workflow silently breaks.
+
+### Issues created/updated BY a remote or cloud agent (e.g. Claude Cloud's default sandbox)
+
+**`bd dolt push` will not work here — don't attempt it, and don't retry it.** Cloud sandboxes are typically scoped to push only their own working branches (e.g. `claude/*`) for safety; they cannot push arbitrary refs like the `__dolt_remote_info__` branch Dolt's git-backed sync needs. This is a sandboxing boundary, not a misconfiguration to fix with more scope.
+
+- The remote/cloud session should only touch the git side: commit `.beads/issues.jsonl`, push its own branch, open a PR.
+- After merging that PR, a human (or any session with real git+Dolt push credentials, e.g. a local machine) must reconcile the durable Dolt DB:
+  ```bash
+  git checkout main && git pull
+  bd import              # upsert new/changed issues from the merged issues.jsonl into the local Dolt DB
+  bd dolt push            # sync the real Dolt DB from an environment that can actually push
+  ```
+  This is the one legitimate use of `bd import` outside normal operation — it's recovering Dolt state after a sync path (`bd dolt push`) that was structurally blocked, not treating JSONL as a substitute source of truth.
