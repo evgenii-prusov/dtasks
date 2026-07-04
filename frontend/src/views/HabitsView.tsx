@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
 import type { Habit } from '../api/types'
 import { AddHabitForm } from '../components/AddHabitForm'
@@ -48,9 +48,20 @@ export function HabitsView() {
   const deleteHabit = useDeleteHabit()
   const createHabit = useCreateHabit()
   const [addingHabit, setAddingHabit] = useState(false)
+  const [justAddedId, setJustAddedId] = useState<number | null>(null)
+  const habitRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
   const weekStarts = useMemo(() => days.filter((_, i) => i % 7 === 0), [days])
+
+  useEffect(() => {
+    if (justAddedId == null) return
+    const el = habitRefs.current[justAddedId]
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setJustAddedId(null)
+    }
+  }, [habits, justAddedId])
 
   const cycle = (h: Habit, date: string) => {
     const cur = h.log[date] ?? 0
@@ -74,7 +85,7 @@ export function HabitsView() {
         <div className="card">
           <AddHabitForm
             onAdd={(habit) => {
-              createHabit.mutate(habit)
+              createHabit.mutate(habit, { onSuccess: (created) => setJustAddedId(created.id) })
               setAddingHabit(false)
             }}
             onCancel={() => setAddingHabit(false)}
@@ -88,7 +99,7 @@ export function HabitsView() {
         const todayState = h.log[todayKey] ?? 0
 
         return (
-          <div key={h.id} className="card">
+          <div key={h.id} ref={(el) => { habitRefs.current[h.id] = el }} className="card">
             <div className="card-head flex-wrap gap-2.5">
               <div>
                 <h3 className="mb-0.5">{h.name}</h3>
