@@ -69,7 +69,7 @@ Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.be
 
 Beads issue data lives in two layers, kept in sync differently depending which way work is flowing:
 
-1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Synced via `bd dolt push`/`bd dolt pull` over a special git ref (`refs/dolt/data`, which materializes as an `__dolt_remote_info__` branch on the remote).
+1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Synced via `bd dolt push`/`bd dolt pull` against the `origin` Dolt remote, which is **DoltHub** (`https://doltremoteapi.dolthub.com/evgenii/dolt01`, browsable at https://www.dolthub.com/repositories/evgenii/dolt01) — not the git remote.
 2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git via normal `refs/heads/*`. A pre-commit hook regenerates it automatically before each commit.
 
 ### Handing new/updated issues TO a remote or cloud agent
@@ -80,7 +80,7 @@ Run all four:
 git checkout -b <feature-branch>     # never push straight to main
 git add .beads/issues.jsonl
 git commit -m "..."
-bd dolt push                          # syncs the real Dolt data
+bd dolt push                          # pushes the real Dolt data to DoltHub
 git push -u origin <feature-branch>
 gh pr create ...                      # if the remote executor needs main
 ```
@@ -89,7 +89,7 @@ If only `git push` happens (no `bd dolt push`), the remote clone's `bd` database
 
 ### Issues created/updated BY a remote or cloud agent (e.g. Claude Cloud's default sandbox)
 
-**`bd dolt push` will not work here — don't attempt it, and don't retry it.** Cloud sandboxes are typically scoped to push only their own working branches (e.g. `claude/*`) for safety; they cannot push arbitrary refs like the `__dolt_remote_info__` branch Dolt's git-backed sync needs. This is a sandboxing boundary, not a misconfiguration to fix with more scope.
+**`bd dolt push` generally will not work here — don't attempt it, and don't retry it.** `bd dolt push`/`pull` against DoltHub requires DoltHub credentials (`dolt login`, or `DOLT_REMOTE_USER`/`DOLT_REMOTE_PASSWORD` env vars) to be present in the environment running the command. A fresh cloud/remote sandbox won't have these by default. Unless DoltHub credentials have been explicitly provisioned into the sandbox, treat this as a sandboxing boundary, not a misconfiguration to fix with more scope.
 
 - The remote/cloud session should only touch the git side: commit `.beads/issues.jsonl`, push its own branch, open a PR.
 - After merging that PR, a human (or any session with real git+Dolt push credentials, e.g. a local machine) must reconcile the durable Dolt DB:
