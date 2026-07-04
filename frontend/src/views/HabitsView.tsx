@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { useHabits, useSetHabitLog } from '../api/hooks'
+import { useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
 import type { Habit } from '../api/types'
+import { Ic } from '../components/Icon'
 import { toISODate, todayISO } from '../lib/dates'
 
 const DOW_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -43,6 +44,7 @@ function streak(h: Habit): number {
 export function HabitsView() {
   const { data: habits = [] } = useHabits()
   const setHabitLog = useSetHabitLog()
+  const deleteHabit = useDeleteHabit()
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
   const weekStarts = useMemo(() => days.filter((_, i) => i % 7 === 0), [days])
@@ -50,6 +52,10 @@ export function HabitsView() {
   const cycle = (h: Habit, date: string) => {
     const cur = h.log[date] ?? 0
     setHabitLog.mutate({ habitId: h.id, day: date, state: (cur + 1) % 3 })
+  }
+
+  const remove = (h: Habit) => {
+    if (confirm(`Delete habit "${h.name}"?`)) deleteHabit.mutate(h.id)
   }
 
   return (
@@ -104,6 +110,13 @@ export function HabitsView() {
                     ))}
                   </div>
                 </div>
+                <button
+                  className="btn btn-g btn-s btn-danger"
+                  onClick={() => remove(h)}
+                  title="Delete habit"
+                >
+                  <Ic n="trash" s={12} />
+                </button>
               </div>
             </div>
 

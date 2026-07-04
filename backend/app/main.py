@@ -88,6 +88,17 @@ async def _get_project(session: AsyncSession, project_id: int, user_id: int) -> 
     return project
 
 
+async def _get_habit(session: AsyncSession, habit_id: int, user_id: int) -> Habit:
+    habit = (
+        await session.execute(
+            select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if habit is None:
+        raise NotFoundException(detail="Habit not found")
+    return habit
+
+
 async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, user_id: int) -> int:
     rows = await session.execute(
         select(Task.id)
@@ -284,6 +295,13 @@ async def set_habit_log(
     return habit_out(habit)
 
 
+@delete("/api/habits/{habit_id:int}", status_code=204)
+async def delete_habit(habit_id: int, session: AsyncSession, user: User) -> None:
+    habit = await _get_habit(session, habit_id, user.id)
+    await session.delete(habit)
+    await session.commit()
+
+
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
 
@@ -311,6 +329,7 @@ route_handlers: list = [
     reorder_task,
     list_habits,
     set_habit_log,
+    delete_habit,
 ]
 if FRONTEND_DIST.is_dir():
     route_handlers.append(
