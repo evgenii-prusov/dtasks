@@ -11,9 +11,16 @@ function keysOf(obj: Record<string, unknown>, prefix = ''): string[] {
   )
 }
 
+// Locales need different plural forms (en: one/other, ru: one/few/many/other),
+// so parity is checked on base keys with the plural suffix stripped.
+const PLURAL_SUFFIX = /_(zero|one|two|few|many|other)$/
+function baseKeysOf(obj: Record<string, unknown>): string[] {
+  return [...new Set(keysOf(obj).map((k) => k.replace(PLURAL_SUFFIX, '')))].sort()
+}
+
 describe('i18n catalogs', () => {
-  it('ru has exactly the same keys as en', () => {
-    expect(keysOf(ru).sort()).toEqual(keysOf(en).sort())
+  it('ru has exactly the same keys as en (modulo plural forms)', () => {
+    expect(baseKeysOf(ru)).toEqual(baseKeysOf(en))
   })
 
   it('has no empty messages', () => {

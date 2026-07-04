@@ -75,7 +75,8 @@
     "todayOff": "+ Today",
     "weekOn": "✓ Week",
     "weekOff": "+ Week",
-    "mustLimit": "Max {{max}} Must Have tasks per day."
+    "mustLimit_one": "Max {{count}} Must Have task per day.",
+    "mustLimit_other": "Max {{count}} Must Have tasks per day."
   },
   "review": {
     "title": "Review",

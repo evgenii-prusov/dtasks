@@ -4,9 +4,10 @@ import { useProjects } from '../api/hooks'
 import type { Project, Task } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
+import { formatDayHeading } from '../lib/dates'
 
 export function TodayView() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: projects = [] } = useProjects()
 
   const must: { t: Task; p: Project }[] = []
@@ -21,11 +22,7 @@ export function TodayView() {
     }
   }
 
-  const dateStr = new Date().toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  })
+  const dateStr = formatDayHeading(i18n.language)
 
   return (
     <div>
