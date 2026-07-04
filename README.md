@@ -1,4 +1,4 @@
-# FlowTask — Jedi Techniques task tracker
+# DTask — Jedi Techniques task tracker
 
 A task tracker inspired by Maxim Dorofeev's *Jedi Techniques*, built from the
 Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats/`).

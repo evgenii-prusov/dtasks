@@ -96,7 +96,7 @@ export function Sidebar() {
           <rect width="20" height="20" rx="5" fill="var(--accent)" />
           <path d="M5 7h10M5 10h7M5 13h5" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
         </svg>
-        FlowTask
+        DTask
       </div>
 
       <NavLink
