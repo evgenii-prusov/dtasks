@@ -3,14 +3,25 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
-import { useCreateProject, useDeleteProject, useLogin, useLogout, useSignup } from './hooks'
-import type { Project } from './types'
+import {
+  useCreateProject,
+  useDeleteHabit,
+  useDeleteProject,
+  useLogin,
+  useLogout,
+  useSignup,
+} from './hooks'
+import type { Habit, Project } from './types'
 
 const navigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 
 function project(id: number, name: string, group = 'Work'): Project {
   return { id, name, group, description: '', notes: '', position: id, tasks: [] }
+}
+
+function habit(id: number, name: string): Habit {
+  return { id, name, subtitle: '', position: id, log: {} }
 }
 
 function json(body: unknown, status = 200) {
@@ -60,6 +71,40 @@ describe('useDeleteProject', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true))
     expect(qc.getQueryData<Project[]>(['projects'])).toEqual(initial)
+  })
+})
+
+describe('useDeleteHabit', () => {
+  it('optimistically removes the habit from the cache and calls DELETE', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(null, { status: 204 }))
+    const qc = new QueryClient()
+    qc.setQueryData(['habits'], [habit(1, 'Keep'), habit(2, 'Remove')])
+
+    const { result } = renderHook(() => useDeleteHabit(), { wrapper: wrapper(qc) })
+    result.current.mutate(2)
+
+    await waitFor(() =>
+      expect(qc.getQueryData<Habit[]>(['habits'])).toEqual([habit(1, 'Keep')]),
+    )
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/habits/2',
+      expect.objectContaining({ method: 'DELETE' }),
+    )
+  })
+
+  it('rolls the cache back when the request fails', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(null, { status: 500 }))
+    const qc = new QueryClient()
+    const initial = [habit(1, 'Keep'), habit(2, 'Remove')]
+    qc.setQueryData(['habits'], initial)
+
+    const { result } = renderHook(() => useDeleteHabit(), { wrapper: wrapper(qc) })
+    result.current.mutate(2)
+
+    await waitFor(() => expect(result.current.isError).toBe(true))
+    expect(qc.getQueryData<Habit[]>(['habits'])).toEqual(initial)
   })
 })
 

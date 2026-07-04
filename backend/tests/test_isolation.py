@@ -103,6 +103,14 @@ async def test_cross_tenant_habit_404(make_client: MakeClient) -> None:
     assert real.status_code == 404
     assert real.json() == missing.json()
 
+    delete_missing = await b.delete("/api/habits/999999")
+    delete_real = await b.delete(f"/api/habits/{a_habit_id}")
+    assert delete_real.status_code == 404
+    assert delete_real.json() == delete_missing.json()
+
+    a_habits_after = (await a.get("/api/habits")).json()
+    assert any(h["id"] == a_habit_id for h in a_habits_after)
+
 
 async def test_must_have_limit_is_per_user(make_client: MakeClient) -> None:
     a = await make_client("a@example.com")

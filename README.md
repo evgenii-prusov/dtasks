@@ -63,6 +63,7 @@ cd ../backend && uv run litestar --app app.main:app run --port 8000
 | POST   | `/api/tasks/{id}/reorder`     | Move a task up/down within its project     |
 | GET    | `/api/habits`                 | All habits with their day logs             |
 | PUT    | `/api/habits/{id}/log`        | Set a day's state (0 none / 1 minimal / 2 complete) |
+| DELETE | `/api/habits/{id}`            | Delete a habit and its logs                |
 
 Rules mirrored from the design: marking a task Must Have also assigns it to
 Today; removing it from Today clears Must Have; at most 2 active Must Have

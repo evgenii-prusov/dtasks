@@ -207,3 +207,25 @@ export function useSetHabitLog() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['habits'] }),
   })
 }
+
+export function useDeleteHabit() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.deleteHabit(id),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['habits'] })
+      const previous = qc.getQueryData<Habit[]>(['habits'])
+      if (previous) {
+        qc.setQueryData(
+          ['habits'],
+          previous.filter((h) => h.id !== id),
+        )
+      }
+      return { previous }
+    },
+    onError: (_err, _id, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['habits'], ctx.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['habits'] }),
+  })
+}

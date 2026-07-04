@@ -70,4 +70,5 @@ export const api = {
       method: 'PUT',
       body: JSON.stringify({ day, state }),
     }),
+  deleteHabit: (id: number) => request<void>(`/api/habits/${id}`, { method: 'DELETE' }),
 }
