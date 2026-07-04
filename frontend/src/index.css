@@ -55,14 +55,14 @@
   --color-habit-2: var(--habit-2);
   --color-high-bg: var(--high-bg);
   --color-high-text: var(--high-text);
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
   --font-serif: 'Lora', serif;
   --shadow-sm: var(--shadow-sm);
 }
 
 /* ─── base ───────────────────────────────────────────────────── */
 body {
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
   background: var(--bg);
   color: var(--text);
   height: 100vh;

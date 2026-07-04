@@ -234,7 +234,7 @@ export function ReviewView() {
               x="40"
               y="36"
               textAnchor="middle"
-              style={{ fontSize: 15, fontWeight: 700, fill: 'var(--text)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              style={{ fontSize: 15, fontWeight: 700, fill: 'var(--text)', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}
             >
               {mins}:{secs.toString().padStart(2, '0')}
             </text>
@@ -242,7 +242,7 @@ export function ReviewView() {
               x="40"
               y="50"
               textAnchor="middle"
-              style={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              style={{ fontSize: 9, fill: 'var(--text-3)', fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif" }}
             >
               {t('review.remaining')}
             </text>
