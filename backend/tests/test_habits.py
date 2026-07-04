@@ -10,6 +10,27 @@ from app.models import HabitLog
 pytestmark = pytest.mark.anyio
 
 
+async def test_create_habit_returns_201_with_new_habit(client: AsyncTestClient) -> None:
+    before = (await client.get("/api/habits")).json()
+
+    resp = await client.post("/api/habits", json={"name": "Read", "subtitle": "30 min"})
+    assert resp.status_code == 201
+    created = resp.json()
+    assert created["name"] == "Read"
+    assert created["subtitle"] == "30 min"
+    assert created["log"] == {}
+    assert created["position"] == len(before)
+
+    after = (await client.get("/api/habits")).json()
+    assert len(after) == len(before) + 1
+    assert any(h["id"] == created["id"] for h in after)
+
+
+async def test_create_habit_rejects_blank_name(client: AsyncTestClient) -> None:
+    resp = await client.post("/api/habits", json={"name": "   "})
+    assert resp.status_code == 400
+
+
 async def test_delete_habit_removes_it_and_cascades_logs(
     client: AsyncTestClient, db: async_sessionmaker
 ) -> None:

@@ -112,6 +112,20 @@ async def test_cross_tenant_habit_404(make_client: MakeClient) -> None:
     assert any(h["id"] == a_habit_id for h in a_habits_after)
 
 
+async def test_habit_creation_is_scoped_to_creating_user(make_client: MakeClient) -> None:
+    a = await make_client("a@example.com")
+    b = await make_client("b@example.com")
+
+    created = await a.post("/api/habits", json={"name": "A's new habit"})
+    assert created.status_code == 201
+    new_habit_id = created.json()["id"]
+
+    a_habits = (await a.get("/api/habits")).json()
+    b_habits = (await b.get("/api/habits")).json()
+    assert any(h["id"] == new_habit_id for h in a_habits)
+    assert all(h["id"] != new_habit_id for h in b_habits)
+
+
 async def test_must_have_limit_is_per_user(make_client: MakeClient) -> None:
     a = await make_client("a@example.com")
     b = await make_client("b@example.com")

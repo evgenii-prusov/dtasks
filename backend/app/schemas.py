@@ -91,6 +91,11 @@ class ReorderPayload(msgspec.Struct):
     direction: str  # "up" | "down"
 
 
+class HabitCreate(msgspec.Struct):
+    name: str
+    subtitle: str = ""
+
+
 class HabitLogPayload(msgspec.Struct):
     day: date
     state: int  # 0|1|2

@@ -62,6 +62,11 @@ export interface ProjectCreate {
   group?: string
 }
 
+export interface HabitCreate {
+  name: string
+  subtitle?: string
+}
+
 export interface User {
   id: number
   email: string

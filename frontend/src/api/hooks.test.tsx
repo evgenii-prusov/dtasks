@@ -4,6 +4,7 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from './client'
 import {
+  useCreateHabit,
   useCreateProject,
   useDeleteHabit,
   useDeleteProject,
@@ -135,6 +136,36 @@ describe('useCreateProject', () => {
       }),
     )
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['projects'] })
+  })
+})
+
+describe('useCreateHabit', () => {
+  it('POSTs the new habit and invalidates the habits query on success', async () => {
+    const created = habit(9, 'New Habit')
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(JSON.stringify(created), {
+          status: 201,
+          headers: { 'content-type': 'application/json' },
+        }),
+      )
+    const qc = new QueryClient()
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+
+    const { result } = renderHook(() => useCreateHabit(), { wrapper: wrapper(qc) })
+    result.current.mutate({ name: 'New Habit' })
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data).toEqual(created)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/habits',
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'New Habit' }),
+      }),
+    )
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['habits'] })
   })
 })
 

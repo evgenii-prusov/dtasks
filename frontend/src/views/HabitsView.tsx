@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
-import { useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
+import { useMemo, useState } from 'react'
+import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
 import type { Habit } from '../api/types'
+import { AddHabitForm } from '../components/AddHabitForm'
 import { Ic } from '../components/Icon'
 import { toISODate, todayISO } from '../lib/dates'
 
@@ -45,6 +46,8 @@ export function HabitsView() {
   const { data: habits = [] } = useHabits()
   const setHabitLog = useSetHabitLog()
   const deleteHabit = useDeleteHabit()
+  const createHabit = useCreateHabit()
+  const [addingHabit, setAddingHabit] = useState(false)
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
   const weekStarts = useMemo(() => days.filter((_, i) => i % 7 === 0), [days])
@@ -62,7 +65,22 @@ export function HabitsView() {
     <div>
       <div className="ph">
         <div className="ph-title">Habits</div>
+        <button className="btn btn-g btn-s" onClick={() => setAddingHabit((a) => !a)}>
+          <Ic n="plus" s={12} /> Add
+        </button>
       </div>
+
+      {addingHabit && (
+        <div className="card">
+          <AddHabitForm
+            onAdd={(habit) => {
+              createHabit.mutate(habit)
+              setAddingHabit(false)
+            }}
+            onCancel={() => setAddingHabit(false)}
+          />
+        </div>
+      )}
 
       {habits.map((h) => {
         const str = streak(h)
