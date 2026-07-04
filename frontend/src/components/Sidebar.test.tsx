@@ -158,6 +158,23 @@ describe('Sidebar project groups', () => {
   })
 })
 
+describe('Sidebar language toggle', () => {
+  it('switches the UI to Russian and back', async () => {
+    renderSidebar([])
+    expect(screen.getByText('Today')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Русский' }))
+    expect(await screen.findByText('Сегодня')).toBeInTheDocument()
+    expect(screen.queryByText('Today')).not.toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('ru')
+    expect(localStorage.getItem('dtask_lang')).toBe('ru')
+
+    await userEvent.click(screen.getByRole('button', { name: 'English' }))
+    expect(await screen.findByText('Today')).toBeInTheDocument()
+    expect(document.documentElement.lang).toBe('en')
+  })
+})
+
 describe('Sidebar account', () => {
   it("shows the signed-in user's email", () => {
     renderSidebar([])

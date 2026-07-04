@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { ApiError } from '../api/client'
 import {
   useCreateProject,
@@ -9,6 +10,7 @@ import {
   mustHaveCount,
 } from '../api/hooks'
 import { useTheme } from '../theme'
+import { useLanguage } from '../i18n'
 import { Ic, type IconName } from './Icon'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
@@ -35,9 +37,11 @@ function NavLink({
 }
 
 export function Sidebar() {
+  const { t } = useTranslation()
   const { data: projects = [] } = useProjects()
   const { data: user } = useCurrentUser()
   const { theme, toggle } = useTheme()
+  const { lang, toggle: toggleLang } = useLanguage()
   const createProject = useCreateProject()
   const logout = useLogout()
   const navigate = useNavigate()
@@ -102,13 +106,13 @@ export function Sidebar() {
       <NavLink
         to="/"
         icon="today"
-        label="Today"
+        label={t('nav.today')}
         badge={todayCount > 0 ? todayCount : null}
         badgeMust={mustCount > 0}
       />
-      <NavLink to="/plan" icon="plan" label="Plan" />
-      <NavLink to="/review" icon="review" label="Review" />
-      <NavLink to="/habits" icon="habits" label="Habits" />
+      <NavLink to="/plan" icon="plan" label={t('nav.plan')} />
+      <NavLink to="/review" icon="review" label={t('nav.review')} />
+      <NavLink to="/habits" icon="habits" label={t('nav.habits')} />
 
       <hr className="s-divider" />
 
@@ -174,6 +178,11 @@ export function Sidebar() {
       <button className="nav" onClick={toggle}>
         <Ic n={theme === 'dark' ? 'sun' : 'moon'} s={14} />
         {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+      </button>
+      {/* Language names stay in their own language, so they live outside the catalogs. */}
+      <button className="nav" onClick={toggleLang}>
+        <Ic n="globe" s={14} />
+        {lang === 'en' ? 'Русский' : 'English'}
       </button>
     </div>
   )
