@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 import { useProjects } from '../api/hooks'
 import type { Project, Task } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 
 export function TodayView() {
+  const { t } = useTranslation()
   const { data: projects = [] } = useProjects()
 
   const must: { t: Task; p: Project }[] = []
@@ -29,21 +31,21 @@ export function TodayView() {
     <div>
       <div className="ph">
         <div>
-          <div className="ph-title">Today</div>
+          <div className="ph-title">{t('today.title')}</div>
           <div className="ph-sub">{dateStr}</div>
         </div>
         <Link to="/plan" className="btn btn-g btn-s">
-          <Ic n="plan" s={13} /> Plan my day
+          <Ic n="plan" s={13} /> {t('today.planMyDay')}
         </Link>
       </div>
 
       {must.length === 0 && today.length === 0 && week.length === 0 && (
         <div className="empty">
           <div className="empty-icon">🌱</div>
-          <div className="mb-[5px] font-semibold">Nothing planned yet</div>
-          <div className="mb-5 text-xs">Use Plan mode to pick your tasks for today.</div>
+          <div className="mb-[5px] font-semibold">{t('today.emptyTitle')}</div>
+          <div className="mb-5 text-xs">{t('today.emptyHint')}</div>
           <Link to="/plan" className="btn btn-p">
-            Open Plan mode
+            {t('today.openPlan')}
           </Link>
         </div>
       )}
@@ -52,11 +54,11 @@ export function TodayView() {
         <div className="card must-card">
           <div className="card-head">
             <h3>
-              <Ic n="fire" s={14} c="var(--must)" /> Must Have Today
+              <Ic n="fire" s={14} c="var(--must)" /> {t('today.mustHave')}
               <span className="text-[11px] font-normal opacity-70">({must.length}/2)</span>
             </h3>
             <span className="text-[10px] font-semibold tracking-[.04em] text-must">
-              START HERE
+              {t('today.startHere')}
             </span>
           </div>
           {must.map(({ t, p }) => (
@@ -77,7 +79,7 @@ export function TodayView() {
         <div className="card">
           <div className="card-head">
             <h3>
-              <Ic n="today" s={13} /> Today ({today.length})
+              <Ic n="today" s={13} /> {t('today.sectionToday')} ({today.length})
             </h3>
           </div>
           {today.map(({ t, p }) => (
@@ -98,7 +100,7 @@ export function TodayView() {
         <div className="card">
           <div className="card-head">
             <h3>
-              <Ic n="plan" s={13} /> This Week ({week.length})
+              <Ic n="plan" s={13} /> {t('today.sectionWeek')} ({week.length})
             </h3>
           </div>
           {week.map(({ t, p }) => (

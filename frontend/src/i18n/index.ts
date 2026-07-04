@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import i18n from 'i18next'
+import i18n, { type TFunction } from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import en from './en.json'
 import ru from './ru.json'
@@ -36,6 +36,17 @@ export function useLanguage() {
 
   const toggle = () => setLang((l) => (l === 'en' ? 'ru' : 'en'))
   return { lang, toggle }
+}
+
+/**
+ * Display label for a project group. The two default groups are stored in the
+ * DB as the English strings 'Work'/'Personal' and localized at render time;
+ * user-created groups are shown as-is.
+ */
+export function groupLabel(t: TFunction, group: string): string {
+  if (group === 'Work') return t('groups.work')
+  if (group === 'Personal') return t('groups.personal')
+  return group
 }
 
 export default i18n

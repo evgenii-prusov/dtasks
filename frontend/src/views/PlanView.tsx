@@ -1,5 +1,7 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { mustHaveCount, useCreateTask, useProjects, useUpdateTask } from '../api/hooks'
+import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
@@ -7,6 +9,7 @@ import { TaskRow } from '../components/TaskRow'
 const MUST_LIMIT = 2
 
 export function PlanView() {
+  const { t } = useTranslation()
   const { data: projects = [] } = useProjects()
   const updateTask = useUpdateTask()
   const createTask = useCreateTask()
@@ -17,7 +20,7 @@ export function PlanView() {
 
   const setMust = (id: number, v: boolean) => {
     if (v && mustCount >= MUST_LIMIT) {
-      alert(`Max ${MUST_LIMIT} Must Have tasks per day.`)
+      alert(t('plan.mustLimit', { max: MUST_LIMIT }))
       return
     }
     updateTask.mutate({ id, patch: { must_have: v } })
@@ -27,24 +30,24 @@ export function PlanView() {
     <div>
       <div className="ph">
         <div>
-          <div className="ph-title">Plan</div>
-          <div className="ph-sub">Assign tasks to today or this week</div>
+          <div className="ph-title">{t('plan.title')}</div>
+          <div className="ph-sub">{t('plan.subtitle')}</div>
         </div>
         <div className="flex items-center gap-2.5">
           <span className="text-[11px] text-ink-3">
-            Must-haves:{' '}
+            {t('plan.mustHaves')}{' '}
             <strong className="text-must">
               {mustCount}/{MUST_LIMIT}
             </strong>
           </span>
           <div className="flex gap-0.5 rounded-md bg-surface-2 p-0.5">
-            {(['today', 'week'] as const).map((t) => (
+            {(['today', 'week'] as const).map((tb) => (
               <button
-                key={t}
-                className={`btn btn-s ${tab === t ? 'btn-p' : 'btn-g'} border-none`}
-                onClick={() => setTab(t)}
+                key={tb}
+                className={`btn btn-s ${tab === tb ? 'btn-p' : 'btn-g'} border-none`}
+                onClick={() => setTab(tb)}
               >
-                {t === 'today' ? 'Today' : 'This week'}
+                {tb === 'today' ? t('plan.tabToday') : t('plan.tabWeek')}
               </button>
             ))}
           </div>
@@ -58,24 +61,27 @@ export function PlanView() {
             <div className="card-head">
               <h3>
                 <Ic n="folder" s={13} c="var(--accent)" />
-                <span className="text-[10px] font-normal text-ink-3">{p.group} /</span> {p.name}
+                <span className="text-[10px] font-normal text-ink-3">
+                  {groupLabel(t, p.group)} /
+                </span>{' '}
+                {p.name}
               </h3>
               <button
                 className="btn btn-g btn-s"
                 onClick={() => setAddingTo(addingTo === p.id ? null : p.id)}
               >
-                <Ic n="plus" s={11} /> Task
+                <Ic n="plus" s={11} /> {t('plan.taskButton')}
               </button>
             </div>
 
             {open.length === 0 && addingTo !== p.id && (
-              <div className="px-4 py-3 text-xs text-ink-3">No open tasks.</div>
+              <div className="px-4 py-3 text-xs text-ink-3">{t('plan.noOpenTasks')}</div>
             )}
 
-            {open.map((t, i) => (
+            {open.map((task, i) => (
               <TaskRow
-                key={t.id}
-                task={t}
+                key={task.id}
+                task={task}
                 editable
                 reorderable
                 deletable
@@ -86,38 +92,41 @@ export function PlanView() {
                     {tab === 'today' ? (
                       <>
                         <button
-                          className={`asgn ${t.must_have && t.assigned_today ? 'must-on' : ''}`}
+                          className={`asgn ${task.must_have && task.assigned_today ? 'must-on' : ''}`}
                           style={{
                             opacity:
-                              (!t.must_have || !t.assigned_today) && mustCount >= MUST_LIMIT
+                              (!task.must_have || !task.assigned_today) && mustCount >= MUST_LIMIT
                                 ? 0.35
                                 : 1,
                           }}
-                          onClick={() => setMust(t.id, !(t.must_have && t.assigned_today))}
-                          title="Mark as Must Have (max 2/day)"
+                          onClick={() => setMust(task.id, !(task.must_have && task.assigned_today))}
+                          title={t('plan.mustTooltip')}
                         >
-                          🔥 Must
+                          {t('plan.mustButton')}
                         </button>
                         <button
-                          className={`asgn ${t.assigned_today ? 'on' : ''}`}
+                          className={`asgn ${task.assigned_today ? 'on' : ''}`}
                           onClick={() =>
                             updateTask.mutate({
-                              id: t.id,
-                              patch: { assigned_today: !t.assigned_today },
+                              id: task.id,
+                              patch: { assigned_today: !task.assigned_today },
                             })
                           }
                         >
-                          {t.assigned_today ? '✓ Today' : '+ Today'}
+                          {task.assigned_today ? t('plan.todayOn') : t('plan.todayOff')}
                         </button>
                       </>
                     ) : (
                       <button
-                        className={`asgn ${t.assigned_week ? 'on' : ''}`}
+                        className={`asgn ${task.assigned_week ? 'on' : ''}`}
                         onClick={() =>
-                          updateTask.mutate({ id: t.id, patch: { assigned_week: !t.assigned_week } })
+                          updateTask.mutate({
+                            id: task.id,
+                            patch: { assigned_week: !task.assigned_week },
+                          })
                         }
                       >
-                        {t.assigned_week ? '✓ Week' : '+ Week'}
+                        {task.assigned_week ? t('plan.weekOn') : t('plan.weekOff')}
                       </button>
                     )}
                   </div>
