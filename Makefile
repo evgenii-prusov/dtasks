@@ -25,7 +25,7 @@ test-frontend: ## Run frontend tests (vitest)
 	cd frontend && npm test
 
 dev-backend: ## Run backend in the foreground (Ctrl+C to stop)
-	cd backend && uv run litestar --app app.main:app run --port 8000
+	cd backend && uv run litestar --app app.main:app run --port 8000 --reload
 
 dev-frontend: ## Run frontend dev server in the foreground (Ctrl+C to stop)
 	cd frontend && npm run dev
@@ -35,7 +35,7 @@ start: ## Start backend + frontend in the background
 	@if [ -f $(RUN_DIR)/backend.pid ] && kill -0 $$(cat $(RUN_DIR)/backend.pid) 2>/dev/null; then \
 		echo "backend already running (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	else \
-		bash -c 'cd backend && exec uv run litestar --app app.main:app run --port 8000' > $(RUN_DIR)/backend.log 2>&1 & \
+		bash -c 'cd backend && exec uv run litestar --app app.main:app run --port 8000 --reload' > $(RUN_DIR)/backend.log 2>&1 & \
 		echo $$! > $(RUN_DIR)/backend.pid; \
 		echo "backend started (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	fi
