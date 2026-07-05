@@ -26,13 +26,28 @@ export function ProjectView({ project }: { project: Project }) {
   const [editDesc, setEditDesc] = useState(false)
   const [desc, setDesc] = useState(project.description)
   const [notes, setNotes] = useState(project.notes)
+  const [editingName, setEditingName] = useState(false)
+  const [name, setName] = useState(project.name)
 
   useEffect(() => {
     setDesc(project.description)
     setNotes(project.notes)
     setAddingTask(false)
     setEditDesc(false)
+    setEditingName(false)
   }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const startRename = () => {
+    setName(project.name)
+    setEditingName(true)
+  }
+  const saveName = () => {
+    const next = name.trim()
+    if (next && next !== project.name) {
+      updateProject.mutate({ id: project.id, patch: { name: next } })
+    }
+    setEditingName(false)
+  }
 
   const open = project.tasks.filter((t) => !t.completed)
   const done = project.tasks.filter((t) => t.completed)
@@ -44,7 +59,27 @@ export function ProjectView({ project }: { project: Project }) {
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.07em] text-ink-3">
             {groupLabel(t, project.group)}
           </div>
-          <div className="ph-title">{project.name}</div>
+          {editingName ? (
+            <input
+              className="input px-2 py-1 font-[Lora,serif] text-[22px] font-semibold tracking-[-0.4px]"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') saveName()
+                if (e.key === 'Escape') setEditingName(false)
+              }}
+              onBlur={saveName}
+              autoFocus
+            />
+          ) : (
+            <div
+              className="ph-title cursor-text"
+              onClick={startRename}
+              title={t('project.clickToRename')}
+            >
+              {project.name}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-1.5">
           <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
