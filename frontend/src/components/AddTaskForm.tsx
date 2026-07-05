@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Complexity, TaskCreate } from '../api/types'
+import { Ic } from './Icon'
 
 export function AddTaskForm({
   onAdd,
@@ -13,11 +14,12 @@ export function AddTaskForm({
   const [title, setTitle] = useState('')
   const [complexity, setComplexity] = useState<Complexity>('low')
   const [recurring, setRecurring] = useState(false)
+  const [isGreen, setIsGreen] = useState(false)
   const [notes, setNotes] = useState('')
 
   const submit = () => {
     if (!title.trim()) return
-    onAdd({ title: title.trim(), complexity, recurring, notes })
+    onAdd({ title: title.trim(), complexity, recurring, notes, is_green: isGreen })
   }
 
   return (
@@ -54,6 +56,13 @@ export function AddTaskForm({
           />
           {t('task.recurringCheckbox')}
         </label>
+        <button
+          className={`asgn gap-1 ${isGreen ? 'green-on' : ''}`}
+          onClick={() => setIsGreen((g) => !g)}
+          title={t('task.greenTooltip')}
+        >
+          <Ic n="leaf" s={11} /> {t('task.greenToggle')}
+        </button>
         <div className="flex-1" />
         <button className="btn btn-g btn-s" onClick={onCancel}>
           {t('common.cancel')}

@@ -90,6 +90,7 @@ export function ReviewView() {
 
   const openTasks = p.tasks.filter((t) => !t.completed)
   const doneTasks = p.tasks.filter((t) => t.completed)
+  const greenOpen = openTasks.filter((t) => t.is_green).length
 
   return (
     <div>
@@ -136,6 +137,12 @@ export function ReviewView() {
                 </span>{' '}
                 {p.name}
               </h3>
+              {greenOpen > 0 && (
+                <span className="badge b-green inline-flex items-center gap-1">
+                  <Ic n="leaf" s={10} />
+                  {t('review.greenRatio', { green: greenOpen, total: openTasks.length })}
+                </span>
+              )}
             </div>
 
             {p.description && (
@@ -189,7 +196,14 @@ export function ReviewView() {
                 {doneTasks.map((t) => (
                   <div key={t.id} className="flex gap-2 border-t border-line px-4 py-1">
                     <span className="mt-0.5 text-[11px] text-accent">✓</span>
-                    <span className="text-[13px] text-ink-3 line-through">{t.title}</span>
+                    <span className="text-[13px] text-ink-3 line-through">
+                      {t.is_green && (
+                        <span className="mr-1 inline-flex align-[-1px] opacity-60">
+                          <Ic n="leaf" s={11} c="var(--green)" />
+                        </span>
+                      )}
+                      {t.title}
+                    </span>
                   </div>
                 ))}
               </div>

@@ -23,13 +23,23 @@ export function TodayView() {
   }
 
   const dateStr = formatDayHeading(i18n.language)
+  const dayTasks = [...must, ...today]
+  const greenCount = dayTasks.filter(({ t }) => t.is_green).length
 
   return (
     <div>
       <div className="ph">
         <div>
           <div className="ph-title">{t('today.title')}</div>
-          <div className="ph-sub">{dateStr}</div>
+          <div className="ph-sub">
+            {dateStr}
+            {dayTasks.length > 0 && (
+              <span className="ml-1.5 font-semibold text-green">
+                · <Ic n="leaf" s={10} c="var(--green)" />{' '}
+                {t('today.greenCount', { green: greenCount, total: dayTasks.length })}
+              </span>
+            )}
+          </div>
         </div>
         <Link to="/plan" className="btn btn-g btn-s">
           <Ic n="plan" s={13} /> {t('today.planMyDay')}

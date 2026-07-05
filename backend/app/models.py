@@ -64,6 +64,7 @@ class Task(Base):
     assigned_today: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_week: Mapped[bool] = mapped_column(Boolean, default=False)
     must_have: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_green: Mapped[bool] = mapped_column(Boolean, default=False)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     position: Mapped[int] = mapped_column(Integer, default=0)
 

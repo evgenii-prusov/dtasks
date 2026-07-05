@@ -27,6 +27,7 @@ const project: Project = {
       assigned_today: false,
       assigned_week: false,
       must_have: false,
+      is_green: false,
       completed: false,
       position: 0,
     },
