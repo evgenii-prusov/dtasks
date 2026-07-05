@@ -185,6 +185,7 @@ async def create_task(
         notes=data.notes,
         complexity=data.complexity,
         recurring=data.recurring,
+        is_green=data.is_green,
         position=max((t.position for t in project.tasks), default=-1) + 1,
     )
     if not task.title:
@@ -200,7 +201,15 @@ async def update_task(
 ) -> TaskOut:
     task = await _get_task(session, task_id, user.id)
 
-    for field in ("title", "notes", "complexity", "recurring", "assigned_week", "completed"):
+    for field in (
+        "title",
+        "notes",
+        "complexity",
+        "recurring",
+        "assigned_week",
+        "is_green",
+        "completed",
+    ):
         value = getattr(data, field)
         if value is not UNSET:
             setattr(task, field, value)

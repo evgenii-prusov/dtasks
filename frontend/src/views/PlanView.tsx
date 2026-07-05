@@ -17,6 +17,11 @@ export function PlanView() {
   const [addingTo, setAddingTo] = useState<number | null>(null)
 
   const mustCount = mustHaveCount(projects)
+  const greenTodayCount = projects.reduce(
+    (n, p) =>
+      n + p.tasks.filter((t) => t.is_green && !t.completed && t.assigned_today).length,
+    0,
+  )
 
   const setMust = (id: number, v: boolean) => {
     if (v && mustCount >= MUST_LIMIT) {
@@ -34,6 +39,9 @@ export function PlanView() {
           <div className="ph-sub">{t('plan.subtitle')}</div>
         </div>
         <div className="flex items-center gap-2.5">
+          <span className="text-[11px] text-ink-3">
+            {t('plan.greenToday')} <strong className="text-green">{greenTodayCount}</strong>
+          </span>
           <span className="text-[11px] text-ink-3">
             {t('plan.mustHaves')}{' '}
             <strong className="text-must">
@@ -89,6 +97,15 @@ export function PlanView() {
                 isLast={i === open.length - 1}
                 right={
                   <div className="flex shrink-0 gap-[5px]">
+                    <button
+                      className={`asgn ${task.is_green ? 'green-on' : ''}`}
+                      onClick={() =>
+                        updateTask.mutate({ id: task.id, patch: { is_green: !task.is_green } })
+                      }
+                      title={t('task.greenTooltip')}
+                    >
+                      <Ic n="leaf" s={11} />
+                    </button>
                     {tab === 'today' ? (
                       <>
                         <button

@@ -18,6 +18,8 @@
   --habit-2: #4a7c59;
   --high-bg: #fef3e2;
   --high-text: #9a5a10;
+  --green: #3e8e4f;
+  --green-2: #e3f3e6;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
 }
 [data-theme='dark'] {
@@ -35,6 +37,8 @@
   --habit-0: #2a251c;
   --high-bg: #2a1c08;
   --high-text: #d4883a;
+  --green: #5fc474;
+  --green-2: #15301c;
   --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
 }
 
@@ -55,6 +59,8 @@
   --color-habit-2: var(--habit-2);
   --color-high-bg: var(--high-bg);
   --color-high-text: var(--high-text);
+  --color-green: var(--green);
+  --color-green-2: var(--green-2);
   --font-sans: 'Plus Jakarta Sans', 'Inter', sans-serif;
   --font-serif: 'Lora', serif;
   --shadow-sm: var(--shadow-sm);
@@ -308,6 +314,15 @@ body {
     background: var(--surface-2);
     color: var(--text-2);
   }
+  .b-green {
+    background: var(--green-2);
+    color: var(--green);
+  }
+
+  /* green task: left edge stripe (leaf glyph rendered next to the title) */
+  .task-row.green {
+    box-shadow: inset 3px 0 0 var(--green);
+  }
 
   .add-form {
     padding: 12px 14px;
@@ -405,7 +420,12 @@ body {
     background: var(--must-2);
     color: var(--must);
   }
-  .asgn:hover:not(.on):not(.must-on) {
+  .asgn.green-on {
+    border-color: var(--green);
+    background: var(--green-2);
+    color: var(--green);
+  }
+  .asgn:hover:not(.on):not(.must-on):not(.green-on) {
     border-color: var(--text-3);
     color: var(--text-2);
   }

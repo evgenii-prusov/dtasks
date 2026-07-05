@@ -59,12 +59,14 @@
     "mustHave": "Must Have Today",
     "startHere": "START HERE",
     "sectionToday": "Today",
-    "sectionWeek": "This Week"
+    "sectionWeek": "This Week",
+    "greenCount": "{{green}} of {{total}} green"
   },
   "plan": {
     "title": "Plan",
     "subtitle": "Assign tasks to today or this week",
     "mustHaves": "Must-haves:",
+    "greenToday": "Green today:",
     "tabToday": "Today",
     "tabWeek": "This week",
     "taskButton": "Task",
@@ -87,6 +89,7 @@
     "doneBody": "You've used your full {{minutes}}-minute review budget.",
     "startNew": "Start new session",
     "allClear": "All clear ✓",
+    "greenRatio": "{{green}}/{{total}} green",
     "notesPlaceholder": "Project notes, links, ideas…",
     "remaining": "remaining",
     "prev": "← Prev",
@@ -127,6 +130,8 @@
     "notesPlaceholder": "Notes…",
     "notesOptionalPlaceholder": "Notes (optional)",
     "recurringCheckbox": "Recurring",
+    "greenToggle": "Green task",
+    "greenTooltip": "Green task — moves you toward your goals",
     "confirmDelete": "Delete \"{{title}}\"?",
     "clickToEdit": "Click to edit",
     "recurringBadge": "↺ recurring",

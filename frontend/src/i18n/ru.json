@@ -59,12 +59,14 @@
     "mustHave": "Главное на сегодня",
     "startHere": "НАЧНИТЕ ЗДЕСЬ",
     "sectionToday": "Сегодня",
-    "sectionWeek": "На этой неделе"
+    "sectionWeek": "На этой неделе",
+    "greenCount": "{{green}} из {{total}} зелёных"
   },
   "plan": {
     "title": "План",
     "subtitle": "Распределите задачи на сегодня и на неделю",
     "mustHaves": "Главных:",
+    "greenToday": "Зелёных на сегодня:",
     "tabToday": "Сегодня",
     "tabWeek": "Неделя",
     "taskButton": "Задача",
@@ -89,6 +91,7 @@
     "doneBody": "Вы использовали весь {{minutes}}-минутный бюджет обзора.",
     "startNew": "Начать новую сессию",
     "allClear": "Всё чисто ✓",
+    "greenRatio": "{{green}}/{{total}} зелёных",
     "notesPlaceholder": "Заметки о проекте, ссылки, идеи…",
     "remaining": "осталось",
     "prev": "← Назад",
@@ -129,6 +132,8 @@
     "notesPlaceholder": "Заметки…",
     "notesOptionalPlaceholder": "Заметки (необязательно)",
     "recurringCheckbox": "Повторяющаяся",
+    "greenToggle": "Зелёная задача",
+    "greenTooltip": "Зелёная задача — приближает к вашим целям",
     "confirmDelete": "Удалить «{{title}}»?",
     "clickToEdit": "Нажмите, чтобы изменить",
     "recurringBadge": "↺ повторяется",

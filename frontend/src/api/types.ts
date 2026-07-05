@@ -10,6 +10,7 @@ export interface Task {
   assigned_today: boolean
   assigned_week: boolean
   must_have: boolean
+  is_green: boolean
   completed: boolean
   position: number
 }
@@ -40,6 +41,7 @@ export interface TaskPatch {
   assigned_today?: boolean
   assigned_week?: boolean
   must_have?: boolean
+  is_green?: boolean
   completed?: boolean
 }
 
@@ -48,6 +50,7 @@ export interface TaskCreate {
   notes?: string
   complexity?: Complexity
   recurring?: boolean
+  is_green?: boolean
 }
 
 export interface ProjectPatch {

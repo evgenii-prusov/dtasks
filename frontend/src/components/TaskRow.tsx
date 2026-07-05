@@ -35,17 +35,19 @@ export function TaskRow({
   const [title, setTitle] = useState(task.title)
   const [notes, setNotes] = useState(task.notes || '')
   const [complexity, setComplexity] = useState<Complexity>(task.complexity)
+  const [isGreen, setIsGreen] = useState(task.is_green)
 
   const startEdit = () => {
     setTitle(task.title)
     setNotes(task.notes || '')
     setComplexity(task.complexity)
+    setIsGreen(task.is_green)
     setEditing(true)
   }
   const save = () => {
     updateTask.mutate({
       id: task.id,
-      patch: { title: title.trim() || task.title, notes, complexity },
+      patch: { title: title.trim() || task.title, notes, complexity, is_green: isGreen },
     })
     setEditing(false)
   }
@@ -56,7 +58,7 @@ export function TaskRow({
 
   if (editable && editing) {
     return (
-      <div className="task-row items-start">
+      <div className={`task-row items-start ${task.is_green ? 'green' : ''}`}>
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
           <input
@@ -81,6 +83,13 @@ export function TaskRow({
               <option value="low">{t('common.lowComplexity')}</option>
               <option value="high">{t('common.highComplexity')}</option>
             </select>
+            <button
+              className={`asgn gap-1 ${isGreen ? 'green-on' : ''}`}
+              onClick={() => setIsGreen((g) => !g)}
+              title={t('task.greenTooltip')}
+            >
+              <Ic n="leaf" s={11} /> {t('task.greenToggle')}
+            </button>
             <div className="flex-1" />
             <button className="btn btn-g btn-s" onClick={cancel}>
               {t('common.cancel')}
@@ -95,7 +104,7 @@ export function TaskRow({
   }
 
   return (
-    <div className="task-row">
+    <div className={`task-row ${task.is_green ? 'green' : ''}`}>
       {checkable && (
         <div
           className={`cb ${task.completed ? 'done' : ''}`}
@@ -107,7 +116,18 @@ export function TaskRow({
         onClick={editable ? startEdit : undefined}
         title={editable ? t('task.clickToEdit') : undefined}
       >
-        <div className={`t-title ${task.completed ? 'done' : ''}`}>{task.title}</div>
+        <div className={`t-title ${task.completed ? 'done' : ''}`}>
+          {task.is_green && (
+            <span
+              className="mr-1 inline-flex align-[-1px]"
+              style={{ color: 'var(--green)' }}
+              title={t('task.greenTooltip')}
+            >
+              <Ic n="leaf" s={12} />
+            </span>
+          )}
+          {task.title}
+        </div>
         <div className="t-meta">
           {showProject && project && <span className="badge b-proj">{project.name}</span>}
           <span className={`badge ${task.complexity === 'high' ? 'b-high' : 'b-low'}`}>
