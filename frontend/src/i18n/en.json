@@ -114,6 +114,7 @@
     "cycleHint": "Click cell to cycle: none → minimal → complete"
   },
   "project": {
+    "clickToRename": "Click to rename",
     "deleteTooltip": "Delete project",
     "confirmDelete": "Delete project \"{{name}}\" and all its tasks?",
     "description": "Description",

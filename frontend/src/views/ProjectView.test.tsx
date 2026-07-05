@@ -48,6 +48,50 @@ beforeEach(() => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+describe('ProjectView rename', () => {
+  it('renames the project when the title is clicked and edited', async () => {
+    renderView()
+
+    await userEvent.click(screen.getByTitle('Click to rename'))
+    const input = screen.getByDisplayValue('Demo Project')
+    await userEvent.clear(input)
+    await userEvent.type(input, 'New Name{Enter}')
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/7',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ name: 'New Name' }),
+        }),
+      ),
+    )
+  })
+
+  it('does not save when editing is cancelled with Escape', async () => {
+    renderView()
+
+    await userEvent.click(screen.getByTitle('Click to rename'))
+    const input = screen.getByDisplayValue('Demo Project')
+    await userEvent.type(input, ' changed{Escape}')
+
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(screen.getByText('Demo Project')).toBeInTheDocument()
+  })
+
+  it('keeps the old name when the input is emptied', async () => {
+    renderView()
+
+    await userEvent.click(screen.getByTitle('Click to rename'))
+    const input = screen.getByDisplayValue('Demo Project')
+    await userEvent.clear(input)
+    await userEvent.keyboard('{Enter}')
+
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(screen.getByText('Demo Project')).toBeInTheDocument()
+  })
+})
+
 describe('ProjectView delete', () => {
   it('deletes the project and navigates home when confirmed', async () => {
     vi.spyOn(window, 'confirm').mockReturnValue(true)
