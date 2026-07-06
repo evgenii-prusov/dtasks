@@ -156,6 +156,69 @@ describe('Sidebar project groups', () => {
     expect(screen.getByPlaceholderText('Project name…')).toHaveValue('Alpha')
     expect(navigate).not.toHaveBeenCalled()
   })
+
+  it('reorders projects when clicking the up/down buttons', async () => {
+    const projects = [
+      {
+        id: 101,
+        name: 'Work Project A',
+        group: 'Work',
+        description: '',
+        notes: '',
+        position: 0,
+        tasks: [],
+      },
+      {
+        id: 102,
+        name: 'Work Project B',
+        group: 'Work',
+        description: '',
+        notes: '',
+        position: 1,
+        tasks: [],
+      },
+    ]
+
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, init) => {
+      if (url === '/api/projects/102/reorder' && init?.method === 'POST') {
+        const body = JSON.parse(init.body as string)
+        if (body.direction === 'up') {
+          return new Response(
+            JSON.stringify([
+              { ...projects[1], position: 0 },
+              { ...projects[0], position: 1 },
+            ]),
+            { status: 201, headers: { 'content-type': 'application/json' } },
+          )
+        }
+      }
+      return new Response(JSON.stringify(projects), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    })
+
+    renderSidebar(projects)
+
+    expect(screen.getByText('Work Project A')).toBeInTheDocument()
+    expect(screen.getByText('Work Project B')).toBeInTheDocument()
+
+    const upButtons = screen.getAllByTitle('Move project up')
+    expect(upButtons[0]).toBeDisabled()
+    expect(upButtons[1]).not.toBeDisabled()
+
+    await userEvent.click(upButtons[1])
+
+    await waitFor(() =>
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/projects/102/reorder',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ direction: 'up' }),
+        }),
+      ),
+    )
+  })
 })
 
 describe('Sidebar language toggle', () => {

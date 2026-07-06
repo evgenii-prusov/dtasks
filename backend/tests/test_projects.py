@@ -63,3 +63,43 @@ async def test_create_project_defaults_group_to_work(client: AsyncTestClient) ->
 async def test_create_project_rejects_blank_name(client: AsyncTestClient) -> None:
     resp = await client.post("/api/projects", json={"name": "   ", "group": "Work"})
     assert resp.status_code == 400
+
+
+async def test_reorder_projects(client: AsyncTestClient) -> None:
+    # Create two projects in Personal group
+    resp1 = await client.post("/api/projects", json={"name": "P1", "group": "Personal"})
+    assert resp1.status_code == 201
+    p1 = resp1.json()
+
+    resp2 = await client.post("/api/projects", json={"name": "P2", "group": "Personal"})
+    assert resp2.status_code == 201
+    p2 = resp2.json()
+
+    # Verify their initial relative positions
+    projects = (await client.get("/api/projects")).json()
+    personal_projects = [p for p in projects if p["group"] == "Personal"]
+    idx1 = next(idx for idx, p in enumerate(personal_projects) if p["id"] == p1["id"])
+    idx2 = next(idx for idx, p in enumerate(personal_projects) if p["id"] == p2["id"])
+    assert idx1 < idx2
+
+    # Reorder P2 up (should swap P2 and P1)
+    resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "up"})
+    assert resp.status_code == 201
+    updated_projects = resp.json()
+    personal_projects_after = [p for p in updated_projects if p["group"] == "Personal"]
+
+    idx1_after = next(idx for idx, p in enumerate(personal_projects_after) if p["id"] == p1["id"])
+    idx2_after = next(idx for idx, p in enumerate(personal_projects_after) if p["id"] == p2["id"])
+    assert idx2_after < idx1_after
+
+    # Try to reorder P2 up again (should be a no-op as it's already first in group)
+    resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "up"})
+    assert resp.status_code == 201
+    personal_projects_noop = [p for p in resp.json() if p["group"] == "Personal"]
+    idx2_noop = next(idx for idx, p in enumerate(personal_projects_noop) if p["id"] == p2["id"])
+    assert idx2_noop == 0
+
+    # Try invalid direction
+    resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "left"})
+    assert resp.status_code == 400
+
