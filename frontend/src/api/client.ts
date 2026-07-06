@@ -52,6 +52,11 @@ export const api = {
   updateProject: (id: number, patch: ProjectPatch) =>
     request<Project>(`/api/projects/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
   deleteProject: (id: number) => request<void>(`/api/projects/${id}`, { method: 'DELETE' }),
+  reorderProject: (id: number, direction: 'up' | 'down') =>
+    request<Project[]>(`/api/projects/${id}/reorder`, {
+      method: 'POST',
+      body: JSON.stringify({ direction }),
+    }),
   createTask: (projectId: number, task: TaskCreate) =>
     request<Task>(`/api/projects/${projectId}/tasks`, {
       method: 'POST',

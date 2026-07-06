@@ -186,6 +186,43 @@ export function useDeleteProject() {
   })
 }
 
+export function useReorderProject() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, direction }: { id: number; direction: 'up' | 'down' }) =>
+      api.reorderProject(id, direction),
+    onMutate: async ({ id, direction }) => {
+      await qc.cancelQueries({ queryKey: ['projects'] })
+      const previous = qc.getQueryData<Project[]>(['projects'])
+      if (previous) {
+        const target = previous.find((p) => p.id === id)
+        if (target) {
+          const group = target.group
+          const inGroup = previous.filter((p) => p.group === group)
+          const i = inGroup.findIndex((p) => p.id === id)
+          const j = direction === 'up' ? i - 1 : i + 1
+          if (j >= 0 && j < inGroup.length) {
+            const next = [...previous]
+            const idxI = next.findIndex((p) => p.id === inGroup[i].id)
+            const idxJ = next.findIndex((p) => p.id === inGroup[j].id)
+            const temp = next[idxI].position
+            next[idxI] = { ...next[idxI], position: next[idxJ].position }
+            next[idxJ] = { ...next[idxJ], position: temp }
+            next.sort((a, b) => a.position - b.position)
+            qc.setQueryData(['projects'], next)
+          }
+        }
+      }
+      return { previous }
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) qc.setQueryData(['projects'], ctx.previous)
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+
 export function useSetHabitLog() {
   const qc = useQueryClient()
   return useMutation({

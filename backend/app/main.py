@@ -172,6 +172,49 @@ async def delete_project(project_id: int, session: AsyncSession, user: User) -> 
     await session.commit()
 
 
+@post("/api/projects/{project_id:int}/reorder")
+async def reorder_project(
+    project_id: int, data: ReorderPayload, session: AsyncSession, user: User
+) -> list[ProjectOut]:
+    if data.direction not in ("up", "down"):
+        raise ClientException(detail="direction must be 'up' or 'down'")
+    project = await _get_project(session, project_id, user.id)
+    projects_in_group = (
+        (
+            await session.execute(
+                select(Project)
+                .where(Project.user_id == user.id, Project.group == project.group)
+                .order_by(Project.position)
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+    i = next(idx for idx, p in enumerate(projects_in_group) if p.id == project.id)
+    j = i - 1 if data.direction == "up" else i + 1
+    if 0 <= j < len(projects_in_group):
+        projects_in_group[i].position, projects_in_group[j].position = (
+            projects_in_group[j].position,
+            projects_in_group[i].position,
+        )
+    await session.commit()
+
+    all_projects = (
+        (
+            await session.execute(
+                select(Project)
+                .where(Project.user_id == user.id)
+                .options(selectinload(Project.tasks))
+                .order_by(Project.position)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [project_out(p) for p in all_projects]
+
+
 @post("/api/projects/{project_id:int}/tasks")
 async def create_task(
     project_id: int, data: TaskCreate, session: AsyncSession, user: User
@@ -353,6 +396,7 @@ route_handlers: list = [
     create_project,
     update_project,
     delete_project,
+    reorder_project,
     create_task,
     update_task,
     delete_task,

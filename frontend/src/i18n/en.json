@@ -123,7 +123,9 @@
     "description": "Description",
     "noDescription": "No description. Click Edit to add one.",
     "allDone": "All tasks done! 🎉",
-    "notesPlaceholder": "Notes, links, ideas…"
+    "notesPlaceholder": "Notes, links, ideas…",
+    "moveUp": "Move project up",
+    "moveDown": "Move project down"
   },
   "task": {
     "titlePlaceholder": "Task title…",
