@@ -5,7 +5,8 @@ import os
 import pytest
 from litestar.testing import AsyncTestClient
 
-from conftest import DEFAULT_EMAIL, DEFAULT_PASSWORD
+from conftest import DEFAULT_EMAIL
+from conftest import DEFAULT_PASSWORD
 
 pytestmark = pytest.mark.anyio
 
@@ -32,7 +33,7 @@ async def test_signup_creates_account_with_starter_data(anon_client: AsyncTestCl
     assert me.json()["email"] == "alice@example.com"
 
     projects = (await anon_client.get("/api/projects")).json()
-    assert len(projects) == 4
+    assert len(projects) == 6
     habits = (await anon_client.get("/api/habits")).json()
     assert len(habits) == 4
 

@@ -143,5 +143,16 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "deleteTooltip": "Delete task"
+  },
+  "quickAdd": {
+    "placeholder": "Quick add task…",
+    "projectLabel": "Project",
+    "noProject": "No project",
+    "workDefault": "Work (Default)",
+    "personalDefault": "Personal (Default)",
+    "chooseSection": "Is this for Work or Personal?",
+    "work": "Work",
+    "personal": "Personal",
+    "submit": "Add"
   }
 }

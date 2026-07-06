@@ -145,5 +145,16 @@
     "moveUp": "Выше",
     "moveDown": "Ниже",
     "deleteTooltip": "Удалить задачу"
+  },
+  "quickAdd": {
+    "placeholder": "Быстро добавить задачу…",
+    "projectLabel": "Проект",
+    "noProject": "Без проекта",
+    "workDefault": "Работа (По умолчанию)",
+    "personalDefault": "Личное (По умолчанию)",
+    "chooseSection": "Это для Работы или Личное?",
+    "work": "Работа",
+    "personal": "Личное",
+    "submit": "Добавить"
   }
 }

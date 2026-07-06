@@ -1,10 +1,14 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { mustHaveCount, useCreateTask, useProjects, useUpdateTask } from '../api/hooks'
+import { mustHaveCount } from '../api/hooks'
+import { useCreateTask } from '../api/hooks'
+import { useProjects } from '../api/hooks'
+import { useUpdateTask } from '../api/hooks'
 import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
+import { QuickAddTask } from '../components/QuickAddTask'
 
 const MUST_LIMIT = 2
 
@@ -61,6 +65,8 @@ export function PlanView() {
           </div>
         </div>
       </div>
+
+      <QuickAddTask />
 
       {projects.map((p) => {
         const open = p.tasks.filter((t) => !t.completed)

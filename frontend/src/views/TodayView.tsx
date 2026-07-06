@@ -1,10 +1,12 @@
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useProjects } from '../api/hooks'
-import type { Project, Task } from '../api/types'
+import type { Project } from '../api/types'
+import type { Task } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { formatDayHeading } from '../lib/dates'
+import { QuickAddTask } from '../components/QuickAddTask'
 
 export function TodayView() {
   const { t, i18n } = useTranslation()
@@ -45,6 +47,8 @@ export function TodayView() {
           <Ic n="plan" s={13} /> {t('today.planMyDay')}
         </Link>
       </div>
+
+      <QuickAddTask />
 
       {must.length === 0 && today.length === 0 && week.length === 0 && (
         <div className="empty">
