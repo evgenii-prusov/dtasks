@@ -15,8 +15,8 @@ async def test_lists_are_scoped(make_client: MakeClient) -> None:
 
     a_projects = (await a.get("/api/projects")).json()
     b_projects = (await b.get("/api/projects")).json()
-    assert len(a_projects) == 4
-    assert len(b_projects) == 4
+    assert len(a_projects) == 6
+    assert len(b_projects) == 6
     a_project_ids = {p["id"] for p in a_projects}
     b_project_ids = {p["id"] for p in b_projects}
     assert a_project_ids.isdisjoint(b_project_ids)
@@ -172,5 +172,5 @@ async def test_project_positions_are_per_user(make_client: MakeClient) -> None:
     a_new = await a.post("/api/projects", json={"name": "A New Project"})
     b_new = await b.post("/api/projects", json={"name": "B New Project"})
 
-    assert a_new.json()["position"] == 4
-    assert b_new.json()["position"] == 4
+    assert a_new.json()["position"] == 6
+    assert b_new.json()["position"] == 6

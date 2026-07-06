@@ -5,16 +5,26 @@ from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Habit, HabitLog, Project, Task
+from .models import Habit
+from .models import HabitLog
+from .models import Project
+from .models import Task
 
 
 async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
     """Give a freshly signed-up user a small demo workspace. Does not commit."""
     projects = [
         Project(
-            name="Alerting Service",
+            name="...",
             group="Work",
             position=0,
+            description="Default project for Work tasks.",
+            tasks=[],
+        ),
+        Project(
+            name="Alerting Service",
+            group="Work",
+            position=1,
             description=(
                 "Build a robust alerting service monitoring system metrics "
                 "and notifying via Slack, email, and PagerDuty."
@@ -42,7 +52,7 @@ async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
         Project(
             name="Demo with Cortex",
             group="Work",
-            position=1,
+            position=2,
             description=(
                 "Prepare and deliver a compelling demo showcasing Cortex "
                 "capabilities to the CTO and data team leads."
@@ -64,7 +74,7 @@ async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
         Project(
             name="AI Assisted Workflow",
             group="Work",
-            position=2,
+            position=3,
             description=(
                 "Implement an AI-assisted workflow helping data teams discover, "
                 "document, and develop data products faster."
@@ -77,9 +87,16 @@ async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
             ],
         ),
         Project(
+            name="...",
+            group="Personal",
+            position=4,
+            description="Default project for Personal tasks.",
+            tasks=[],
+        ),
+        Project(
             name="German Driving License",
             group="Personal",
-            position=3,
+            position=5,
             description=(
                 "Pass the German Führerschein Class B. Theory exam booked May 15. "
                 "~14 practical lessons needed."

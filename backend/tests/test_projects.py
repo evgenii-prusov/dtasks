@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import pytest
 from litestar.testing import AsyncTestClient
-from sqlalchemy import func, select
+from sqlalchemy import func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import Task
@@ -92,14 +93,54 @@ async def test_reorder_projects(client: AsyncTestClient) -> None:
     idx2_after = next(idx for idx, p in enumerate(personal_projects_after) if p["id"] == p2["id"])
     assert idx2_after < idx1_after
 
-    # Try to reorder P2 up again (should be a no-op as it's already first in group)
+    # Reorder P2 up again (swaps with German Driving License)
+    resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "up"})
+    assert resp.status_code == 201
+
+    # Reorder P2 up again (swaps with '...')
     resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "up"})
     assert resp.status_code == 201
     personal_projects_noop = [p for p in resp.json() if p["group"] == "Personal"]
     idx2_noop = next(idx for idx, p in enumerate(personal_projects_noop) if p["id"] == p2["id"])
     assert idx2_noop == 0
 
+    # Try to reorder P2 up again (should be a no-op as it's already first in group)
+    resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "up"})
+    assert resp.status_code == 201
+    personal_projects_noop2 = [p for p in resp.json() if p["group"] == "Personal"]
+    idx2_noop2 = next(idx for idx, p in enumerate(personal_projects_noop2) if p["id"] == p2["id"])
+    assert idx2_noop2 == 0
+
     # Try invalid direction
     resp = await client.post(f"/api/projects/{p2['id']}/reorder", json={"direction": "left"})
     assert resp.status_code == 400
+
+
+async def test_default_projects_exist_by_default(client: AsyncTestClient) -> None:
+    projects = (await client.get("/api/projects")).json()
+    work_default = next((p for p in projects if p["name"] == "..." and p["group"] == "Work"), None)
+    personal_default = next((p for p in projects if p["name"] == "..." and p["group"] == "Personal"), None)
+    assert work_default is not None
+    assert personal_default is not None
+
+
+async def test_cannot_delete_or_rename_default_projects(client: AsyncTestClient) -> None:
+    projects = (await client.get("/api/projects")).json()
+    work_default = next(p for p in projects if p["name"] == "..." and p["group"] == "Work")
+
+    # Attempt rename
+    resp = await client.patch(f"/api/projects/{work_default['id']}", json={"name": "New Name"})
+    assert resp.status_code == 400
+    assert "cannot be renamed" in resp.json()["detail"]
+
+    # Attempt delete
+    resp = await client.delete(f"/api/projects/{work_default['id']}")
+    assert resp.status_code == 400
+    assert "cannot be deleted" in resp.json()["detail"]
+
+
+async def test_cannot_create_reserved_name_project(client: AsyncTestClient) -> None:
+    resp = await client.post("/api/projects", json={"name": "...", "group": "Work"})
+    assert resp.status_code == 400
+    assert "reserved for default projects" in resp.json()["detail"]
 

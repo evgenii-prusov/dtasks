@@ -115,8 +115,61 @@ async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, u
     return len(rows.all())
 
 
+async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
+    added = False
+    work_proj = (
+        await session.execute(
+            select(Project)
+            .where(Project.user_id == user_id, Project.name == "...", Project.group == "Work")
+        )
+    ).scalar_one_or_none()
+
+    if work_proj is None:
+        positions = (
+            await session.execute(select(Project.position).where(Project.user_id == user_id))
+        ).scalars().all()
+        next_pos = max(positions, default=-1) + 1
+        work_proj = Project(
+            user_id=user_id,
+            name="...",
+            group="Work",
+            description="Default project for Work tasks.",
+            position=next_pos,
+            tasks=[],
+        )
+        session.add(work_proj)
+        added = True
+
+    personal_proj = (
+        await session.execute(
+            select(Project)
+            .where(Project.user_id == user_id, Project.name == "...", Project.group == "Personal")
+        )
+    ).scalar_one_or_none()
+
+    if personal_proj is None:
+        positions = (
+            await session.execute(select(Project.position).where(Project.user_id == user_id))
+        ).scalars().all()
+        next_pos = max(positions, default=-1) + 1
+        personal_proj = Project(
+            user_id=user_id,
+            name="...",
+            group="Personal",
+            description="Default project for Personal tasks.",
+            position=next_pos,
+            tasks=[],
+        )
+        session.add(personal_proj)
+        added = True
+
+    if added:
+        await session.commit()
+
+
 @get("/api/projects")
 async def list_projects(session: AsyncSession, user: User) -> list[ProjectOut]:
+    await _ensure_default_projects(session, user.id)
     projects = (
         (
             await session.execute(
@@ -137,6 +190,8 @@ async def create_project(data: ProjectCreate, session: AsyncSession, user: User)
     name = data.name.strip()
     if not name:
         raise ClientException(detail="name must not be empty")
+    if name == "...":
+        raise ClientException(detail="Project name '...' is reserved for default projects")
     positions = (
         await session.execute(select(Project.position).where(Project.user_id == user.id))
     ).scalars().all()
@@ -157,6 +212,11 @@ async def update_project(
     project_id: int, data: ProjectPatch, session: AsyncSession, user: User
 ) -> ProjectOut:
     project = await _get_project(session, project_id, user.id)
+    if project.name == "...":
+        if data.name is not UNSET and data.name != "...":
+            raise ClientException(detail="Default projects cannot be renamed")
+        if data.group is not UNSET and data.group != project.group:
+            raise ClientException(detail="Default projects cannot change groups")
     for field in ("name", "group", "description", "notes"):
         value = getattr(data, field)
         if value is not UNSET:
@@ -168,6 +228,8 @@ async def update_project(
 @delete("/api/projects/{project_id:int}", status_code=204)
 async def delete_project(project_id: int, session: AsyncSession, user: User) -> None:
     project = await _get_project(session, project_id, user.id)
+    if project.name == "...":
+        raise ClientException(detail="Default projects cannot be deleted")
     await session.delete(project)
     await session.commit()
 
