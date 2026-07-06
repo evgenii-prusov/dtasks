@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCreateTask, useProjects, useUpdateProject } from '../api/hooks'
+import { useCreateTask } from '../api/hooks'
+import { useProjects } from '../api/hooks'
+import { useUpdateProject } from '../api/hooks'
+import { useUpdateTask } from '../api/hooks'
 import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
@@ -13,6 +16,7 @@ export function ReviewView() {
   const { data: projects = [] } = useProjects()
   const updateProject = useUpdateProject()
   const createTask = useCreateTask()
+  const updateTask = useUpdateTask()
 
   const total = MINUTES_PER_PROJECT * 60 * (projects.length || 1)
   const [idx, setIdx] = useState(0)
@@ -164,16 +168,42 @@ export function ReviewView() {
               {openTasks.length === 0 && !addingTask && (
                 <div className="px-4 pt-1 pb-3 text-xs text-ink-3">{t('review.allClear')}</div>
               )}
-              {openTasks.map((t, ti) => (
+              {openTasks.map((task, ti) => (
                 <TaskRow
-                  key={t.id}
-                  task={t}
+                  key={task.id}
+                  task={task}
                   checkable
                   editable
                   reorderable
                   deletable
                   isFirst={ti === 0}
                   isLast={ti === openTasks.length - 1}
+                  right={
+                    <div className="flex shrink-0 gap-[5px]">
+                      <button
+                        className={`asgn ${task.assigned_today ? 'on' : ''}`}
+                        onClick={() =>
+                          updateTask.mutate({
+                            id: task.id,
+                            patch: { assigned_today: !task.assigned_today },
+                          })
+                        }
+                      >
+                        {task.assigned_today ? t('plan.todayOn') : t('plan.todayOff')}
+                      </button>
+                      <button
+                        className={`asgn ${task.assigned_week ? 'on' : ''}`}
+                        onClick={() =>
+                          updateTask.mutate({
+                            id: task.id,
+                            patch: { assigned_week: !task.assigned_week },
+                          })
+                        }
+                      >
+                        {task.assigned_week ? t('plan.weekOn') : t('plan.weekOff')}
+                      </button>
+                    </div>
+                  }
                 />
               ))}
               {addingTask && (
