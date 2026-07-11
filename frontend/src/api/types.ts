@@ -25,6 +25,15 @@ export interface Project {
   tasks: Task[]
 }
 
+// Every group gets one server-managed catch-all project (name reserved as
+// "...") for tasks that don't belong to a specific project. It can't be
+// renamed, moved, or deleted (enforced server-side too).
+export const DEFAULT_PROJECT_NAME = '...'
+
+export function isDefaultProject(project: Pick<Project, 'name'>): boolean {
+  return project.name === DEFAULT_PROJECT_NAME
+}
+
 export interface Habit {
   id: number
   name: string
