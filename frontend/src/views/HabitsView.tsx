@@ -200,7 +200,7 @@ export function HabitsView() {
                 </div>
 
                 {/* Grid */}
-                <div className="overflow-x-auto pb-0.5">
+                <div className="hgrid-scroll overflow-x-auto pb-0.5">
                   <div className="hgrid">
                     {days.map((dateKey) => {
                       const isFuture = dateKey > todayKey
