@@ -12,6 +12,7 @@ import {
 } from '../api/hooks'
 import { useTheme } from '../theme'
 import { groupLabel, useLanguage } from '../i18n'
+import { isDefaultProject } from '../api/types'
 import { Ic, type IconName } from './Icon'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
@@ -130,45 +131,68 @@ export function Sidebar() {
               <Ic n="plus" s={11} />
             </button>
           </div>
-          {ps.map((p, idx) => (
-            <div key={p.id} className="group/project relative flex items-center w-full">
-              <Link
-                to="/projects/$projectId"
-                params={{ projectId: String(p.id) }}
-                className="nav !pr-[52px]"
-                activeProps={{ className: 'nav on' }}
-              >
-                <Ic n="folder" s={13} />
-                <span className="overflow-hidden text-ellipsis whitespace-nowrap">{p.name}</span>
-              </Link>
-              <div className="absolute right-4.5 hidden group-hover/project:flex items-center gap-0.5 z-10">
-                <button
-                  disabled={idx === 0}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    reorderProject.mutate({ id: p.id, direction: 'up' })
-                  }}
-                  className="flex items-center justify-center h-4.5 w-4.5 rounded border border-line bg-surface text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-surface cursor-pointer text-[8px] leading-none"
-                  title={t('project.moveUp')}
-                >
-                  ▲
-                </button>
-                <button
-                  disabled={idx === ps.length - 1}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    reorderProject.mutate({ id: p.id, direction: 'down' })
-                  }}
-                  className="flex items-center justify-center h-4.5 w-4.5 rounded border border-line bg-surface text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-surface cursor-pointer text-[8px] leading-none"
-                  title={t('project.moveDown')}
-                >
-                  ▼
-                </button>
-              </div>
-            </div>
-          ))}
+          {(() => {
+            const defaultProject = ps.find(isDefaultProject)
+            const regularProjects = ps.filter((p) => !isDefaultProject(p))
+            return (
+              <>
+                {defaultProject && (
+                  <Link
+                    to="/projects/$projectId"
+                    params={{ projectId: String(defaultProject.id) }}
+                    className="nav italic text-ink-3"
+                    activeProps={{ className: 'nav on' }}
+                  >
+                    <Ic n="folder" s={13} />
+                    <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                      {t('quickAdd.noProject')}
+                    </span>
+                  </Link>
+                )}
+                {regularProjects.map((p, idx) => (
+                  <div key={p.id} className="group/project relative flex items-center w-full">
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId: String(p.id) }}
+                      className="nav !pr-[52px]"
+                      activeProps={{ className: 'nav on' }}
+                    >
+                      <Ic n="folder" s={13} />
+                      <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+                        {p.name}
+                      </span>
+                    </Link>
+                    <div className="absolute right-4.5 hidden group-hover/project:flex items-center gap-0.5 z-10">
+                      <button
+                        disabled={idx === 0}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          reorderProject.mutate({ id: p.id, direction: 'up' })
+                        }}
+                        className="flex items-center justify-center h-4.5 w-4.5 rounded border border-line bg-surface text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-surface cursor-pointer text-[8px] leading-none"
+                        title={t('project.moveUp')}
+                      >
+                        ▲
+                      </button>
+                      <button
+                        disabled={idx === regularProjects.length - 1}
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          reorderProject.mutate({ id: p.id, direction: 'down' })
+                        }}
+                        className="flex items-center justify-center h-4.5 w-4.5 rounded border border-line bg-surface text-ink-2 hover:bg-surface-2 disabled:opacity-30 disabled:hover:bg-surface cursor-pointer text-[8px] leading-none"
+                        title={t('project.moveDown')}
+                      >
+                        ▼
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )
+          })()}
           {addingGroup === group && (
             <div className="px-[18px] py-1">
               <input

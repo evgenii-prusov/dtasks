@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useCreateTask, useDeleteProject, useUpdateProject } from '../api/hooks'
 import { groupLabel } from '../i18n'
-import type { Project } from '../api/types'
+import { isDefaultProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
@@ -14,6 +14,8 @@ export function ProjectView({ project }: { project: Project }) {
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const createTask = useCreateTask()
+
+  const isDefault = isDefaultProject(project)
 
   const removeProject = () => {
     if (confirm(t('project.confirmDelete', { name: project.name }))) {
@@ -71,6 +73,8 @@ export function ProjectView({ project }: { project: Project }) {
               onBlur={saveName}
               autoFocus
             />
+          ) : isDefault ? (
+            <div className="ph-title">{t('quickAdd.noProject')}</div>
           ) : (
             <div
               className="ph-title cursor-text"
@@ -85,13 +89,15 @@ export function ProjectView({ project }: { project: Project }) {
           <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
             <Ic n="plus" s={12} /> {t('common.addTask')}
           </button>
-          <button
-            className="btn btn-g btn-s btn-danger"
-            onClick={removeProject}
-            title={t('project.deleteTooltip')}
-          >
-            <Ic n="trash" s={12} />
-          </button>
+          {!isDefault && (
+            <button
+              className="btn btn-g btn-s btn-danger"
+              onClick={removeProject}
+              title={t('project.deleteTooltip')}
+            >
+              <Ic n="trash" s={12} />
+            </button>
+          )}
         </div>
       </div>
 
