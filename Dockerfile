@@ -8,6 +8,8 @@ RUN npm run build
 
 ### Stage 2: Python runtime
 FROM python:3.13-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends sqlite3 \
+    && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 
 WORKDIR /app/backend
@@ -16,6 +18,7 @@ RUN uv sync --frozen --no-dev --no-install-project
 
 COPY backend/ ./
 COPY --from=frontend-build /src/frontend/dist /app/frontend/dist
+COPY scripts/ /app/scripts/
 
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh

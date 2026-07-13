@@ -53,6 +53,9 @@ cd ../backend && uv run litestar --app app.main:app run --port 8000
 # open http://localhost:8000
 ```
 
+For an actual internet-facing deployment (Docker + Caddy for automatic HTTPS),
+see [`docs/deploy.md`](docs/deploy.md).
+
 ## API
 
 | Method | Path                          | Purpose                                    |
