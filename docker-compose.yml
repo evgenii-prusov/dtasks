@@ -1,0 +1,32 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DTASKS_DB_PATH: /data/dtasks.sqlite
+      DTASKS_SESSION_DIR: /data/sessions
+      DTASKS_SECURE_COOKIES: "1"
+    volumes:
+      - dtasks-data:/data
+    expose:
+      - "8000"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+
+volumes:
+  dtasks-data:
+  caddy-data:
+  caddy-config:
