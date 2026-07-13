@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 backend/.venv/
 backend/*.sqlite
+backend/db_backups/
 backend/.sessions/
 
 # Node

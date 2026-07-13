@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -53,8 +54,12 @@ MUST_HAVE_LIMIT = 2
 
 @asynccontextmanager
 async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
-    async with db.engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    # Prod schema comes from `alembic upgrade head` (run before the app starts,
+    # see the Docker entrypoint); create_all is only for tests/dev, which opt in
+    # via this flag since they have no migration step of their own.
+    if os.environ.get("DTASKS_AUTO_CREATE_SCHEMA") == "1":
+        async with db.engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     yield
     await db.engine.dispose()
 
