@@ -23,3 +23,6 @@ frontend/dist/
 
 #IDEA
 .idea/
+
+# Docker deploy secrets
+.env
