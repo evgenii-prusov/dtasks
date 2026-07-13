@@ -12,6 +12,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 os.environ.setdefault("DTASKS_INVITE_CODE", "test-invite-code")
 os.environ.setdefault("DTASKS_AUTH_RATE_LIMIT", "1000000")
 os.environ.setdefault("DTASKS_SESSION_DIR", tempfile.mkdtemp(prefix="dtasks-test-sessions-"))
+# Tests have no migration step of their own; opt into the lifespan's create_all
+# (prod instead runs `alembic upgrade head` before the app starts).
+os.environ.setdefault("DTASKS_AUTO_CREATE_SCHEMA", "1")
 
 from app import db as app_db  # noqa: E402
 from app import main  # noqa: E402
