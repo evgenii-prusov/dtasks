@@ -1,0 +1,36 @@
+#cloud-config
+# Bootstraps a stock Oracle "Canonical Ubuntu" image into a box that satisfies
+# docs/deploy.md's prerequisites: Docker Engine + compose plugin installed,
+# and ports 80/443 reachable. Runs once on first boot.
+
+package_update: true
+package_upgrade: true
+packages:
+  - ca-certificates
+  - curl
+  - gnupg
+  - iptables-persistent
+
+runcmd:
+  - export DEBIAN_FRONTEND=noninteractive
+  - install -m 0755 -d /etc/apt/keyrings
+  - curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  - chmod a+r /etc/apt/keyrings/docker.asc
+  - >
+    bash -c 'echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc]
+    https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo $VERSION_CODENAME) stable"
+    > /etc/apt/sources.list.d/docker.list'
+  - apt-get update
+  - >
+    DEBIAN_FRONTEND=noninteractive apt-get install -y
+    docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  - usermod -aG docker ubuntu
+  # Oracle's stock Ubuntu images ship iptables rules that accept only SSH
+  # inbound and drop everything else at the OS level -- independent of the
+  # OCI security list. Without this, Caddy's ports 80/443 are open in the
+  # cloud firewall but still blocked on the host itself.
+  - iptables -I INPUT -p tcp --dport 80 -j ACCEPT
+  - iptables -I INPUT -p tcp --dport 443 -j ACCEPT
+  - netfilter-persistent save
+
+final_message: "dtasks-vm cloud-init finished after $UPTIME seconds"

@@ -1,0 +1,10 @@
+# Copy to terraform.tfvars and fill in real values. terraform.tfvars is
+# gitignored -- it's account-specific, never commit it.
+# See docs/provision-vm.md for how to obtain each value.
+
+region           = "eu-frankfurt-1"
+compartment_ocid = "ocid1.tenancy.oc1..changeme"
+
+# Everything else (oci_profile, ssh_public_key_path, instance_name, ocpus,
+# memory_gbs, allow_ssh_cidr) has a sensible default in variables.tf --
+# override here only if you need something different.
