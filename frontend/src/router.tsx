@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
@@ -18,11 +19,33 @@ import { currentUserQueryOptions, useProjects } from './api/hooks'
 import { createQueryClient } from './queryClient'
 
 function Layout() {
+  const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <div className="flex h-screen">
-      <Sidebar />
-      <div className="max-w-[880px] flex-1 overflow-y-auto px-12 py-9">
-        <Outlet />
+      {/* Mobile overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 overflow-y-auto">
+        {/* Mobile top bar */}
+        <div className="flex items-center gap-3 border-b border-line px-4 py-3 md:hidden">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="flex flex-col gap-[5px] p-1"
+            aria-label="Open menu"
+          >
+            <span className="block h-[2px] w-5 bg-ink" />
+            <span className="block h-[2px] w-5 bg-ink" />
+            <span className="block h-[2px] w-5 bg-ink" />
+          </button>
+        </div>
+        <div className="max-w-[880px] px-4 py-6 md:px-12 md:py-9">
+          <Outlet />
+        </div>
       </div>
     </div>
   )
