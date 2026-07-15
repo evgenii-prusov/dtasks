@@ -32,6 +32,7 @@ export function TaskRow({
   const reorderTask = useReorderTask()
   const deleteTask = useDeleteTask()
   const [editing, setEditing] = useState(false)
+  const [expanded, setExpanded] = useState(false)
   const [title, setTitle] = useState(task.title)
   const [notes, setNotes] = useState(task.notes || '')
   const [complexity, setComplexity] = useState<Complexity>(task.complexity)
@@ -42,6 +43,7 @@ export function TaskRow({
     setNotes(task.notes || '')
     setComplexity(task.complexity)
     setIsGreen(task.is_green)
+    setExpanded(false)
     setEditing(true)
   }
   const save = () => {
@@ -103,8 +105,10 @@ export function TaskRow({
     )
   }
 
+  const hasActions = right || reorderable || deletable
+
   return (
-    <div className={`task-row ${task.is_green ? 'green' : ''}`}>
+    <div className={`task-row flex-wrap ${task.is_green ? 'green' : ''}`}>
       {checkable && (
         <div
           className={`cb ${task.completed ? 'done' : ''}`}
@@ -112,8 +116,14 @@ export function TaskRow({
         />
       )}
       <div
-        className={`min-w-0 flex-1 ${editable ? 'cursor-text' : ''}`}
-        onClick={editable ? startEdit : undefined}
+        className={`min-w-0 flex-1 ${editable ? 'cursor-text' : hasActions ? 'cursor-pointer' : ''}`}
+        onClick={
+          editable
+            ? startEdit
+            : hasActions
+              ? () => setExpanded((v) => !v)
+              : undefined
+        }
         title={editable ? t('task.clickToEdit') : undefined}
       >
         <div className={`t-title ${task.completed ? 'done' : ''}`}>
@@ -137,36 +147,39 @@ export function TaskRow({
           {task.notes && <span className="text-[10px] text-ink-3">· {t('task.noteBadge')}</span>}
         </div>
       </div>
-      {right}
-      {reorderable && (
-        <div className="flex shrink-0 flex-col gap-px">
+      {/* Action buttons: always visible on md+, tap-to-expand on mobile */}
+      <div className={`${expanded ? 'flex' : 'hidden'} w-full items-center gap-1.5 flex-wrap md:flex md:w-auto`}>
+        {right}
+        {reorderable && (
+          <div className="flex shrink-0 flex-col gap-px">
+            <button
+              className="btn btn-g px-[5px] py-px text-[9px] leading-none"
+              disabled={isFirst}
+              onClick={() => reorderTask.mutate({ id: task.id, direction: 'up' })}
+              title={t('task.moveUp')}
+            >
+              ▲
+            </button>
+            <button
+              className="btn btn-g px-[5px] py-px text-[9px] leading-none"
+              disabled={isLast}
+              onClick={() => reorderTask.mutate({ id: task.id, direction: 'down' })}
+              title={t('task.moveDown')}
+            >
+              ▼
+            </button>
+          </div>
+        )}
+        {deletable && (
           <button
-            className="btn btn-g px-[5px] py-px text-[9px] leading-none"
-            disabled={isFirst}
-            onClick={() => reorderTask.mutate({ id: task.id, direction: 'up' })}
-            title={t('task.moveUp')}
+            className="btn btn-g btn-danger shrink-0 px-[6px] py-[5px]"
+            onClick={remove}
+            title={t('task.deleteTooltip')}
           >
-            ▲
+            <Ic n="trash" s={12} />
           </button>
-          <button
-            className="btn btn-g px-[5px] py-px text-[9px] leading-none"
-            disabled={isLast}
-            onClick={() => reorderTask.mutate({ id: task.id, direction: 'down' })}
-            title={t('task.moveDown')}
-          >
-            ▼
-          </button>
-        </div>
-      )}
-      {deletable && (
-        <button
-          className="btn btn-g btn-danger shrink-0 px-[6px] py-[5px]"
-          onClick={remove}
-          title={t('task.deleteTooltip')}
-        >
-          <Ic n="trash" s={12} />
-        </button>
-      )}
+        )}
+      </div>
     </div>
   )
 }
