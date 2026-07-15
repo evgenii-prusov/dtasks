@@ -23,22 +23,24 @@ function NavLink({
   label,
   badge,
   badgeMust,
+  onClick,
 }: {
   to: string
   icon: IconName
   label: string
   badge?: number | null
   badgeMust?: boolean
+  onClick?: () => void
 }) {
   return (
-    <Link to={to} className="nav" activeProps={{ className: 'nav on' }}>
+    <Link to={to} className="nav" activeProps={{ className: 'nav on' }} onClick={onClick}>
       <Ic n={icon} s={14} /> {label}
       {badge != null && <span className={`nav-badge ${badgeMust ? 'must' : ''}`}>{badge}</span>}
     </Link>
   )
 }
 
-export function Sidebar() {
+export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () => void }) {
   const { t } = useTranslation()
   const { data: projects = [] } = useProjects()
   const { data: user } = useCurrentUser()
@@ -96,8 +98,17 @@ export function Sidebar() {
     )
   }
 
+  const close = () => onClose?.()
+
   return (
-    <div className="flex w-[230px] min-w-[230px] flex-col overflow-y-auto border-r border-line bg-surface py-3.5">
+    <div
+      className={[
+        'flex w-[230px] min-w-[230px] flex-col overflow-y-auto border-r border-line bg-surface py-3.5',
+        'fixed inset-y-0 left-0 z-40 transition-transform duration-200',
+        'md:relative md:translate-x-0 md:transition-none',
+        isOpen ? 'translate-x-0' : '-translate-x-full',
+      ].join(' ')}
+    >
       <div className="flex items-center gap-[7px] px-[18px] pt-1 pb-[18px] font-serif text-[17px] font-semibold tracking-[-0.3px] text-accent">
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <rect width="20" height="20" rx="5" fill="var(--accent)" />
@@ -112,10 +123,11 @@ export function Sidebar() {
         label={t('nav.today')}
         badge={todayCount > 0 ? todayCount : null}
         badgeMust={mustCount > 0}
+        onClick={close}
       />
-      <NavLink to="/plan" icon="plan" label={t('nav.plan')} />
-      <NavLink to="/review" icon="review" label={t('nav.review')} />
-      <NavLink to="/habits" icon="habits" label={t('nav.habits')} />
+      <NavLink to="/plan" icon="plan" label={t('nav.plan')} onClick={close} />
+      <NavLink to="/review" icon="review" label={t('nav.review')} onClick={close} />
+      <NavLink to="/habits" icon="habits" label={t('nav.habits')} onClick={close} />
 
       <hr className="s-divider" />
 
@@ -142,6 +154,7 @@ export function Sidebar() {
                     params={{ projectId: String(defaultProject.id) }}
                     className="nav italic text-ink-3"
                     activeProps={{ className: 'nav on' }}
+                    onClick={close}
                   >
                     <Ic n="folder" s={13} />
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap">
@@ -156,6 +169,7 @@ export function Sidebar() {
                       params={{ projectId: String(p.id) }}
                       className="nav !pr-[52px]"
                       activeProps={{ className: 'nav on' }}
+                      onClick={close}
                     >
                       <Ic n="folder" s={13} />
                       <span className="overflow-hidden text-ellipsis whitespace-nowrap">
