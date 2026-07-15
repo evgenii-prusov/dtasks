@@ -154,6 +154,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                     params={{ projectId: String(defaultProject.id) }}
                     className="nav italic text-ink-3"
                     activeProps={{ className: 'nav on' }}
+                    onClick={close}
                   >
                     <Ic n="folder" s={13} />
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap">
@@ -168,6 +169,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                       params={{ projectId: String(p.id) }}
                       className="nav !pr-[52px]"
                       activeProps={{ className: 'nav on' }}
+                      onClick={close}
                     >
                       <Ic n="folder" s={13} />
                       <span className="overflow-hidden text-ellipsis whitespace-nowrap">

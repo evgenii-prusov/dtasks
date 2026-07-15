@@ -22,6 +22,7 @@ function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
     <div className="flex h-screen">
+      {/* Mobile overlay */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-30 bg-black/40 md:hidden"
@@ -30,6 +31,7 @@ function Layout() {
       )}
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 overflow-y-auto">
+        {/* Mobile top bar */}
         <div className="flex items-center gap-3 border-b border-line px-4 py-3 md:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
