@@ -26,3 +26,12 @@ frontend/dist/
 
 # Docker deploy secrets
 .env
+
+# Terraform (infra/): local state, account-specific vars, provider cache
+infra/.terraform/
+infra/terraform.tfstate
+infra/terraform.tfstate.*
+infra/terraform.tfvars
+infra/*.tfplan
+infra/crash.log
+infra/crash.*.log
