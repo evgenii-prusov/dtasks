@@ -6,10 +6,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import pytest
+from conftest import DEFAULT_EMAIL, DEFAULT_PASSWORD
 from litestar.testing import AsyncTestClient
-
-from conftest import DEFAULT_EMAIL
-from conftest import DEFAULT_PASSWORD
 from scripts.reset_password import reset_password  # noqa: E402
 
 pytestmark = pytest.mark.anyio

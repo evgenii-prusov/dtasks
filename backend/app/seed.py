@@ -5,10 +5,7 @@ from datetime import date, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Habit
-from .models import HabitLog
-from .models import Project
-from .models import Task
+from .models import Habit, HabitLog, Project, Task
 
 
 async def seed_starter_data(session: AsyncSession, user_id: int) -> None:

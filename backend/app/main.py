@@ -6,32 +6,17 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from litestar import Litestar
-from litestar import Request
-from litestar import Response
-from litestar import delete
-from litestar import get
-from litestar import patch
-from litestar import post
-from litestar import put
+from litestar import Litestar, Request, Response, delete, get, patch, post, put
 from litestar.config.cors import CORSConfig
-from litestar.exceptions import ClientException
-from litestar.exceptions import NotFoundException
+from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from . import db
-from .auth import auth_router
-from .auth import session_auth
-from .auth import session_store
-from .models import Base
-from .models import Habit
-from .models import HabitLog
-from .models import Project
-from .models import Task
-from .models import User
+from .auth import auth_router, session_auth, session_store
+from .models import Base, Habit, HabitLog, Project, Task, User
 from .schemas import (
     UNSET,
     HabitCreate,
@@ -71,9 +56,7 @@ def provide_user(request: Request[User, Any, Any]) -> User:
 async def _get_task(session: AsyncSession, task_id: int, user_id: int) -> Task:
     task = (
         await session.execute(
-            select(Task)
-            .join(Project)
-            .where(Task.id == task_id, Project.user_id == user_id)
+            select(Task).join(Project).where(Task.id == task_id, Project.user_id == user_id)
         )
     ).scalar_one_or_none()
     if task is None:
@@ -96,9 +79,7 @@ async def _get_project(session: AsyncSession, project_id: int, user_id: int) -> 
 
 async def _get_habit(session: AsyncSession, habit_id: int, user_id: int) -> Habit:
     habit = (
-        await session.execute(
-            select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id)
-        )
+        await session.execute(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id))
     ).scalar_one_or_none()
     if habit is None:
         raise NotFoundException(detail="Habit not found")
@@ -124,15 +105,16 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
     added = False
     work_proj = (
         await session.execute(
-            select(Project)
-            .where(Project.user_id == user_id, Project.name == "...", Project.group == "Work")
+            select(Project).where(Project.user_id == user_id, Project.name == "...", Project.group == "Work")
         )
     ).scalar_one_or_none()
 
     if work_proj is None:
         positions = (
-            await session.execute(select(Project.position).where(Project.user_id == user_id))
-        ).scalars().all()
+            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
+            .scalars()
+            .all()
+        )
         next_pos = max(positions, default=-1) + 1
         work_proj = Project(
             user_id=user_id,
@@ -147,15 +129,18 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
 
     personal_proj = (
         await session.execute(
-            select(Project)
-            .where(Project.user_id == user_id, Project.name == "...", Project.group == "Personal")
+            select(Project).where(
+                Project.user_id == user_id, Project.name == "...", Project.group == "Personal"
+            )
         )
     ).scalar_one_or_none()
 
     if personal_proj is None:
         positions = (
-            await session.execute(select(Project.position).where(Project.user_id == user_id))
-        ).scalars().all()
+            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
+            .scalars()
+            .all()
+        )
         next_pos = max(positions, default=-1) + 1
         personal_proj = Project(
             user_id=user_id,
@@ -198,8 +183,8 @@ async def create_project(data: ProjectCreate, session: AsyncSession, user: User)
     if name == "...":
         raise ClientException(detail="Project name '...' is reserved for default projects")
     positions = (
-        await session.execute(select(Project.position).where(Project.user_id == user.id))
-    ).scalars().all()
+        (await session.execute(select(Project.position).where(Project.user_id == user.id))).scalars().all()
+    )
     project = Project(
         user_id=user.id,
         name=name,
@@ -283,9 +268,7 @@ async def reorder_project(
 
 
 @post("/api/projects/{project_id:int}/tasks")
-async def create_task(
-    project_id: int, data: TaskCreate, session: AsyncSession, user: User
-) -> TaskOut:
+async def create_task(project_id: int, data: TaskCreate, session: AsyncSession, user: User) -> TaskOut:
     project = await _get_project(session, project_id, user.id)
     if data.complexity not in ("low", "high"):
         raise ClientException(detail="complexity must be 'low' or 'high'")
@@ -306,9 +289,7 @@ async def create_task(
 
 
 @patch("/api/tasks/{task_id:int}")
-async def update_task(
-    task_id: int, data: TaskPatch, session: AsyncSession, user: User
-) -> TaskOut:
+async def update_task(task_id: int, data: TaskPatch, session: AsyncSession, user: User) -> TaskOut:
     task = await _get_task(session, task_id, user.id)
 
     for field in (
@@ -399,8 +380,8 @@ async def create_habit(data: HabitCreate, session: AsyncSession, user: User) -> 
     if not name:
         raise ClientException(detail="name must not be empty")
     positions = (
-        await session.execute(select(Habit.position).where(Habit.user_id == user.id))
-    ).scalars().all()
+        (await session.execute(select(Habit.position).where(Habit.user_id == user.id))).scalars().all()
+    )
     habit = Habit(
         user_id=user.id,
         name=name,
@@ -414,9 +395,7 @@ async def create_habit(data: HabitCreate, session: AsyncSession, user: User) -> 
 
 
 @put("/api/habits/{habit_id:int}/log")
-async def set_habit_log(
-    habit_id: int, data: HabitLogPayload, session: AsyncSession, user: User
-) -> HabitOut:
+async def set_habit_log(habit_id: int, data: HabitLogPayload, session: AsyncSession, user: User) -> HabitOut:
     habit = (
         await session.execute(
             select(Habit)
@@ -479,9 +458,7 @@ route_handlers: list = [
     delete_habit,
 ]
 if FRONTEND_DIST.is_dir():
-    route_handlers.append(
-        create_static_files_router(path="/", directories=[FRONTEND_DIST], html_mode=True)
-    )
+    route_handlers.append(create_static_files_router(path="/", directories=[FRONTEND_DIST], html_mode=True))
 
 app = Litestar(
     route_handlers=route_handlers,
