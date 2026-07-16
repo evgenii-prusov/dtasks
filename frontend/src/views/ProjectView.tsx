@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useCreateTask, useDeleteProject, useUpdateProject } from '../api/hooks'
+import { useCreateTask, useDeleteProject, useProjects, useUpdateProject } from '../api/hooks'
 import { groupLabel } from '../i18n'
 import { isDefaultProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
@@ -14,6 +14,7 @@ export function ProjectView({ project }: { project: Project }) {
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const createTask = useCreateTask()
+  const { data: allProjects = [] } = useProjects()
 
   const isDefault = isDefaultProject(project)
 
@@ -151,6 +152,7 @@ export function ProjectView({ project }: { project: Project }) {
             deletable
             isFirst={i === 0}
             isLast={i === open.length - 1}
+            allProjects={allProjects}
           />
         ))}
         {addingTask && (

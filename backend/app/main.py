@@ -343,6 +343,11 @@ async def update_task(
         else:
             task.must_have = False
 
+    if data.project_id is not UNSET:
+        new_project = await _get_project(session, data.project_id, user.id)
+        task.project_id = new_project.id
+        task.position = max((t.position for t in new_project.tasks if t.id != task.id), default=-1) + 1
+
     await session.commit()
     return task_out(task)
 

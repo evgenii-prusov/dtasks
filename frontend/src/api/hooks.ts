@@ -77,10 +77,26 @@ export function mustHaveCount(projects: Project[]): number {
 }
 
 function patchTaskInCache(projects: Project[], taskId: number, patch: TaskPatch): Project[] {
-  return projects.map((p) => ({
+  if (patch.project_id === undefined) {
+    return projects.map((p) => ({
+      ...p,
+      tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+    }))
+  }
+  let movedTask: (typeof projects)[0]['tasks'][0] | undefined
+  const without = projects.map((p) => ({
     ...p,
-    tasks: p.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)),
+    tasks: p.tasks.filter((t) => {
+      if (t.id === taskId) {
+        movedTask = { ...t, ...patch }
+        return false
+      }
+      return true
+    }),
   }))
+  if (!movedTask) return without
+  const task = movedTask
+  return without.map((p) => (p.id === patch.project_id ? { ...p, tasks: [...p.tasks, task] } : p))
 }
 
 export function useUpdateTask() {

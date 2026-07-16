@@ -52,6 +52,7 @@ export interface TaskPatch {
   must_have?: boolean
   is_green?: boolean
   completed?: boolean
+  project_id?: number
 }
 
 export interface TaskCreate {
