@@ -29,10 +29,10 @@ export function ReviewView() {
 
   const p = projects[idx]
 
-  // Initialize the session budget once projects arrive
+  // Initialize the session budget once projects with tasks arrive
   useEffect(() => {
-    if (projects.length > 0 && left === null) setLeft(total)
-  }, [projects.length, left, total])
+    if (projects.some((proj) => proj.tasks.length > 0) && left === null) setLeft(total)
+  }, [projects, left, total])
 
   useEffect(() => {
     setNoteVal(p?.notes ?? '')
@@ -56,9 +56,11 @@ export function ReviewView() {
     return () => clearInterval(intervalRef.current)
   }, [running, done])
 
+  const hasAnyTasks = projects.some((proj) => proj.tasks.length > 0)
+
   if (isLoading) return null
 
-  if (projects.length === 0)
+  if (!hasAnyTasks)
     return (
       <div>
         <div className="ph">
