@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import pytest
 from litestar.testing import AsyncTestClient
-from sqlalchemy import func
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.models import Task
@@ -28,9 +27,7 @@ async def test_delete_project_removes_it_and_cascades_tasks(
     # Tasks belonging to the project are cascade-deleted (no orphans left).
     async with db() as session:
         orphan_tasks = (
-            await session.execute(
-                select(func.count()).select_from(Task).where(Task.project_id == project_id)
-            )
+            await session.execute(select(func.count()).select_from(Task).where(Task.project_id == project_id))
         ).scalar()
     assert orphan_tasks == 0
 
@@ -143,4 +140,3 @@ async def test_cannot_create_reserved_name_project(client: AsyncTestClient) -> N
     resp = await client.post("/api/projects", json={"name": "...", "group": "Work"})
     assert resp.status_code == 400
     assert "reserved for default projects" in resp.json()["detail"]
-

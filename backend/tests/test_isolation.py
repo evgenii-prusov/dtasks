@@ -1,9 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from litestar.testing import AsyncTestClient
-from sqlalchemy.ext.asyncio import async_sessionmaker
-
 from conftest import MakeClient
 
 pytestmark = pytest.mark.anyio
@@ -75,12 +72,8 @@ async def test_cross_tenant_task_404(make_client: MakeClient) -> None:
     assert reorder_real.status_code == 404
     assert reorder_real.json() == reorder_missing.json()
 
-    create_missing = await b.post(
-        "/api/projects/999999/tasks", json={"title": "hacked task"}
-    )
-    create_real = await b.post(
-        f"/api/projects/{a_project_id}/tasks", json={"title": "hacked task"}
-    )
+    create_missing = await b.post("/api/projects/999999/tasks", json={"title": "hacked task"})
+    create_real = await b.post(f"/api/projects/{a_project_id}/tasks", json={"title": "hacked task"})
     assert create_real.status_code == 404
     assert create_real.json() == create_missing.json()
 
@@ -94,12 +87,8 @@ async def test_cross_tenant_habit_404(make_client: MakeClient) -> None:
 
     a_habit_id = (await a.get("/api/habits")).json()[0]["id"]
 
-    missing = await b.put(
-        "/api/habits/999999/log", json={"day": "2026-07-03", "state": 2}
-    )
-    real = await b.put(
-        f"/api/habits/{a_habit_id}/log", json={"day": "2026-07-03", "state": 2}
-    )
+    missing = await b.put("/api/habits/999999/log", json={"day": "2026-07-03", "state": 2})
+    real = await b.put(f"/api/habits/{a_habit_id}/log", json={"day": "2026-07-03", "state": 2})
     assert real.status_code == 404
     assert real.json() == missing.json()
 
@@ -134,9 +123,7 @@ async def test_must_have_limit_is_per_user(make_client: MakeClient) -> None:
     b_projects = (await b.get("/api/projects")).json()
     b_tasks = [t for p in b_projects for t in p["tasks"]]
     b_non_must_have = next(t for t in b_tasks if not t["must_have"])
-    b_at_limit = await b.patch(
-        f"/api/tasks/{b_non_must_have['id']}", json={"must_have": True}
-    )
+    b_at_limit = await b.patch(f"/api/tasks/{b_non_must_have['id']}", json={"must_have": True})
     assert b_at_limit.status_code == 409
 
     a_projects = (await a.get("/api/projects")).json()
@@ -147,21 +134,15 @@ async def test_must_have_limit_is_per_user(make_client: MakeClient) -> None:
 
     # A unsets one of theirs, then successfully sets a different one, even
     # while B independently sits at the limit.
-    unset = await a.patch(
-        f"/api/tasks/{a_must_haves[0]['id']}", json={"must_have": False}
-    )
+    unset = await a.patch(f"/api/tasks/{a_must_haves[0]['id']}", json={"must_have": False})
     assert unset.status_code == 200
 
-    set_new = await a.patch(
-        f"/api/tasks/{a_non_must_have['id']}", json={"must_have": True}
-    )
+    set_new = await a.patch(f"/api/tasks/{a_non_must_have['id']}", json={"must_have": True})
     assert set_new.status_code == 200
 
     # A is now back at the limit (2 active must-haves): the remaining
     # original must-have plus the newly set one.
-    still_at_limit = await a.patch(
-        f"/api/tasks/{a_must_haves[0]['id']}", json={"must_have": True}
-    )
+    still_at_limit = await a.patch(f"/api/tasks/{a_must_haves[0]['id']}", json={"must_have": True})
     assert still_at_limit.status_code == 409
 
 

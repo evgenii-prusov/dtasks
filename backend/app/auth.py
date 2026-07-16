@@ -52,9 +52,7 @@ def _user_out(user: User) -> UserOut:
     return UserOut(id=user.id, email=user.email)
 
 
-async def retrieve_user_handler(
-    session: dict[str, Any], connection: ASGIConnection
-) -> User | None:
+async def retrieve_user_handler(session: dict[str, Any], connection: ASGIConnection) -> User | None:
     user_id = session.get("user_id")
     if user_id is None:
         return None
@@ -72,15 +70,11 @@ async def signup(data: SignupPayload, session: AsyncSession, request: Request) -
     if "@" not in email:
         raise ClientException(detail="A valid email is required")
     if len(data.password) < MIN_PASSWORD_LENGTH:
-        raise ClientException(
-            detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters"
-        )
+        raise ClientException(detail=f"Password must be at least {MIN_PASSWORD_LENGTH} characters")
 
     exists = (await session.execute(select(User.id).where(User.email == email))).first()
     if exists is not None:
-        raise ClientException(
-            detail="An account with this email already exists", status_code=409
-        )
+        raise ClientException(detail="An account with this email already exists", status_code=409)
 
     user = User(email=email, password_hash=hash_password(data.password))
     session.add(user)
@@ -95,9 +89,7 @@ async def signup(data: SignupPayload, session: AsyncSession, request: Request) -
 @post("/login", exclude_from_auth=True, status_code=200)
 async def login(data: LoginPayload, session: AsyncSession, request: Request) -> UserOut:
     email = data.email.strip().lower()
-    user = (
-        await session.execute(select(User).where(User.email == email))
-    ).scalar_one_or_none()
+    user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
     password_ok = verify_password(data.password, user.password_hash if user else _DUMMY_HASH)
     if user is None or not password_ok:
         raise NotAuthorizedException(detail="Invalid email or password")
@@ -116,9 +108,7 @@ async def me(request: Request[User, Any, Any]) -> UserOut:
 
 
 # Brute-force protection for credential endpoints only; /me is polled by the SPA.
-_rate_limit = RateLimitConfig(
-    rate_limit=("minute", int(os.environ.get("DTASKS_AUTH_RATE_LIMIT", "20")))
-)
+_rate_limit = RateLimitConfig(rate_limit=("minute", int(os.environ.get("DTASKS_AUTH_RATE_LIMIT", "20"))))
 
 auth_router = Router(
     path="/api/auth",

@@ -3,10 +3,8 @@ from __future__ import annotations
 import os
 
 import pytest
+from conftest import DEFAULT_EMAIL, DEFAULT_PASSWORD
 from litestar.testing import AsyncTestClient
-
-from conftest import DEFAULT_EMAIL
-from conftest import DEFAULT_PASSWORD
 
 pytestmark = pytest.mark.anyio
 
@@ -77,9 +75,7 @@ async def test_login_logout_roundtrip(client: AsyncTestClient) -> None:
     assert (await client.post("/api/auth/logout")).status_code == 204
     assert (await client.get("/api/auth/me")).status_code == 401
 
-    resp = await client.post(
-        "/api/auth/login", json={"email": DEFAULT_EMAIL, "password": DEFAULT_PASSWORD}
-    )
+    resp = await client.post("/api/auth/login", json={"email": DEFAULT_EMAIL, "password": DEFAULT_PASSWORD})
     assert resp.status_code == 200
     assert resp.json()["email"] == DEFAULT_EMAIL
     assert (await client.get("/api/auth/me")).status_code == 200

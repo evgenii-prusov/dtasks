@@ -35,7 +35,7 @@ const project: Project = {
 }
 
 function renderView() {
-  const qc = new QueryClient()
+  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
   qc.setQueryData(['projects'], [project])
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>

@@ -38,9 +38,7 @@ async def test_delete_habit_removes_it_and_cascades_logs(
     target = habits[0]
     habit_id = target["id"]
 
-    logged = await client.put(
-        f"/api/habits/{habit_id}/log", json={"day": "2026-07-03", "state": 2}
-    )
+    logged = await client.put(f"/api/habits/{habit_id}/log", json={"day": "2026-07-03", "state": 2})
     assert logged.status_code == 200
 
     resp = await client.delete(f"/api/habits/{habit_id}")
