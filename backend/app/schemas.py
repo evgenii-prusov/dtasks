@@ -81,6 +81,7 @@ class TaskPatch(msgspec.Struct):
     must_have: bool | msgspec.UnsetType = UNSET
     is_green: bool | msgspec.UnsetType = UNSET
     completed: bool | msgspec.UnsetType = UNSET
+    project_id: int | msgspec.UnsetType = UNSET
 
 
 class ProjectPatch(msgspec.Struct):

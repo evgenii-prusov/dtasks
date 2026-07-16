@@ -146,7 +146,8 @@
     "complexityHigh": "сложная",
     "moveUp": "Выше",
     "moveDown": "Ниже",
-    "deleteTooltip": "Удалить задачу"
+    "deleteTooltip": "Удалить задачу",
+    "moveToProject": "Переместить в проект"
   },
   "quickAdd": {
     "placeholder": "Быстро добавить задачу…",

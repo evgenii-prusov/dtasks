@@ -15,6 +15,7 @@ export function TaskRow({
   isLast = false,
   deletable = false,
   right,
+  allProjects,
 }: {
   task: Task
   project?: Project
@@ -26,6 +27,7 @@ export function TaskRow({
   isLast?: boolean
   deletable?: boolean
   right?: ReactNode
+  allProjects?: Project[]
 }) {
   const { t } = useTranslation()
   const updateTask = useUpdateTask()
@@ -36,6 +38,7 @@ export function TaskRow({
   const [notes, setNotes] = useState(task.notes || '')
   const [complexity, setComplexity] = useState<Complexity>(task.complexity)
   const [isGreen, setIsGreen] = useState(task.is_green)
+  const [selectedProjectId, setSelectedProjectId] = useState(task.project_id)
   const [swiped, setSwiped] = useState(false)
 
   const touchStartX = useRef<number | null>(null)
@@ -81,13 +84,18 @@ export function TaskRow({
     setNotes(task.notes || '')
     setComplexity(task.complexity)
     setIsGreen(task.is_green)
+    setSelectedProjectId(task.project_id)
     setEditing(true)
   }
   const save = () => {
-    updateTask.mutate({
-      id: task.id,
-      patch: { title: title.trim() || task.title, notes, complexity, is_green: isGreen },
-    })
+    const patch: Parameters<typeof updateTask.mutate>[0]['patch'] = {
+      title: title.trim() || task.title,
+      notes,
+      complexity,
+      is_green: isGreen,
+    }
+    if (selectedProjectId !== task.project_id) patch.project_id = selectedProjectId
+    updateTask.mutate({ id: task.id, patch })
     setEditing(false)
   }
   const cancel = () => setEditing(false)
@@ -137,6 +145,31 @@ export function TaskRow({
               {t('common.save')}
             </button>
           </div>
+          {allProjects && allProjects.length > 1 && (
+            <div className="mt-1.5 flex items-center gap-1.5">
+              <span className="text-[11px] text-ink-3">{t('task.moveToProject')}:</span>
+              <select
+                className="sel text-[11px]"
+                value={selectedProjectId}
+                onChange={(e) => setSelectedProjectId(Number(e.target.value))}
+              >
+                {Object.entries(
+                  allProjects.reduce<Record<string, Project[]>>((acc, p) => {
+                    ;(acc[p.group] ??= []).push(p)
+                    return acc
+                  }, {}),
+                ).map(([group, projects]) => (
+                  <optgroup key={group} label={group}>
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
       </div>
     )

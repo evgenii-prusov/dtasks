@@ -144,7 +144,8 @@
     "complexityHigh": "high",
     "moveUp": "Move up",
     "moveDown": "Move down",
-    "deleteTooltip": "Delete task"
+    "deleteTooltip": "Delete task",
+    "moveToProject": "Move to project"
   },
   "quickAdd": {
     "placeholder": "Quick add task…",
