@@ -13,7 +13,7 @@ const MINUTES_PER_PROJECT = 5
 
 export function ReviewView() {
   const { t } = useTranslation()
-  const { data: projects = [] } = useProjects()
+  const { data: projects = [], isLoading } = useProjects()
   const updateProject = useUpdateProject()
   const createTask = useCreateTask()
   const updateTask = useUpdateTask()
@@ -55,6 +55,22 @@ export function ReviewView() {
     }, 1000)
     return () => clearInterval(intervalRef.current)
   }, [running, done])
+
+  if (isLoading) return null
+
+  if (projects.length === 0)
+    return (
+      <div>
+        <div className="ph">
+          <div className="ph-title">{t('review.title')}</div>
+        </div>
+        <div className="empty">
+          <div className="empty-icon">📋</div>
+          <div className="mb-1.5 font-semibold">{t('review.emptyTitle')}</div>
+          <div className="text-xs">{t('review.emptyBody')}</div>
+        </div>
+      </div>
+    )
 
   if (!p || left === null) return null
 
