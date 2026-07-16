@@ -90,10 +90,16 @@ export function QuickAddTask() {
           >
             <option value="none">{t('quickAdd.noProject')}</option>
             {groups.map((group) => {
+              const catchAll = group === 'Work' ? defaultWorkProj : defaultPersonalProj
               const groupProjs = userProjects.filter((p) => p.group === group)
-              if (groupProjs.length === 0) return null
+              if (!catchAll && groupProjs.length === 0) return null
               return (
                 <optgroup key={group} label={groupLabel(t, group)}>
+                  {catchAll && (
+                    <option value={String(catchAll.id)}>
+                      {t(`quickAdd.${group.toLowerCase() as 'work' | 'personal'}`)}
+                    </option>
+                  )}
                   {groupProjs.map((p) => (
                     <option key={p.id} value={p.id}>
                       {p.name}
