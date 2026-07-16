@@ -95,7 +95,9 @@
     "prev": "← Prev",
     "next": "Next →",
     "budgetLine1": "Session budget",
-    "budgetLine2": "for all projects"
+    "budgetLine2": "for all projects",
+    "emptyTitle": "No tasks yet",
+    "emptyBody": "Create a project and add tasks to start reviewing."
   },
   "habits": {
     "title": "Habits",
