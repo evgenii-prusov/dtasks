@@ -21,7 +21,7 @@ import { createQueryClient } from './queryClient'
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   return (
-    <div className="flex h-screen">
+    <div className="flex h-dvh">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div

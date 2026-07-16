@@ -64,11 +64,11 @@ export function TodayView() {
       {must.length > 0 && (
         <div className="card must-card">
           <div className="card-head">
-            <h3>
+            <h3 className="min-w-0 overflow-hidden">
               <Ic n="fire" s={14} c="var(--must)" /> {t('today.mustHave')}
               <span className="text-[11px] font-normal opacity-70">({must.length}/2)</span>
             </h3>
-            <span className="text-[10px] font-semibold tracking-[.04em] text-must">
+            <span className="shrink-0 whitespace-nowrap text-[10px] font-semibold tracking-[.04em] text-must">
               {t('today.startHere')}
             </span>
           </div>
