@@ -69,7 +69,7 @@ export function PlanView() {
       <QuickAddTask />
 
       {projects.map((p) => {
-        const open = p.tasks.filter((t) => !t.completed)
+        const open = p.tasks.filter((t) => !t.completed && !t.assigned_today)
         return (
           <div key={p.id} className="card">
             <div className="card-head">
