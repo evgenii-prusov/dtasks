@@ -187,21 +187,21 @@ export function TaskRow({
     )
   }
 
-  // Whether there are any action elements for the swipe strip
-  const hasActions = right !== undefined || reorderable || deletable
+  // Whether there are swipe-only actions (reorder / delete)
+  const hasSwipeActions = reorderable || deletable
 
   return (
     <div
       ref={rowRef}
       className={`task-row relative overflow-hidden ${task.is_green ? 'green' : ''}`}
-      onTouchStart={hasActions ? handleTouchStart : undefined}
-      onTouchEnd={hasActions ? handleTouchEnd : undefined}
+      onTouchStart={hasSwipeActions ? handleTouchStart : undefined}
+      onTouchEnd={hasSwipeActions ? handleTouchEnd : undefined}
     >
       {/* Main content — shifts left when swiped on mobile */}
       <div
-        className="flex min-w-0 flex-1 items-center gap-1.5 transition-transform duration-200 md:contents"
+        className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 transition-transform duration-200 md:contents"
         style={
-          hasActions
+          hasSwipeActions
             ? { transform: swiped ? `translateX(-${actionsWidth}px)` : 'translateX(0)' }
             : undefined
         }
@@ -238,10 +238,13 @@ export function TaskRow({
             {task.notes && <span className="text-[10px] text-ink-3">· {t('task.noteBadge')}</span>}
           </div>
         </div>
+
+        {/* Right slot: always visible at every screen width */}
+        {right !== undefined && <div className="flex shrink-0 items-center">{right}</div>}
       </div>
 
-      {/* Actions: swipe-revealed on mobile, inline on md+ */}
-      {hasActions && (
+      {/* Swipe-revealed panel: reorder and delete only */}
+      {hasSwipeActions && (
         <div
           ref={actionsRef}
           className={[
@@ -252,7 +255,6 @@ export function TaskRow({
             .filter(Boolean)
             .join(' ')}
         >
-          {right}
           {reorderable && (
             <div className="flex shrink-0 flex-col gap-px">
               <button
