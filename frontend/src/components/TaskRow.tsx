@@ -38,6 +38,7 @@ export function TaskRow({
   const [notes, setNotes] = useState(task.notes || '')
   const [complexity, setComplexity] = useState<Complexity>(task.complexity)
   const [isGreen, setIsGreen] = useState(task.is_green)
+  const [recurring, setRecurring] = useState(task.recurring)
   const [selectedProjectId, setSelectedProjectId] = useState(task.project_id)
   const [swiped, setSwiped] = useState(false)
 
@@ -84,6 +85,7 @@ export function TaskRow({
     setNotes(task.notes || '')
     setComplexity(task.complexity)
     setIsGreen(task.is_green)
+    setRecurring(task.recurring)
     setSelectedProjectId(task.project_id)
     setEditing(true)
   }
@@ -93,6 +95,7 @@ export function TaskRow({
       notes,
       complexity,
       is_green: isGreen,
+      recurring,
     }
     if (selectedProjectId !== task.project_id) patch.project_id = selectedProjectId
     updateTask.mutate({ id: task.id, patch })
@@ -130,6 +133,15 @@ export function TaskRow({
               <option value="low">{t('common.lowComplexity')}</option>
               <option value="high">{t('common.highComplexity')}</option>
             </select>
+            <label className="flex cursor-pointer items-center gap-1 text-xs text-ink-2">
+              <input
+                type="checkbox"
+                checked={recurring}
+                onChange={(e) => setRecurring(e.target.checked)}
+                style={{ accentColor: 'var(--accent)' }}
+              />
+              {t('task.recurringCheckbox')}
+            </label>
             <button
               className={`asgn gap-1 ${isGreen ? 'green-on' : ''}`}
               onClick={() => setIsGreen((g) => !g)}

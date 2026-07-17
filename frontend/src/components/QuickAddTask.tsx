@@ -11,6 +11,7 @@ export function QuickAddTask() {
 
   const [title, setTitle] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<string>('none')
+  const [recurring, setRecurring] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
 
   // Find default projects (named '...')
@@ -28,7 +29,7 @@ export function QuickAddTask() {
       const pId = Number(selectedProjectId)
       createTask.mutate({
         projectId: pId,
-        task: { title: cleanTitle },
+        task: { title: cleanTitle, recurring },
       })
       reset()
       return
@@ -47,7 +48,7 @@ export function QuickAddTask() {
     if (defaultProj) {
       createTask.mutate({
         projectId: defaultProj.id,
-        task: { title: cleanTitle },
+        task: { title: cleanTitle, recurring },
       })
     }
     reset()
@@ -56,6 +57,7 @@ export function QuickAddTask() {
   const reset = () => {
     setTitle('')
     setSelectedProjectId('none')
+    setRecurring(false)
     setShowPrompt(false)
   }
 
@@ -79,6 +81,16 @@ export function QuickAddTask() {
             }}
             placeholder={t('quickAdd.placeholder')}
           />
+
+          <label className="flex shrink-0 cursor-pointer items-center gap-1 text-xs text-ink-2">
+            <input
+              type="checkbox"
+              checked={recurring}
+              onChange={(e) => setRecurring(e.target.checked)}
+              style={{ accentColor: 'var(--accent)' }}
+            />
+            {t('task.recurringCheckbox')}
+          </label>
 
           <select
             className="sel max-w-[200px] h-[34px] animate-[fadeIn_0.2s_ease]"
