@@ -12,6 +12,13 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 os.environ.setdefault("DTASKS_INVITE_CODE", "test-invite-code")
 os.environ.setdefault("DTASKS_AUTH_RATE_LIMIT", "1000000")
 os.environ.setdefault("DTASKS_SESSION_DIR", tempfile.mkdtemp(prefix="dtasks-test-sessions-"))
+# OAuth provider creds default to "configured" so most tests don't need to think about
+# them; tests exercising the "unconfigured provider" 404 path monkeypatch.delenv these.
+os.environ.setdefault("DTASKS_GOOGLE_CLIENT_ID", "test-google-client-id")
+os.environ.setdefault("DTASKS_GOOGLE_CLIENT_SECRET", "test-google-client-secret")
+os.environ.setdefault("DTASKS_GITHUB_CLIENT_ID", "test-github-client-id")
+os.environ.setdefault("DTASKS_GITHUB_CLIENT_SECRET", "test-github-client-secret")
+os.environ.setdefault("DTASKS_PUBLIC_URL", "http://localhost:5173")
 # Tests have no migration step of their own; opt into the lifespan's create_all
 # (prod instead runs `alembic upgrade head` before the app starts).
 os.environ.setdefault("DTASKS_AUTO_CREATE_SCHEMA", "1")
