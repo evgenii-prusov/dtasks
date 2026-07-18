@@ -43,6 +43,12 @@ variable "availability_domain_index" {
   default     = 0
 }
 
+variable "backup_bucket_name" {
+  description = "Object Storage bucket holding offsite backups for all projects (see docs/backup-storage.md). Bucket names are unique per namespace, not globally, so a short name is fine."
+  type        = string
+  default     = "backups"
+}
+
 variable "allow_ssh_cidr" {
   description = "CIDR allowed to reach SSH (port 22). Tighten to \"<your-ip>/32\" if desired -- see docs/provision-vm.md for the tradeoff."
   type        = string
