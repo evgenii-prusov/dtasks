@@ -126,17 +126,38 @@ container — no restart needed.
 
 ## Backup
 
+`scripts/backup_db.py` automates daily backups with tiered (grandfather-father-son)
+retention, using the SQLite online backup API (`sqlite3.Connection.backup()` —
+never a plain file copy, which can capture a torn state mid-write):
+
+- backups from the last 30 days are all kept (one per day)
+- 30 days–~2 months old: kept down to one per week
+- older than ~2 months: kept down to one per month
+
+It writes/prunes `jedi_tracker.YYYYMMDD_HHMMSS.sqlite` files under
+`DTASKS_DB_PATH`'s directory (override with `--backup-dir` or `DTASKS_BACKUP_DIR`)
+— in the Docker deployment that's inside the persistent `/data` volume, not the
+container's writable layer. Running it twice in the same day is a no-op for the
+backup step (idempotent) and pruning never re-deletes or double-deletes.
+
+Run it daily inside the container, e.g. via a host cron job:
+
 ```sh
-docker compose exec app sqlite3 /data/dtasks.sqlite ".backup /data/backup.sqlite"
-docker compose cp app:/data/backup.sqlite ./dtasks-backup-$(date +%F).sqlite
-docker compose exec app rm /data/backup.sqlite   # don't leave copies inside the volume
+0 3 * * *  cd /path/to/dtasks && docker compose exec -T app python /app/scripts/backup_db.py >> /var/log/dtasks-backup.log 2>&1
 ```
 
-`.backup` takes a consistent snapshot even while the app is writing to the
-live database. Copy the resulting file off the VM (e.g. to your own machine
-or object storage) — a backup that lives on the same disk as the original
-doesn't protect against disk loss. Put the first two lines in a daily cron job;
-the third line and the off-host copy are what make it an actual backup.
+(See the docstring at the top of `scripts/backup_db.py` for the bare-host cron
+line and a systemd timer unit, if not running under Docker.) `--dry-run` reports
+what a run would do without touching anything; `--prune-only` re-runs just the
+retention pass.
+
+Backups still live on the same volume as the live DB, so also periodically copy
+one off the VM (e.g. to your own machine or object storage) — a backup on the
+same disk as the original doesn't protect against disk loss:
+
+```sh
+docker compose cp app:/data/db_backups/jedi_tracker.20260718_030000.sqlite ./
+```
 
 ## Restore
 
