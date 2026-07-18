@@ -28,14 +28,14 @@ def ts(days_ago: int, hour: int = 12) -> dt.datetime:
 def test_parse_backup_timestamp_round_trips_with_backup_filename() -> None:
     timestamp = dt.datetime(2026, 7, 13, 22, 44, 32)
     name = backup_filename(timestamp)
-    assert name == "jedi_tracker.20260713_224432.sqlite"
+    assert name == "dtasks.20260713_224432.sqlite"
     assert parse_backup_timestamp(Path(name)) == timestamp
 
 
 def test_parse_backup_timestamp_ignores_unrelated_files() -> None:
-    assert parse_backup_timestamp(Path("jedi_tracker.sqlite")) is None
+    assert parse_backup_timestamp(Path("dtasks.sqlite")) is None
     assert parse_backup_timestamp(Path("notes.txt")) is None
-    assert parse_backup_timestamp(Path("jedi_tracker.2026-07-13.sqlite")) is None
+    assert parse_backup_timestamp(Path("dtasks.2026-07-13.sqlite")) is None
 
 
 def test_keep_all_backups_within_daily_window() -> None:
@@ -128,7 +128,7 @@ def test_prune_backups_is_idempotent(tmp_path: Path) -> None:
 
 
 def test_create_backup_skips_if_todays_backup_already_exists(tmp_path: Path) -> None:
-    db_path = tmp_path / "jedi_tracker.sqlite"
+    db_path = tmp_path / "dtasks.sqlite"
     _make_real_sqlite_db(db_path)
     backup_dir = tmp_path / "db_backups"
 
@@ -156,7 +156,7 @@ def test_create_backup_raises_if_db_path_missing(tmp_path: Path) -> None:
 def test_create_backup_produces_a_valid_sqlite_file(tmp_path: Path) -> None:
     import sqlite3
 
-    db_path = tmp_path / "jedi_tracker.sqlite"
+    db_path = tmp_path / "dtasks.sqlite"
     _make_real_sqlite_db(db_path)
     backup_dir = tmp_path / "db_backups"
 

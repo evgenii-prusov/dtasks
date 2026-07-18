@@ -52,9 +52,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "backend"))
 
 from app.db import DB_PATH  # noqa: E402
 
-# Existing manual-snapshot convention: jedi_tracker.YYYYMMDD_HHMMSS.sqlite.
-# Retention math is derived purely by parsing this filename -- no metadata store.
-FILENAME_RE = re.compile(r"^jedi_tracker\.(\d{8}_\d{6})\.sqlite$")
+# Snapshot naming: dtasks.YYYYMMDD_HHMMSS.sqlite. Retention math is derived
+# purely by parsing this filename -- no metadata store. Files not matching the
+# pattern are invisible to both retention and the once-a-day check, so legacy
+# snapshots (pre-rename "dtasks." prefix) must be renamed by hand or
+# they'll sit unpruned forever.
+FILENAME_RE = re.compile(r"^dtasks\.(\d{8}_\d{6})\.sqlite$")
 TIMESTAMP_FMT = "%Y%m%d_%H%M%S"
 
 DAILY_RETENTION_DAYS = 30  # keep every backup within this window
@@ -70,7 +73,7 @@ def default_backup_dir() -> Path:
 
 
 def backup_filename(timestamp: dt.datetime) -> str:
-    return f"jedi_tracker.{timestamp.strftime(TIMESTAMP_FMT)}.sqlite"
+    return f"dtasks.{timestamp.strftime(TIMESTAMP_FMT)}.sqlite"
 
 
 def parse_backup_timestamp(path: Path) -> dt.datetime | None:
@@ -85,7 +88,7 @@ def list_backups(backup_dir: Path) -> list[tuple[Path, dt.datetime]]:
     if not backup_dir.exists():
         return []
     backups = []
-    for path in backup_dir.glob("jedi_tracker.*.sqlite"):
+    for path in backup_dir.glob("dtasks.*.sqlite"):
         timestamp = parse_backup_timestamp(path)
         if timestamp is not None:
             backups.append((path, timestamp))
@@ -107,7 +110,7 @@ def create_backup(db_path: Path, backup_dir: Path, now: dt.datetime) -> Path | N
 
     backup_dir.mkdir(parents=True, exist_ok=True)
 
-    today_prefix = f"jedi_tracker.{now.strftime('%Y%m%d')}_"
+    today_prefix = f"dtasks.{now.strftime('%Y%m%d')}_"
     already_have_today = any(path.name.startswith(today_prefix) for path, _ in list_backups(backup_dir))
     if already_have_today:
         return None
