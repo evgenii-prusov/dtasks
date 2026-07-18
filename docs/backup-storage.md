@@ -70,8 +70,15 @@ Note `backup_namespace` — every rclone remote config below needs it.
 
 ## VM setup (dtasks)
 
+Install rclone from rclone.org, **not** apt — the Debian/Ubuntu package is
+built without the `oracleobjectstorage` backend (it depends on the vendored
+OCI Go SDK, which the dfsg repack strips), failing later with
+`didn't find backend called "oracleobjectstorage"`:
+
 ```sh
-sudo apt-get install -y rclone
+curl -fsSLO https://downloads.rclone.org/rclone-current-linux-arm64.deb   # A1 Flex is ARM
+sudo dpkg -i rclone-current-linux-arm64.deb
+rclone help backend oracleobjectstorage >/dev/null && echo backend OK
 ```
 
 Create `~/.config/rclone/rclone.conf` for whichever user runs the backup
