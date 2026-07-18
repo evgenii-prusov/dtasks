@@ -91,7 +91,9 @@
     "mustLimit_one": "Максимум {{count}} главная задача в день.",
     "mustLimit_few": "Максимум {{count}} главные задачи в день.",
     "mustLimit_many": "Максимум {{count}} главных задач в день.",
-    "mustLimit_other": "Максимум {{count}} главных задач в день."
+    "mustLimit_other": "Максимум {{count}} главных задач в день.",
+    "searchPlaceholder": "Поиск задач…",
+    "searchNoResults": "Нет задач по запросу «{{query}}»"
   },
   "review": {
     "title": "Обзор",
