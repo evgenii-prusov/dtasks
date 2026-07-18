@@ -16,6 +16,8 @@ export type IconName =
   | 'logout'
   | 'globe'
   | 'leaf'
+  | 'search'
+  | 'x'
 
 const paths = (c: string): Record<IconName, ReactNode> => ({
   today: (
@@ -111,6 +113,15 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       d="M13.5 2.5c-6.5.7-9.6 3.4-10.9 9.7l-.5 2.3 1.5.3.4-1.9c.4.1.9.2 1.3.2 6.8 0 8.6-6.9 8.2-10.6zm-8.2 9.1c-.3 0-.6 0-.9-.1C5.5 7.2 7.8 5 12.1 4.2c-.3 3.2-1.9 7.4-6.8 7.4z"
       fill={c}
     />
+  ),
+  search: (
+    <>
+      <circle cx="7" cy="7" r="4.5" stroke={c} strokeWidth="1.5" fill="none" />
+      <path d="M10.5 10.5L14 14" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  x: (
+    <path d="M4 4l8 8M12 4l-8 8" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
   ),
 })
 

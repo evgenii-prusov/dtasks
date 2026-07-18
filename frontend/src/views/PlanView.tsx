@@ -76,16 +76,30 @@ export function PlanView() {
         </div>
       </div>
 
-      <div className="px-4 pb-3">
+      <div className="relative mb-3">
+        <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-ink-3">
+          <Ic n="search" s={13} />
+        </span>
         <input
-          className="input w-full"
+          className="input w-full pl-[30px] pr-7"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
           placeholder={t('plan.searchPlaceholder')}
         />
+        {search && (
+          <button
+            className="absolute right-[8px] top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
+            onClick={() => setSearch('')}
+            tabIndex={-1}
+            aria-label="Clear search"
+          >
+            <Ic n="x" s={12} />
+          </button>
+        )}
       </div>
 
-      <QuickAddTask />
+      {!query && <QuickAddTask />}
 
       {query ? (
         <div className="card">
