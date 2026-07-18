@@ -90,8 +90,11 @@ async def signup(data: SignupPayload, session: AsyncSession, request: Request) -
 async def login(data: LoginPayload, session: AsyncSession, request: Request) -> UserOut:
     email = data.email.strip().lower()
     user = (await session.execute(select(User).where(User.email == email))).scalar_one_or_none()
-    password_ok = verify_password(data.password, user.password_hash if user else _DUMMY_HASH)
-    if user is None or not password_ok:
+    # OAuth-only accounts (password_hash is NULL) must be indistinguishable from an
+    # unknown email: always verify against a real hash, never short-circuit on NULL.
+    stored_hash = user.password_hash if user and user.password_hash is not None else _DUMMY_HASH
+    password_ok = verify_password(data.password, stored_hash)
+    if user is None or user.password_hash is None or not password_ok:
         raise NotAuthorizedException(detail="Invalid email or password")
     request.set_session({"user_id": user.id})
     return _user_out(user)

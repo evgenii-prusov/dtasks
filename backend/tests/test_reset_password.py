@@ -9,6 +9,9 @@ import pytest
 from conftest import DEFAULT_EMAIL, DEFAULT_PASSWORD
 from litestar.testing import AsyncTestClient
 from scripts.reset_password import reset_password  # noqa: E402
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models import User
 
 pytestmark = pytest.mark.anyio
 
@@ -36,3 +39,22 @@ async def test_reset_password_unknown_email_returns_false(anon_client: AsyncTest
     # anon_client's lifespan creates the tables on the temp DB; no user signed up.
     found = await reset_password("nobody@example.com", "whatever-password")
     assert found is False
+
+
+async def test_reset_password_gives_oauth_only_account_a_working_password(
+    anon_client: AsyncTestClient, db: async_sessionmaker
+) -> None:
+    """OAuth-only users (password_hash=None) can be given a password manually."""
+    oauth_email = "oauth-only@example.com"
+    async with db() as session:
+        session.add(User(email=oauth_email, password_hash=None))
+        await session.commit()
+
+    found = await reset_password(oauth_email, NEW_PASSWORD)
+    assert found is True
+
+    login = await anon_client.post(
+        "/api/auth/login",
+        json={"email": oauth_email, "password": NEW_PASSWORD},
+    )
+    assert login.status_code == 200
