@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from . import db
 from .models import User
+from .oauth import oauth_callback, oauth_login, oauth_providers
 from .schemas import LoginPayload, SignupPayload, UserOut
 from .seed import seed_starter_data
 
@@ -116,9 +117,14 @@ _rate_limit = RateLimitConfig(rate_limit=("minute", int(os.environ.get("DTASKS_A
 auth_router = Router(
     path="/api/auth",
     route_handlers=[
-        Router(path="/", route_handlers=[signup, login], middleware=[_rate_limit.middleware]),
+        Router(
+            path="/",
+            route_handlers=[signup, login, oauth_login, oauth_callback],
+            middleware=[_rate_limit.middleware],
+        ),
         logout,
         me,
+        oauth_providers,
     ],
 )
 
