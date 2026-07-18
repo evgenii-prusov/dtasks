@@ -95,3 +95,8 @@ export interface LoginPayload {
   email: string
   password: string
 }
+
+export interface AuthProviders {
+  google: boolean
+  github: boolean
+}

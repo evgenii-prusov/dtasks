@@ -44,10 +44,21 @@
     "haveAccount": "Already have an account?",
     "needAccount": "Need an account?",
     "signUp": "Sign up",
+    "or": "or",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithGithub": "Continue with GitHub",
+    "inviteRequiredForOauth": "Enter your invite code first",
     "errors": {
       "invalidCredentials": "Invalid email or password",
       "invalidInvite": "Invalid invite code",
-      "emailExists": "An account with this email already exists"
+      "emailExists": "An account with this email already exists",
+      "oauth": {
+        "invite_required": "An invite code is required to sign up",
+        "invalid_invite": "Invalid invite code",
+        "no_verified_email": "We couldn't find a verified email on that account",
+        "state_mismatch": "That sign-in link expired, please try again",
+        "provider_error": "Something went wrong signing in with that provider"
+      }
     }
   },
   "today": {

@@ -1,9 +1,27 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useSearch } from '@tanstack/react-router'
 import { ApiError } from '../api/client'
-import { useLogin, useSignup } from '../api/hooks'
+import { useAuthProviders, useLogin, useSignup } from '../api/hooks'
 
 type Mode = 'signup' | 'login'
+type Provider = 'google' | 'github'
+
+// Keep in sync with docs/auth.md §2.7. Any other value on `oauth_error`
+// (including no value at all) is treated as "no known code".
+const OAUTH_ERROR_CODES = [
+  'invite_required',
+  'invalid_invite',
+  'no_verified_email',
+  'state_mismatch',
+  'provider_error',
+] as const
+
+type OauthErrorCode = (typeof OAUTH_ERROR_CODES)[number]
+
+function isOauthErrorCode(code: string): code is OauthErrorCode {
+  return (OAUTH_ERROR_CODES as readonly string[]).includes(code)
+}
 
 function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }) {
   return (
@@ -16,17 +34,87 @@ function FieldLabel({ htmlFor, children }: { htmlFor: string; children: string }
   )
 }
 
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden="true">
+      <path
+        fill="#4285F4"
+        d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.874 2.684-6.615z"
+      />
+      <path
+        fill="#34A853"
+        d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M3.964 10.706A5.41 5.41 0 0 1 3.68 9c0-.593.102-1.17.284-1.706V4.962H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.038l3.007-2.332z"
+      />
+      <path
+        fill="#EA4335"
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.962L3.964 7.294C4.672 5.167 6.656 3.58 9 3.58z"
+      />
+    </svg>
+  )
+}
+
+function GithubIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8z" />
+    </svg>
+  )
+}
+
+function OAuthButton({
+  provider,
+  label,
+  icon,
+  onClick,
+}: {
+  provider: Provider
+  label: string
+  icon: ReactNode
+  onClick: (provider: Provider) => void
+}) {
+  return (
+    <button
+      type="button"
+      className="btn btn-g w-full justify-center gap-2"
+      onClick={() => onClick(provider)}
+    >
+      {icon}
+      {label}
+    </button>
+  )
+}
+
 export function WelcomeView() {
   const { t } = useTranslation()
   const [mode, setMode] = useState<Mode>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [oauthInviteError, setOauthInviteError] = useState(false)
   const signup = useSignup()
   const login = useLogin()
+  const { data: providers } = useAuthProviders()
+
+  const search = useSearch({ from: '/welcome' })
+  const navigate = useNavigate()
+  // Snapshot at mount: the URL param is stripped right after, so the banner
+  // must keep rendering from this copy rather than the (now-empty) live search.
+  const [oauthBannerCode, setOauthBannerCode] = useState(search.oauth_error)
+
+  useEffect(() => {
+    if (search.oauth_error) {
+      navigate({ to: '/welcome', search: {}, replace: true })
+    }
+    // Only ever run this once, on mount — it strips the param it reads.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const pending = signup.isPending || login.isPending
-  const error = mode === 'signup' ? signup.error : login.error
+  const mutationError = mode === 'signup' ? signup.error : login.error
 
   // Known backend failures get localized messages; other ApiErrors surface
   // the backend's own text (e.g. password length), which stays English.
@@ -38,8 +126,25 @@ export function WelcomeView() {
     return err.message
   }
 
+  const oauthErrorText = (code: string): string => {
+    if (isOauthErrorCode(code)) return t(`welcome.errors.oauth.${code}`)
+    return t('common.genericError')
+  }
+
+  // Precedence: a fresh client-side/mutation error from user interaction
+  // outranks the one-shot banner snapshotted at mount.
+  const displayError = oauthInviteError
+    ? t('welcome.inviteRequiredForOauth')
+    : mutationError
+      ? errorText(mutationError)
+      : oauthBannerCode
+        ? oauthErrorText(oauthBannerCode)
+        : null
+
   const switchMode = (next: Mode) => {
     setMode(next)
+    setOauthInviteError(false)
+    setOauthBannerCode(undefined)
     signup.reset()
     login.reset()
   }
@@ -47,9 +152,26 @@ export function WelcomeView() {
   const onSubmit = (e: FormEvent) => {
     e.preventDefault()
     if (pending) return
+    setOauthInviteError(false)
     if (mode === 'signup') signup.mutate({ email, password, invite_code: inviteCode })
     else login.mutate({ email, password })
   }
+
+  const handleOAuthClick = (provider: Provider) => {
+    if (mode === 'signup') {
+      const trimmed = inviteCode.trim()
+      if (!trimmed) {
+        setOauthInviteError(true)
+        return
+      }
+      setOauthInviteError(false)
+      window.location.href = `/api/auth/oauth/${provider}/login?invite_code=${encodeURIComponent(trimmed)}`
+      return
+    }
+    window.location.href = `/api/auth/oauth/${provider}/login`
+  }
+
+  const showOAuth = Boolean(providers?.google || providers?.github)
 
   return (
     <div className="flex h-screen items-center justify-center bg-bg px-6">
@@ -102,14 +224,17 @@ export function WelcomeView() {
                 autoComplete="off"
                 className="input mb-3"
                 value={inviteCode}
-                onChange={(e) => setInviteCode(e.target.value)}
+                onChange={(e) => {
+                  setInviteCode(e.target.value)
+                  setOauthInviteError(false)
+                }}
               />
             </>
           )}
 
-          {error && (
+          {displayError && (
             <div className="mb-3 rounded-md bg-must-2 px-3 py-2 text-[12px] font-medium text-must">
-              {errorText(error)}
+              {displayError}
             </div>
           )}
 
@@ -122,6 +247,36 @@ export function WelcomeView() {
                 ? t('welcome.loggingIn')
                 : t('welcome.logIn')}
           </button>
+
+          {showOAuth && (
+            <>
+              <div className="my-4 flex items-center gap-3">
+                <div className="h-px flex-1 bg-line" />
+                <span className="text-[11px] font-medium uppercase tracking-[.08em] text-ink-3">
+                  {t('welcome.or')}
+                </span>
+                <div className="h-px flex-1 bg-line" />
+              </div>
+              <div className="flex flex-col gap-2">
+                {providers?.google && (
+                  <OAuthButton
+                    provider="google"
+                    label={t('welcome.continueWithGoogle')}
+                    icon={<GoogleIcon />}
+                    onClick={handleOAuthClick}
+                  />
+                )}
+                {providers?.github && (
+                  <OAuthButton
+                    provider="github"
+                    label={t('welcome.continueWithGithub')}
+                    icon={<GithubIcon />}
+                    onClick={handleOAuthClick}
+                  />
+                )}
+              </div>
+            </>
+          )}
         </form>
 
         <p className="mt-4 text-center text-[12px] text-ink-3">
