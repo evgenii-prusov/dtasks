@@ -4,6 +4,8 @@ import datetime as dt
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from scripts.backup_db import (  # noqa: E402
@@ -138,6 +140,17 @@ def test_create_backup_skips_if_todays_backup_already_exists(tmp_path: Path) -> 
     second = create_backup(db_path, backup_dir, later_same_day)
     assert second is None
     assert len(list_backups(backup_dir)) == 1
+
+
+def test_create_backup_raises_if_db_path_missing(tmp_path: Path) -> None:
+    db_path = tmp_path / "does_not_exist.sqlite"
+    backup_dir = tmp_path / "db_backups"
+
+    with pytest.raises(FileNotFoundError):
+        create_backup(db_path, backup_dir, NOW)
+
+    assert not db_path.exists()
+    assert list_backups(backup_dir) == []
 
 
 def test_create_backup_produces_a_valid_sqlite_file(tmp_path: Path) -> None:

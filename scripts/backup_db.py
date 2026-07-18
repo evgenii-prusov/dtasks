@@ -98,6 +98,13 @@ def create_backup(db_path: Path, backup_dir: Path, now: dt.datetime) -> Path | N
     Idempotent: if a backup already exists for `now`'s date, does nothing and
     returns None instead of creating a second same-day snapshot.
     """
+    if not db_path.exists():
+        # sqlite3.connect() silently creates an empty file at any path that
+        # doesn't exist, which would otherwise turn a misconfigured DB path
+        # into a daily stream of empty "successful" backups instead of a
+        # loud, obvious failure.
+        raise FileNotFoundError(f"Database file not found: {db_path}")
+
     backup_dir.mkdir(parents=True, exist_ok=True)
 
     today_prefix = f"jedi_tracker.{now.strftime('%Y%m%d')}_"
