@@ -68,10 +68,19 @@ see [`docs/deploy.md`](docs/deploy.md).
 | GET    | `/api/habits`                 | All habits with their day logs             |
 | PUT    | `/api/habits/{id}/log`        | Set a day's state (0 none / 1 minimal / 2 complete) |
 | DELETE | `/api/habits/{id}`            | Delete a habit and its logs                |
+| POST   | `/api/auth/signup`            | Email + password + invite code signup      |
+| POST   | `/api/auth/login`             | Email + password login                     |
+| POST   | `/api/auth/logout`            | Clear the session                          |
+| GET    | `/api/auth/me`                | Current signed-in user                     |
+| GET    | `/api/auth/oauth/{provider}/login` | Start Google/GitHub OAuth login, redirects to the provider |
+| GET    | `/api/auth/oauth/{provider}/callback` | Provider redirects back here to complete OAuth login |
+| GET    | `/api/auth/providers`         | `{google, github}` — which OAuth providers are configured |
 
 Rules mirrored from the design: marking a task Must Have also assigns it to
 Today; removing it from Today clears Must Have; at most 2 active Must Have
 tasks per day.
+
+Full auth design (sessions, OAuth flow, account-linking rules): [`docs/auth.md`](docs/auth.md).
 
 ## Design source
 
