@@ -5,6 +5,9 @@ import os
 import pytest
 from conftest import DEFAULT_EMAIL, DEFAULT_PASSWORD
 from litestar.testing import AsyncTestClient
+from sqlalchemy.ext.asyncio import async_sessionmaker
+
+from app.models import User
 
 pytestmark = pytest.mark.anyio
 
@@ -93,6 +96,34 @@ async def test_login_failures_are_indistinguishable(client: AsyncTestClient) -> 
     assert wrong_password.status_code == 401
     assert unknown_email.status_code == 401
     assert wrong_password.json() == unknown_email.json()
+
+
+async def test_oauth_only_account_gets_generic_401_on_password_login(
+    client: AsyncTestClient, db: async_sessionmaker
+) -> None:
+    """A user with password_hash=None (OAuth-only) must be indistinguishable
+    from an unknown email or a wrong password: same status, same body."""
+    await client.post("/api/auth/logout")
+
+    oauth_email = "oauth-only@example.com"
+    async with db() as session:
+        session.add(User(email=oauth_email, password_hash=None))
+        await session.commit()
+
+    oauth_only = await client.post(
+        "/api/auth/login", json={"email": oauth_email, "password": "whatever-password"}
+    )
+    wrong_password = await client.post(
+        "/api/auth/login", json={"email": DEFAULT_EMAIL, "password": "wrong-password"}
+    )
+    unknown_email = await client.post(
+        "/api/auth/login", json={"email": "nobody@example.com", "password": DEFAULT_PASSWORD}
+    )
+
+    assert oauth_only.status_code == 401
+    assert oauth_only.json() == wrong_password.json() == unknown_email.json()
+    # No session was created for the OAuth-only login attempt.
+    assert (await client.get("/api/auth/me")).status_code == 401
 
 
 async def test_spa_routes_stay_public(anon_client: AsyncTestClient) -> None:
