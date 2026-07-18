@@ -44,10 +44,21 @@
     "haveAccount": "Уже есть аккаунт?",
     "needAccount": "Нет аккаунта?",
     "signUp": "Зарегистрироваться",
+    "or": "или",
+    "continueWithGoogle": "Войти через Google",
+    "continueWithGithub": "Войти через GitHub",
+    "inviteRequiredForOauth": "Сначала введите код приглашения",
     "errors": {
       "invalidCredentials": "Неверный email или пароль",
       "invalidInvite": "Неверный код приглашения",
-      "emailExists": "Аккаунт с этим email уже существует"
+      "emailExists": "Аккаунт с этим email уже существует",
+      "oauth": {
+        "invite_required": "Для регистрации нужен код приглашения",
+        "invalid_invite": "Неверный код приглашения",
+        "no_verified_email": "Не удалось найти подтверждённый email на этом аккаунте",
+        "state_mismatch": "Ссылка для входа устарела, попробуйте ещё раз",
+        "provider_error": "Не удалось войти через этот сервис, попробуйте ещё раз"
+      }
     }
   },
   "today": {

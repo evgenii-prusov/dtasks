@@ -57,10 +57,17 @@ interface RouterContext {
 
 const rootRoute = createRootRouteWithContext<RouterContext>()({ component: Outlet })
 
+interface WelcomeSearch {
+  oauth_error?: string
+}
+
 const welcomeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/welcome',
   component: WelcomeView,
+  validateSearch: (search: Record<string, unknown>): WelcomeSearch => ({
+    oauth_error: typeof search.oauth_error === 'string' ? search.oauth_error : undefined,
+  }),
   beforeLoad: async ({ context }) => {
     const user = await context.queryClient
       .ensureQueryData(currentUserQueryOptions)

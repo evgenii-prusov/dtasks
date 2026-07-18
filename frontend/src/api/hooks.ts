@@ -49,6 +49,17 @@ export function useLogin() {
   })
 }
 
+/** Which OAuth providers are configured server-side. Public — used on /welcome
+ * before a session exists, so it must not depend on auth state. */
+export function useAuthProviders() {
+  return useQuery({
+    queryKey: ['auth', 'providers'],
+    queryFn: api.authProviders,
+    retry: false,
+    staleTime: Infinity,
+  })
+}
+
 export function useLogout() {
   const qc = useQueryClient()
   const navigate = useNavigate()

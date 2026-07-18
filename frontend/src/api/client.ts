@@ -1,4 +1,5 @@
 import type {
+  AuthProviders,
   Habit,
   HabitCreate,
   LoginPayload,
@@ -46,6 +47,7 @@ export const api = {
   login: (payload: LoginPayload) =>
     request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
+  authProviders: () => request<AuthProviders>('/api/auth/providers'),
   listProjects: () => request<Project[]>('/api/projects'),
   createProject: (project: ProjectCreate) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(project) }),
