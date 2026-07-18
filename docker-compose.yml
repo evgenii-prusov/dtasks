@@ -8,6 +8,7 @@ services:
       DTASKS_DB_PATH: /data/dtasks.sqlite
       DTASKS_SESSION_DIR: /data/sessions
       DTASKS_SECURE_COOKIES: "1"
+      DTASKS_PUBLIC_URL: https://${DOMAIN}
     volumes:
       - dtasks-data:/data
     expose:

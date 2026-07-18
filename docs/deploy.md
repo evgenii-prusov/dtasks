@@ -42,11 +42,67 @@ Open `https://<DOMAIN>` — Caddy obtains a cert automatically on first request.
 | `DTASKS_SECURE_COOKIES`| `docker-compose.yml` (`app`)  | Fixed to `1` — session cookie gets the `Secure` flag |
 | `DTASKS_DB_PATH`       | `docker-compose.yml` (`app`)  | Fixed to `/data/dtasks.sqlite`, inside the `dtasks-data` volume |
 | `DTASKS_SESSION_DIR`   | `docker-compose.yml` (`app`)  | Fixed to `/data/sessions`, inside the same volume |
+| `DTASKS_PUBLIC_URL`    | `docker-compose.yml` (`app`)  | Fixed to `https://${DOMAIN}` — external origin used to build OAuth callback URLs |
+| `DTASKS_GOOGLE_CLIENT_ID` / `DTASKS_GOOGLE_CLIENT_SECRET` | `.env` | Google OAuth client credentials; unset disables the Google login button |
+| `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET` | `.env` | GitHub OAuth app credentials; unset disables the GitHub login button |
 
 `.env` is gitignored — it never gets committed. `DTASKS_DB_PATH`/`DTASKS_SESSION_DIR`
 are intentionally hardcoded in `docker-compose.yml` rather than `.env`: they must
 point inside the `dtasks-data` volume for persistence to work, so there's no
 legitimate reason to override them per-deploy.
+
+## OAuth providers
+
+Google and GitHub login are each optional and independent: leaving a
+provider's client ID/secret pair unset in `.env` disables that provider's
+"Continue with ..." button and 404s its endpoints (see `docs/auth.md` §2.8).
+Set up whichever ones you want.
+
+**Register separate dev and prod OAuth apps for each provider.** A GitHub
+OAuth app allows exactly one callback URL, so a single app can't serve both
+`localhost` and your production domain — Google apps can technically hold
+multiple redirect URIs, but keeping dev and prod apps separate avoids
+surprises and is what this runbook assumes.
+
+Callback URLs you'll need:
+
+- **Prod**: `https://<DOMAIN>/api/auth/oauth/google/callback` and
+  `https://<DOMAIN>/api/auth/oauth/github/callback` (substitute your real
+  `DOMAIN`).
+- **Dev**: `http://localhost:5173/api/auth/oauth/google/callback` and
+  `http://localhost:5173/api/auth/oauth/github/callback` — the Vite dev
+  server on `:5173` proxies `/api` to the backend, so the callback stays
+  same-origin even though the backend itself runs on `:8000`.
+
+### Google
+
+1. Go to the [Google Cloud Console](https://console.cloud.google.com/),
+   create (or pick) a project, then **APIs & Services → OAuth consent
+   screen**. Configure it with scopes `openid`, `email`, and `profile`
+   (these are the only scopes dtasks requests).
+2. Go to **APIs & Services → Credentials → Create Credentials → OAuth
+   client ID**, application type **Web application**.
+3. Under **Authorized redirect URIs**, add the callback URL for this app
+   (the prod URL above for your prod app, the dev URL for your dev app).
+4. Save, then copy the generated **Client ID** and **Client secret** into
+   `.env` as `DTASKS_GOOGLE_CLIENT_ID` / `DTASKS_GOOGLE_CLIENT_SECRET`.
+
+### GitHub
+
+1. Go to **Settings → Developer settings → OAuth Apps → New OAuth App**
+   (under your GitHub account, or an org's settings if you want the app
+   owned by the org).
+2. Fill in an application name and homepage URL (e.g. `https://<DOMAIN>`
+   for prod, `http://localhost:5173` for dev).
+3. Set **Authorization callback URL** to the callback URL for this app (the
+   prod or dev URL above — GitHub only accepts one, which is why dev and
+   prod need separate apps).
+4. Register the app, then **Generate a new client secret**. Copy the
+   **Client ID** and the generated secret into `.env` as
+   `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET`.
+
+After editing `.env`, run `docker compose up -d` to pick up the new values
+(no rebuild needed — they're plain env vars).
 
 ## Migrations
 
