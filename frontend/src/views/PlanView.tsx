@@ -19,6 +19,7 @@ export function PlanView() {
   const createTask = useCreateTask()
   const [tab, setTab] = useState<'today' | 'week'>('today')
   const [addingTo, setAddingTo] = useState<number | null>(null)
+  const [search, setSearch] = useState('')
 
   const mustCount = mustHaveCount(projects)
   const greenTodayCount = projects.reduce(
@@ -34,6 +35,15 @@ export function PlanView() {
     }
     updateTask.mutate({ id, patch: { must_have: v } })
   }
+
+  const query = search.trim().toLowerCase()
+  const searchResults = query
+    ? projects.flatMap((p) =>
+        p.tasks
+          .filter((t) => !t.completed && t.title.toLowerCase().includes(query))
+          .map((t) => ({ task: t, project: p })),
+      )
+    : []
 
   return (
     <div>
@@ -66,9 +76,106 @@ export function PlanView() {
         </div>
       </div>
 
-      <QuickAddTask />
+      <div className="relative mb-3">
+        <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-ink-3">
+          <Ic n="search" s={13} />
+        </span>
+        <input
+          className="input w-full pl-[30px] pr-7"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
+          placeholder={t('plan.searchPlaceholder')}
+        />
+        {search && (
+          <button
+            className="absolute right-[8px] top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
+            onClick={() => setSearch('')}
+            tabIndex={-1}
+            aria-label="Clear search"
+          >
+            <Ic n="x" s={12} />
+          </button>
+        )}
+      </div>
 
-      {projects.map((p) => {
+      {!query && <QuickAddTask />}
+
+      {query ? (
+        <div className="card">
+          {searchResults.length === 0 ? (
+            <div className="px-4 py-3 text-xs text-ink-3">
+              {t('plan.searchNoResults', { query: search.trim() })}
+            </div>
+          ) : (
+            searchResults.map(({ task, project }, i) => (
+              <TaskRow
+                key={task.id}
+                task={task}
+                project={project}
+                showProject
+                editable
+                isFirst={i === 0}
+                isLast={i === searchResults.length - 1}
+                right={
+                  <div className="flex shrink-0 gap-[5px]">
+                    <button
+                      className={`asgn ${task.is_green ? 'green-on' : ''}`}
+                      onClick={() =>
+                        updateTask.mutate({ id: task.id, patch: { is_green: !task.is_green } })
+                      }
+                      title={t('task.greenTooltip')}
+                    >
+                      <Ic n="leaf" s={11} />
+                    </button>
+                    {tab === 'today' ? (
+                      <>
+                        <button
+                          className={`asgn ${task.must_have && task.assigned_today ? 'must-on' : ''}`}
+                          style={{
+                            opacity:
+                              (!task.must_have || !task.assigned_today) && mustCount >= MUST_LIMIT
+                                ? 0.35
+                                : 1,
+                          }}
+                          onClick={() => setMust(task.id, !(task.must_have && task.assigned_today))}
+                          title={t('plan.mustTooltip')}
+                        >
+                          {t('plan.mustButton')}
+                        </button>
+                        <button
+                          className={`asgn ${task.assigned_today ? 'on' : ''}`}
+                          onClick={() =>
+                            updateTask.mutate({
+                              id: task.id,
+                              patch: { assigned_today: !task.assigned_today },
+                            })
+                          }
+                        >
+                          {task.assigned_today ? t('plan.todayOn') : t('plan.todayOff')}
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        className={`asgn ${task.assigned_week ? 'on' : ''}`}
+                        onClick={() =>
+                          updateTask.mutate({
+                            id: task.id,
+                            patch: { assigned_week: !task.assigned_week },
+                          })
+                        }
+                      >
+                        {task.assigned_week ? t('plan.weekOn') : t('plan.weekOff')}
+                      </button>
+                    )}
+                  </div>
+                }
+              />
+            ))
+          )}
+        </div>
+      ) : (
+        projects.map((p) => {
         const open = p.tasks.filter(
           (t) => !t.completed && (tab === 'week' ? !t.assigned_today : true),
         )
@@ -170,7 +277,8 @@ export function PlanView() {
             )}
           </div>
         )
-      })}
+      })
+      )}
     </div>
   )
 }

@@ -89,7 +89,9 @@
     "weekOn": "✓ Week",
     "weekOff": "+ Week",
     "mustLimit_one": "Max {{count}} Must Have task per day.",
-    "mustLimit_other": "Max {{count}} Must Have tasks per day."
+    "mustLimit_other": "Max {{count}} Must Have tasks per day.",
+    "searchPlaceholder": "Search tasks…",
+    "searchNoResults": "No tasks match \"{{query}}\""
   },
   "review": {
     "title": "Review",
