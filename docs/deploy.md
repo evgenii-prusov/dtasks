@@ -134,7 +134,7 @@ never a plain file copy, which can capture a torn state mid-write):
 - 30 days–~2 months old: kept down to one per week
 - older than ~2 months: kept down to one per month
 
-It writes/prunes `jedi_tracker.YYYYMMDD_HHMMSS.sqlite` files under
+It writes/prunes `dtasks.YYYYMMDD_HHMMSS.sqlite` files under
 `DTASKS_DB_PATH`'s directory (override with `--backup-dir` or `DTASKS_BACKUP_DIR`)
 — in the Docker deployment that's inside the persistent `/data` volume, not the
 container's writable layer. Running it twice in the same day is a no-op for the
@@ -156,7 +156,7 @@ one off the VM (e.g. to your own machine or object storage) — a backup on the
 same disk as the original doesn't protect against disk loss:
 
 ```sh
-docker compose cp app:/data/db_backups/jedi_tracker.20260718_030000.sqlite ./
+docker compose cp app:/data/db_backups/dtasks.20260718_030000.sqlite ./
 ```
 
 ## Restore

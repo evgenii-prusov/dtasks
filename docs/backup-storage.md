@@ -17,7 +17,7 @@ prefix:
 
 ```
 backups/
-  dtasks/db_backups/jedi_tracker.20260718_030000.sqlite
+  dtasks/db_backups/dtasks.20260718_030000.sqlite
   otherproj/dumps/...
 ```
 
@@ -151,7 +151,7 @@ List and pull whatever you need:
 
 ```sh
 rclone lsf ocibackup:backups/dtasks/db_backups/
-rclone copy ocibackup:backups/dtasks/db_backups/jedi_tracker.20260718_030000.sqlite /tmp/restore/
+rclone copy ocibackup:backups/dtasks/db_backups/dtasks.20260718_030000.sqlite /tmp/restore/
 ```
 
 Then follow the normal restore path for the project (for dtasks:
