@@ -35,3 +35,4 @@ infra/terraform.tfvars
 infra/*.tfplan
 infra/crash.log
 infra/crash.*.log
+.beads/interactions.jsonl
