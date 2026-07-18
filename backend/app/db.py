@@ -9,7 +9,7 @@ from typing import Any
 from sqlalchemy import event
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "jedi_tracker.sqlite"
+_DEFAULT_DB_PATH = Path(__file__).resolve().parent.parent / "dtasks.sqlite"
 DB_PATH = Path(os.environ.get("DTASKS_DB_PATH", str(_DEFAULT_DB_PATH)))
 
 
