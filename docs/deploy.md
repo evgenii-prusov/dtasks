@@ -1,14 +1,14 @@
 # Deploy runbook
 
-Docker-based production deployment for dtasks: a `docker compose` stack of two
-containers — `app` (the Litestar backend, serving the built frontend as static
-files) and `caddy` (reverse proxy, automatic HTTPS via Let's Encrypt). Target:
+Docker-based production deployment for dtasks: a single-container
+`docker compose` stack — `app` (the Litestar backend, serving the built
+frontend as static files). HTTPS termination and reverse proxying live in the
+shared edge stack from the [dinfra repo](https://github.com/evgenii-prusov/dinfra):
+one Caddy container owning ports 80/443 for every app on this VM. The dtasks
+app publishes no ports — it joins the external docker network `web` under the
+alias `dtasks-app`, and dinfra's Caddyfile routes the domain to it. Target:
 a single Oracle Cloud "Always Free" VM (upgraded to Pay-As-You-Go to remove
-idle-instance reclamation).
-
-This VM may host other unrelated hobby apps later — each would get its own
-container plus its own Caddy site block. No action needed now; just keep that
-in mind before assuming this compose file owns the whole machine.
+idle-instance reclamation), shared with other hobby apps (dcash/dengi.dev).
 
 ## Prerequisites (one-time, on the VM)
 
@@ -18,26 +18,30 @@ in mind before assuming this compose file owns the whole machine.
 - Point the deployment domain's DNS `A`/`AAAA` record at the VM's public IP —
   Caddy needs this to succeed at the ACME HTTP-01 challenge on port 80.
 - Open inbound ports 80 and 443 in the VM's firewall/security list.
+- The **dinfra edge stack** must be up and routing this domain (see the
+  [dinfra README](https://github.com/evgenii-prusov/dinfra)): once per VM
+  `docker network create web`, then `~/dinfra` with a site block for this
+  domain in its Caddyfile.
 
 ## First deploy
 
 ```sh
 git clone <repo-url> dtasks && cd dtasks
 cp .env.example .env
-# edit .env: real DOMAIN, ACME_EMAIL, and a private DTASKS_INVITE_CODE
+# edit .env: real DOMAIN and a private DTASKS_INVITE_CODE
 docker compose build
 docker compose up -d
 docker compose logs -f app   # confirm "alembic upgrade head" ran, then uvicorn started
 ```
 
-Open `https://<DOMAIN>` — Caddy obtains a cert automatically on first request.
+Open `https://<DOMAIN>` — TLS certificates are handled by the dinfra edge
+(it obtains one automatically the first time the site block is up).
 
 ## Environment variables
 
 | Variable              | Set in                       | Purpose |
 | ---------------------- | ----------------------------- | ------- |
-| `DOMAIN`               | `.env`                        | Public hostname Caddy requests a cert for and proxies |
-| `ACME_EMAIL`           | `.env`                        | Contact email Let's Encrypt associates with the cert |
+| `DOMAIN`               | `.env`                        | Public hostname — builds `DTASKS_PUBLIC_URL`; cert + proxying for it are configured in dinfra |
 | `DTASKS_INVITE_CODE`   | `.env`                        | Required on signup; hand this out to beta friends |
 | `DTASKS_SECURE_COOKIES`| `docker-compose.yml` (`app`)  | Fixed to `1` — session cookie gets the `Secure` flag |
 | `DTASKS_DB_PATH`       | `docker-compose.yml` (`app`)  | Fixed to `/data/dtasks.sqlite`, inside the `dtasks-data` volume |
