@@ -9,6 +9,7 @@ import {
   type RouterHistory,
 } from '@tanstack/react-router'
 import { Sidebar } from './components/Sidebar'
+import { UndoToastProvider } from './components/UndoToast'
 import { TodayView } from './views/TodayView'
 import { PlanView } from './views/PlanView'
 import { ReviewView } from './views/ReviewView'
@@ -51,6 +52,14 @@ function Layout() {
   )
 }
 
+function LayoutWithToast() {
+  return (
+    <UndoToastProvider>
+      <Layout />
+    </UndoToastProvider>
+  )
+}
+
 interface RouterContext {
   queryClient: QueryClient
 }
@@ -80,7 +89,7 @@ const welcomeRoute = createRoute({
 const authedRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'authed',
-  component: Layout,
+  component: LayoutWithToast,
   beforeLoad: async ({ context }) => {
     try {
       await context.queryClient.ensureQueryData(currentUserQueryOptions)

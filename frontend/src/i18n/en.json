@@ -18,6 +18,7 @@
     "notes": "Notes",
     "openTasks": "Open tasks",
     "completed": "Completed",
+    "undo": "Undo",
     "lowComplexity": "Low complexity",
     "highComplexity": "High complexity",
     "genericError": "Something went wrong. Please try again."
@@ -158,7 +159,8 @@
     "moveUp": "Move up",
     "moveDown": "Move down",
     "deleteTooltip": "Delete task",
-    "moveToProject": "Move to project"
+    "moveToProject": "Move to project",
+    "doneToast": "\"{{title}}\" done"
   },
   "quickAdd": {
     "placeholder": "Quick add task…",
