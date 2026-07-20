@@ -128,6 +128,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
       <NavLink to="/plan" icon="plan" label={t('nav.plan')} onClick={close} />
       <NavLink to="/review" icon="review" label={t('nav.review')} onClick={close} />
       <NavLink to="/habits" icon="habits" label={t('nav.habits')} onClick={close} />
+      <NavLink to="/report" icon="chart" label={t('nav.report')} onClick={close} />
 
       <hr className="s-divider" />
 

@@ -31,6 +31,7 @@ export function ProjectView({ project }: { project: Project }) {
   const [notes, setNotes] = useState(project.notes)
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(project.name)
+  const [showCompleted, setShowCompleted] = useState(true)
 
   useEffect(() => {
     setDesc(project.description)
@@ -38,6 +39,7 @@ export function ProjectView({ project }: { project: Project }) {
     setAddingTask(false)
     setEditDesc(false)
     setEditingName(false)
+    setShowCompleted(true)
   }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRename = () => {
@@ -175,8 +177,17 @@ export function ProjectView({ project }: { project: Project }) {
             <h3 className="text-ink-3">
               {t('common.completed')} ({done.length})
             </h3>
+            <button
+              className="btn btn-g btn-s"
+              onClick={() => setShowCompleted((s) => !s)}
+            >
+              <Ic n={showCompleted ? 'chevron-up' : 'chevron-down'} s={12} />
+              {showCompleted
+                ? t('project.hideCompleted')
+                : t('project.showCompleted', { count: done.length })}
+            </button>
           </div>
-          {done.map((t) => (
+          {showCompleted && done.map((t) => (
             <TaskRow key={t.id} task={t} checkable />
           ))}
         </div>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useProjects } from '../api/hooks'
@@ -11,18 +12,26 @@ import { QuickAddTask } from '../components/QuickAddTask'
 export function TodayView() {
   const { t, i18n } = useTranslation()
   const { data: projects = [] } = useProjects()
+  const [showDone, setShowDone] = useState(false)
 
   const must: { t: Task; p: Project }[] = []
   const today: { t: Task; p: Project }[] = []
   const week: { t: Task; p: Project }[] = []
+  const doneToday: { t: Task; p: Project }[] = []
+  const doneWeek: { t: Task; p: Project }[] = []
   for (const p of projects) {
     for (const t of p.tasks) {
-      if (t.completed) continue
+      if (t.completed) {
+        if (t.assigned_today) doneToday.push({ t, p })
+        else if (t.assigned_week) doneWeek.push({ t, p })
+        continue
+      }
       if (t.must_have && t.assigned_today) must.push({ t, p })
       else if (t.assigned_today) today.push({ t, p })
       else if (t.assigned_week) week.push({ t, p })
     }
   }
+  const doneCount = doneToday.length + doneWeek.length
 
   const dateStr = formatDayHeading(i18n.language)
   const dayTasks = [...must, ...today]
@@ -43,9 +52,17 @@ export function TodayView() {
             )}
           </div>
         </div>
-        <Link to="/plan" className="btn btn-g btn-s">
-          <Ic n="plan" s={13} /> {t('today.planMyDay')}
-        </Link>
+        <div className="flex items-center gap-1.5">
+          {doneCount > 0 && (
+            <button className="btn btn-g btn-s" onClick={() => setShowDone((s) => !s)}>
+              <Ic n="check" s={12} />
+              {showDone ? t('today.hideDone') : t('today.showDone', { count: doneCount })}
+            </button>
+          )}
+          <Link to="/plan" className="btn btn-g btn-s">
+            <Ic n="plan" s={13} /> {t('today.planMyDay')}
+          </Link>
+        </div>
       </div>
 
       <QuickAddTask />
@@ -124,6 +141,32 @@ export function TodayView() {
               editable
               deletable
             />
+          ))}
+        </div>
+      )}
+
+      {showDone && doneToday.length > 0 && (
+        <div className="card">
+          <div className="card-head">
+            <h3 className="text-ink-3">
+              <Ic n="check" s={13} /> {t('today.sectionDoneToday')} ({doneToday.length})
+            </h3>
+          </div>
+          {doneToday.map(({ t, p }) => (
+            <TaskRow key={t.id} task={t} project={p} showProject checkable />
+          ))}
+        </div>
+      )}
+
+      {showDone && doneWeek.length > 0 && (
+        <div className="card">
+          <div className="card-head">
+            <h3 className="text-ink-3">
+              <Ic n="check" s={13} /> {t('today.sectionDoneWeek')} ({doneWeek.length})
+            </h3>
+          </div>
+          {doneWeek.map(({ t, p }) => (
+            <TaskRow key={t.id} task={t} project={p} showProject checkable />
           ))}
         </div>
       )}

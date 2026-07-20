@@ -18,6 +18,9 @@ export type IconName =
   | 'leaf'
   | 'search'
   | 'x'
+  | 'chart'
+  | 'chevron-down'
+  | 'chevron-up'
 
 const paths = (c: string): Record<IconName, ReactNode> => ({
   today: (
@@ -122,6 +125,19 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
   ),
   x: (
     <path d="M4 4l8 8M12 4l-8 8" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+  ),
+  chart: (
+    <>
+      <rect x="2" y="9" width="3" height="5" rx="0.5" fill={c} />
+      <rect x="6.5" y="5" width="3" height="9" rx="0.5" fill={c} />
+      <rect x="11" y="2" width="3" height="12" rx="0.5" fill={c} />
+    </>
+  ),
+  'chevron-down': (
+    <path d="M4 6l4 4 4-4" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  ),
+  'chevron-up': (
+    <path d="M4 10l4-4 4 4" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
   ),
 })
 
