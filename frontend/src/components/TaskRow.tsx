@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useDeleteTask, useReorderTask, useUpdateTask } from '../api/hooks'
 import type { Complexity, Project, Task } from '../api/types'
 import { Ic } from './Icon'
+import { useShowUndoToast } from './UndoToast'
 
 export function TaskRow({
   task,
@@ -33,6 +34,7 @@ export function TaskRow({
   const updateTask = useUpdateTask()
   const reorderTask = useReorderTask()
   const deleteTask = useDeleteTask()
+  const showUndo = useShowUndoToast()
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
   const [notes, setNotes] = useState(task.notes || '')
@@ -209,7 +211,15 @@ export function TaskRow({
         {checkable && (
           <div
             className={`cb ${task.completed ? 'done' : ''}`}
-            onClick={() => updateTask.mutate({ id: task.id, patch: { completed: !task.completed } })}
+            onClick={() => {
+              const completing = !task.completed
+              updateTask.mutate({ id: task.id, patch: { completed: completing } })
+              if (completing) {
+                showUndo(task.title, () =>
+                  updateTask.mutate({ id: task.id, patch: { completed: false } }),
+                )
+              }
+            }}
           />
         )}
         <div

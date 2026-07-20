@@ -18,6 +18,7 @@
     "notes": "Заметки",
     "openTasks": "Открытые задачи",
     "completed": "Выполненные",
+    "undo": "Отменить",
     "lowComplexity": "Низкая сложность",
     "highComplexity": "Высокая сложность",
     "genericError": "Что-то пошло не так. Попробуйте ещё раз."
@@ -160,7 +161,8 @@
     "moveUp": "Выше",
     "moveDown": "Ниже",
     "deleteTooltip": "Удалить задачу",
-    "moveToProject": "Переместить в проект"
+    "moveToProject": "Переместить в проект",
+    "doneToast": "«{{title}}» выполнено"
   },
   "quickAdd": {
     "placeholder": "Быстро добавить задачу…",
