@@ -157,7 +157,7 @@ export function QuickAddTask() {
   }
 
   return (
-    <div className="card p-3 mb-6 bg-surface">
+    <div className="card p-3 mb-6 bg-surface !overflow-visible relative">
       <div className="flex flex-col gap-2">
         <div className="flex gap-2 items-center">
           <div className="relative flex-1" ref={dropdownRef}>
