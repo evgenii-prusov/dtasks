@@ -171,6 +171,7 @@
     "chooseSection": "Это для Работы или Личное?",
     "work": "Работа",
     "personal": "Личное",
-    "submit": "Добавить"
+    "submit": "Добавить",
+    "createProject": "Создать проект «{{name}}»"
   }
 }
