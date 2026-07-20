@@ -74,26 +74,7 @@ describe('QuickAddTask', () => {
   it('renders elements correctly', () => {
     renderQuickAddTask()
     expect(screen.getByPlaceholderText('Quick add task…')).toBeInTheDocument()
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument()
-  })
-
-  it('adds task to a specific project directly', async () => {
-    renderQuickAddTask()
-    
-    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Task for Real Work')
-    await userEvent.selectOptions(screen.getByRole('combobox'), '3')
-    await userEvent.click(screen.getByRole('button', { name: /add/i }))
-
-    await waitFor(() =>
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/projects/3/tasks',
-        expect.objectContaining({
-          method: 'POST',
-          body: JSON.stringify({ title: 'Task for Real Work', recurring: false }),
-        }),
-      ),
-    )
   })
 
   it('shows group confirmation prompt when no project is chosen', async () => {

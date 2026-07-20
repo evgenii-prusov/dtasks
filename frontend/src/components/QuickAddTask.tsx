@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateProject, useCreateTask, useProjects } from '../api/hooks'
 import type { Project } from '../api/types'
-import { groupLabel } from '../i18n'
 import { Ic } from './Icon'
 
 interface AutocompleteOption {
@@ -18,7 +17,7 @@ export function QuickAddTask() {
   const createProject = useCreateProject()
 
   const [title, setTitle] = useState('')
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('none')
+  const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [recurring, setRecurring] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
 
@@ -30,7 +29,6 @@ export function QuickAddTask() {
   const defaultWorkProj = projects.find((p) => p.name === '...' && p.group === 'Work')
   const defaultPersonalProj = projects.find((p) => p.name === '...' && p.group === 'Personal')
 
-  const groups = ['Work', 'Personal']
   const userProjects = projects.filter((p) => p.name !== '...')
 
   // Detect #tag query in title (at current end or before whitespace)
@@ -75,7 +73,7 @@ export function QuickAddTask() {
     if (opt.isNew) {
       setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, ` #${opt.name}`).trimStart())
     } else if (opt.project) {
-      setSelectedProjectId(String(opt.project.id))
+      setSelectedProjectId(opt.project.id)
       setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, '').trim())
     }
     setShowAutocomplete(false)
@@ -86,7 +84,7 @@ export function QuickAddTask() {
     if (!rawTitle) return
 
     let cleanTitle = rawTitle
-    let targetProjectId: number | null = selectedProjectId !== 'none' ? Number(selectedProjectId) : null
+    let targetProjectId: number | null = selectedProjectId
 
     // Check if title has explicit #Tag
     const tagMatch = rawTitle.match(/#([^\s#]+(?:\s+[^\s#]+)*)$/) || rawTitle.match(/#([^\s#]+)/)
@@ -150,7 +148,7 @@ export function QuickAddTask() {
 
   const reset = () => {
     setTitle('')
-    setSelectedProjectId('none')
+    setSelectedProjectId(null)
     setRecurring(false)
     setShowPrompt(false)
     setShowAutocomplete(false)
@@ -235,36 +233,6 @@ export function QuickAddTask() {
             />
             {t('task.recurringCheckbox')}
           </label>
-
-          <select
-            className="sel max-w-[200px] h-[34px] animate-[fadeIn_0.2s_ease]"
-            value={selectedProjectId}
-            onChange={(e) => {
-              setSelectedProjectId(e.target.value)
-              setShowPrompt(false)
-            }}
-          >
-            <option value="none">{t('quickAdd.noProject')}</option>
-            {groups.map((group) => {
-              const catchAll = group === 'Work' ? defaultWorkProj : defaultPersonalProj
-              const groupProjs = userProjects.filter((p) => p.group === group)
-              if (!catchAll && groupProjs.length === 0) return null
-              return (
-                <optgroup key={group} label={groupLabel(t, group)}>
-                  {catchAll && (
-                    <option value={String(catchAll.id)}>
-                      {t(`quickAdd.${group.toLowerCase() as 'work' | 'personal'}`)}
-                    </option>
-                  )}
-                  {groupProjs.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.name}
-                    </option>
-                  ))}
-                </optgroup>
-              )
-            })}
-          </select>
 
           <button
             className="btn btn-p btn-s h-[34px] px-4 font-semibold shrink-0"
