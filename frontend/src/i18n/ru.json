@@ -3,7 +3,8 @@
     "today": "Сегодня",
     "plan": "План",
     "review": "Обзор",
-    "habits": "Привычки"
+    "habits": "Привычки",
+    "report": "Отчёт"
   },
   "groups": {
     "work": "Работа",
@@ -72,7 +73,11 @@
     "startHere": "НАЧНИТЕ ЗДЕСЬ",
     "sectionToday": "Сегодня",
     "sectionWeek": "На этой неделе",
-    "greenCount": "{{green}} из {{total}} зелёных"
+    "greenCount": "{{green}} из {{total}} зелёных",
+    "sectionDoneToday": "Выполнено сегодня",
+    "sectionDoneWeek": "Выполнено на этой неделе",
+    "showDone": "Показать выполненные ({{count}})",
+    "hideDone": "Скрыть выполненные"
   },
   "plan": {
     "title": "План",
@@ -143,7 +148,21 @@
     "allDone": "Все задачи выполнены! 🎉",
     "notesPlaceholder": "Заметки, ссылки, идеи…",
     "moveUp": "Переместить проект выше",
-    "moveDown": "Переместить проект ниже"
+    "moveDown": "Переместить проект ниже",
+    "showCompleted": "Показать ({{count}})",
+    "hideCompleted": "Скрыть"
+  },
+  "report": {
+    "title": "Отчёт",
+    "subtitle": "Количество задач по проектам",
+    "project": "Проект",
+    "backlog": "Бэклог",
+    "today": "Сегодня",
+    "week": "Неделя",
+    "closed": "Закрытые",
+    "total": "Всего",
+    "totals": "Все проекты",
+    "noTasks": "Задач пока нет"
   },
   "task": {
     "titlePlaceholder": "Название задачи…",

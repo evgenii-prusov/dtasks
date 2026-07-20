@@ -15,6 +15,7 @@ import { PlanView } from './views/PlanView'
 import { ReviewView } from './views/ReviewView'
 import { HabitsView } from './views/HabitsView'
 import { ProjectView } from './views/ProjectView'
+import { ReportView } from './views/ReportView'
 import { WelcomeView } from './views/WelcomeView'
 import { currentUserQueryOptions, useProjects } from './api/hooks'
 import { createQueryClient } from './queryClient'
@@ -123,6 +124,12 @@ const habitsRoute = createRoute({
   component: HabitsView,
 })
 
+const reportRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/report',
+  component: ReportView,
+})
+
 function ProjectRouteComponent() {
   const { projectId } = projectRoute.useParams()
   const { data: projects = [] } = useProjects()
@@ -139,7 +146,7 @@ const projectRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   welcomeRoute,
-  authedRoute.addChildren([todayRoute, planRoute, reviewRoute, habitsRoute, projectRoute]),
+  authedRoute.addChildren([todayRoute, planRoute, reviewRoute, habitsRoute, reportRoute, projectRoute]),
 ])
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {

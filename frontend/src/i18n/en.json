@@ -3,7 +3,8 @@
     "today": "Today",
     "plan": "Plan",
     "review": "Review",
-    "habits": "Habits"
+    "habits": "Habits",
+    "report": "Report"
   },
   "groups": {
     "work": "Work",
@@ -72,7 +73,11 @@
     "startHere": "START HERE",
     "sectionToday": "Today",
     "sectionWeek": "This Week",
-    "greenCount": "{{green}} of {{total}} green"
+    "greenCount": "{{green}} of {{total}} green",
+    "sectionDoneToday": "Done Today",
+    "sectionDoneWeek": "Done This Week",
+    "showDone": "Show done ({{count}})",
+    "hideDone": "Hide done"
   },
   "plan": {
     "title": "Plan",
@@ -141,7 +146,21 @@
     "allDone": "All tasks done! 🎉",
     "notesPlaceholder": "Notes, links, ideas…",
     "moveUp": "Move project up",
-    "moveDown": "Move project down"
+    "moveDown": "Move project down",
+    "showCompleted": "Show ({{count}})",
+    "hideCompleted": "Hide"
+  },
+  "report": {
+    "title": "Report",
+    "subtitle": "Task counts across all projects",
+    "project": "Project",
+    "backlog": "Backlog",
+    "today": "Today",
+    "week": "Week",
+    "closed": "Closed",
+    "total": "Total",
+    "totals": "All projects",
+    "noTasks": "No tasks yet"
   },
   "task": {
     "titlePlaceholder": "Task title…",
