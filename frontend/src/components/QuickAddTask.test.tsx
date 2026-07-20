@@ -47,8 +47,15 @@ function renderQuickAddTask(projs: Project[] = projects) {
 }
 
 beforeEach(() => {
-  vi.spyOn(globalThis, 'fetch').mockImplementation(async (url) => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(async (url, options) => {
     const urlStr = url.toString()
+    if (urlStr.endsWith('/api/projects') && options?.method === 'POST') {
+      const body = JSON.parse(options.body as string)
+      return new Response(
+        JSON.stringify({ id: 99, name: body.name, group: body.group, tasks: [] }),
+        { status: 201, headers: { 'content-type': 'application/json' } },
+      )
+    }
     if (urlStr.includes('/api/projects') && !urlStr.includes('/tasks')) {
       return new Response(JSON.stringify(projects), {
         status: 200,
@@ -131,4 +138,62 @@ describe('QuickAddTask', () => {
       ),
     )
   })
+
+  it('shows autocomplete dropdown when # is typed and matches existing project', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    await userEvent.type(input, 'Task title #Real')
+
+    const optionBtn = screen.getByRole('button', { name: /Real Work Project/i })
+    expect(optionBtn).toBeInTheDocument()
+
+    // Select option via click
+    await userEvent.click(optionBtn)
+
+    // Form submit
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/3/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Task title', recurring: false }),
+        }),
+      ),
+    )
+  })
+
+  it('creates a new project automatically when #tag does not match any existing project', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    await userEvent.type(input, 'Build feature #NewSecretProject')
+
+    expect(screen.getByText(/Create project "NewSecretProject"/i)).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /add/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ name: 'NewSecretProject', group: 'Work' }),
+        }),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/99/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Build feature', recurring: false }),
+        }),
+      ),
+    )
+  })
 })
+

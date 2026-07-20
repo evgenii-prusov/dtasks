@@ -169,6 +169,7 @@
     "chooseSection": "Is this for Work or Personal?",
     "work": "Work",
     "personal": "Personal",
-    "submit": "Add"
+    "submit": "Add",
+    "createProject": "Create project \"{{name}}\""
   }
 }
