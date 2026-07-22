@@ -40,6 +40,8 @@ export function TaskRow({
   const [notes, setNotes] = useState(task.notes || '')
   const [complexity, setComplexity] = useState<Complexity>(task.complexity)
   const [isGreen, setIsGreen] = useState(task.is_green)
+  const [assignedToday, setAssignedToday] = useState(task.assigned_today)
+  const [assignedWeek, setAssignedWeek] = useState(task.assigned_week)
   const [selectedProjectId, setSelectedProjectId] = useState(task.project_id)
   const [swiped, setSwiped] = useState(false)
 
@@ -86,6 +88,8 @@ export function TaskRow({
     setNotes(task.notes || '')
     setComplexity(task.complexity)
     setIsGreen(task.is_green)
+    setAssignedToday(task.assigned_today)
+    setAssignedWeek(task.assigned_week)
     setSelectedProjectId(task.project_id)
     setEditing(true)
   }
@@ -95,6 +99,8 @@ export function TaskRow({
       notes,
       complexity,
       is_green: isGreen,
+      assigned_today: assignedToday,
+      assigned_week: assignedWeek,
     }
     if (selectedProjectId !== task.project_id) patch.project_id = selectedProjectId
     updateTask.mutate({ id: task.id, patch })
@@ -138,6 +144,24 @@ export function TaskRow({
               title={t('task.greenTooltip')}
             >
               <Ic n="leaf" s={11} /> {t('task.greenToggle')}
+            </button>
+            <button
+              className={`asgn gap-1 ${assignedToday ? 'on' : ''}`}
+              onClick={() => {
+                setAssignedToday((v) => !v)
+                if (!assignedToday) setAssignedWeek(false)
+              }}
+            >
+              {assignedToday ? '✓' : '+'} {t('task.scheduleToday')}
+            </button>
+            <button
+              className={`asgn gap-1 ${assignedWeek ? 'on' : ''}`}
+              onClick={() => {
+                setAssignedWeek((v) => !v)
+                if (!assignedWeek) setAssignedToday(false)
+              }}
+            >
+              {assignedWeek ? '✓' : '+'} {t('task.scheduleWeek')}
             </button>
             <div className="flex-1" />
             <button className="btn btn-g btn-s" onClick={cancel}>

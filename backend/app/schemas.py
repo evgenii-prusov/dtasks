@@ -62,6 +62,8 @@ class TaskCreate(msgspec.Struct):
     notes: str = ""
     complexity: str = "low"
     is_green: bool = False
+    assigned_today: bool = False
+    assigned_week: bool = False
 
 
 class ProjectCreate(msgspec.Struct):
