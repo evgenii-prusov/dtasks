@@ -58,6 +58,8 @@ export interface TaskCreate {
   notes?: string
   complexity?: Complexity
   is_green?: boolean
+  assigned_today?: boolean
+  assigned_week?: boolean
 }
 
 export interface ProjectPatch {

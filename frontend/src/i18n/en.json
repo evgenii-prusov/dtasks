@@ -168,6 +168,8 @@
     "notesOptionalPlaceholder": "Notes (optional)",
     "greenToggle": "Green task",
     "greenTooltip": "Green task — moves you toward your goals",
+    "scheduleToday": "Today",
+    "scheduleWeek": "This week",
     "confirmDelete": "Delete \"{{title}}\"?",
     "clickToEdit": "Click to edit",
     "noteBadge": "note",

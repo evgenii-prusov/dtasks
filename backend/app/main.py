@@ -278,6 +278,8 @@ async def create_task(project_id: int, data: TaskCreate, session: AsyncSession, 
         notes=data.notes,
         complexity=data.complexity,
         is_green=data.is_green,
+        assigned_today=data.assigned_today,
+        assigned_week=data.assigned_week,
         position=max((t.position for t in project.tasks), default=-1) + 1,
     )
     if not task.title:
