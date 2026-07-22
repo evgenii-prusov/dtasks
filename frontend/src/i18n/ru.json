@@ -170,6 +170,8 @@
     "notesOptionalPlaceholder": "Заметки (необязательно)",
     "greenToggle": "Зелёная задача",
     "greenTooltip": "Зелёная задача — приближает к вашим целям",
+    "scheduleToday": "Сегодня",
+    "scheduleWeek": "На этой неделе",
     "confirmDelete": "Удалить «{{title}}»?",
     "clickToEdit": "Нажмите, чтобы изменить",
     "noteBadge": "заметка",
