@@ -28,6 +28,7 @@ const project: Project = {
       must_have: false,
       is_green: false,
       completed: false,
+      completed_at: null,
       position: 0,
     },
   ],
