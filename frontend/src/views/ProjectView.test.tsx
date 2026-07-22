@@ -23,7 +23,6 @@ const project: Project = {
       title: 'A task',
       notes: '',
       complexity: 'low',
-      recurring: false,
       assigned_today: false,
       assigned_week: false,
       must_have: false,

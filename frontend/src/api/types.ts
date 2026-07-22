@@ -6,7 +6,6 @@ export interface Task {
   title: string
   notes: string
   complexity: Complexity
-  recurring: boolean
   assigned_today: boolean
   assigned_week: boolean
   must_have: boolean
@@ -46,7 +45,6 @@ export interface TaskPatch {
   title?: string
   notes?: string
   complexity?: Complexity
-  recurring?: boolean
   assigned_today?: boolean
   assigned_week?: boolean
   must_have?: boolean
@@ -59,7 +57,6 @@ export interface TaskCreate {
   title: string
   notes?: string
   complexity?: Complexity
-  recurring?: boolean
   is_green?: boolean
 }
 

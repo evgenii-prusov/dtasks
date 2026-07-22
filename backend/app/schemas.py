@@ -15,7 +15,6 @@ class TaskOut(msgspec.Struct):
     title: str
     notes: str
     complexity: str
-    recurring: bool
     assigned_today: bool
     assigned_week: bool
     must_have: bool
@@ -62,7 +61,6 @@ class TaskCreate(msgspec.Struct):
     title: str
     notes: str = ""
     complexity: str = "low"
-    recurring: bool = False
     is_green: bool = False
 
 
@@ -75,7 +73,6 @@ class TaskPatch(msgspec.Struct):
     title: str | msgspec.UnsetType = UNSET
     notes: str | msgspec.UnsetType = UNSET
     complexity: str | msgspec.UnsetType = UNSET
-    recurring: bool | msgspec.UnsetType = UNSET
     assigned_today: bool | msgspec.UnsetType = UNSET
     assigned_week: bool | msgspec.UnsetType = UNSET
     must_have: bool | msgspec.UnsetType = UNSET
@@ -112,7 +109,6 @@ def task_out(t: Task) -> TaskOut:
         title=t.title,
         notes=t.notes,
         complexity=t.complexity,
-        recurring=t.recurring,
         assigned_today=t.assigned_today,
         assigned_week=t.assigned_week,
         must_have=t.must_have,

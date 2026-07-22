@@ -96,7 +96,7 @@ describe('QuickAddTask', () => {
         '/api/projects/1/tasks',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ title: 'One-off Task', recurring: false }),
+          body: JSON.stringify({ title: 'One-off Task' }),
         }),
       ),
     )
@@ -114,7 +114,7 @@ describe('QuickAddTask', () => {
         '/api/projects/2/tasks',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ title: 'Personal One-off', recurring: false }),
+          body: JSON.stringify({ title: 'Personal One-off' }),
         }),
       ),
     )
@@ -140,7 +140,7 @@ describe('QuickAddTask', () => {
         '/api/projects/3/tasks',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ title: 'Task title', recurring: false }),
+          body: JSON.stringify({ title: 'Task title' }),
         }),
       ),
     )
@@ -171,7 +171,7 @@ describe('QuickAddTask', () => {
         '/api/projects/99/tasks',
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({ title: 'Build feature', recurring: false }),
+          body: JSON.stringify({ title: 'Build feature' }),
         }),
       ),
     )
