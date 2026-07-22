@@ -15,10 +15,19 @@ export function AddTaskForm({
   const [complexity, setComplexity] = useState<Complexity>('low')
   const [isGreen, setIsGreen] = useState(false)
   const [notes, setNotes] = useState('')
+  const [assignedToday, setAssignedToday] = useState(false)
+  const [assignedWeek, setAssignedWeek] = useState(false)
 
   const submit = () => {
     if (!title.trim()) return
-    onAdd({ title: title.trim(), complexity, notes, is_green: isGreen })
+    onAdd({
+      title: title.trim(),
+      complexity,
+      notes,
+      is_green: isGreen,
+      assigned_today: assignedToday,
+      assigned_week: assignedWeek,
+    })
   }
 
   return (
@@ -52,6 +61,26 @@ export function AddTaskForm({
           title={t('task.greenTooltip')}
         >
           <Ic n="leaf" s={11} /> {t('task.greenToggle')}
+        </button>
+        <button
+          className={`asgn gap-1 ${assignedToday ? 'on' : ''}`}
+          onClick={() => {
+            setAssignedToday((v) => !v)
+            if (!assignedToday) setAssignedWeek(false)
+          }}
+          title={t('task.scheduleToday')}
+        >
+          {assignedToday ? '✓' : '+'} {t('task.scheduleToday')}
+        </button>
+        <button
+          className={`asgn gap-1 ${assignedWeek ? 'on' : ''}`}
+          onClick={() => {
+            setAssignedWeek((v) => !v)
+            if (!assignedWeek) setAssignedToday(false)
+          }}
+          title={t('task.scheduleWeek')}
+        >
+          {assignedWeek ? '✓' : '+'} {t('task.scheduleWeek')}
         </button>
         <div className="flex-1" />
         <button className="btn btn-g btn-s" onClick={onCancel}>
