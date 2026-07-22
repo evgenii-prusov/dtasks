@@ -18,7 +18,6 @@ export function QuickAddTask() {
 
   const [title, setTitle] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
-  const [recurring, setRecurring] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
@@ -121,7 +120,7 @@ export function QuickAddTask() {
     if (targetProjectId !== null) {
       createTask.mutate({
         projectId: targetProjectId,
-        task: { title: cleanTitle, recurring },
+        task: { title: cleanTitle },
       })
       reset()
       return
@@ -140,7 +139,7 @@ export function QuickAddTask() {
     if (defaultProj) {
       createTask.mutate({
         projectId: defaultProj.id,
-        task: { title: cleanTitle, recurring },
+        task: { title: cleanTitle },
       })
     }
     reset()
@@ -149,7 +148,6 @@ export function QuickAddTask() {
   const reset = () => {
     setTitle('')
     setSelectedProjectId(null)
-    setRecurring(false)
     setShowPrompt(false)
     setShowAutocomplete(false)
   }
@@ -223,16 +221,6 @@ export function QuickAddTask() {
               </div>
             )}
           </div>
-
-          <label className="flex shrink-0 cursor-pointer items-center gap-1 text-xs text-ink-2">
-            <input
-              type="checkbox"
-              checked={recurring}
-              onChange={(e) => setRecurring(e.target.checked)}
-              style={{ accentColor: 'var(--accent)' }}
-            />
-            {t('task.recurringCheckbox')}
-          </label>
 
           <button
             className="btn btn-p btn-s h-[34px] px-4 font-semibold shrink-0"

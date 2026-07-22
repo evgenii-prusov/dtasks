@@ -13,13 +13,12 @@ export function AddTaskForm({
   const { t } = useTranslation()
   const [title, setTitle] = useState('')
   const [complexity, setComplexity] = useState<Complexity>('low')
-  const [recurring, setRecurring] = useState(false)
   const [isGreen, setIsGreen] = useState(false)
   const [notes, setNotes] = useState('')
 
   const submit = () => {
     if (!title.trim()) return
-    onAdd({ title: title.trim(), complexity, recurring, notes, is_green: isGreen })
+    onAdd({ title: title.trim(), complexity, notes, is_green: isGreen })
   }
 
   return (
@@ -47,15 +46,6 @@ export function AddTaskForm({
           <option value="low">{t('common.lowComplexity')}</option>
           <option value="high">{t('common.highComplexity')}</option>
         </select>
-        <label className="flex cursor-pointer items-center gap-1 text-xs text-ink-2">
-          <input
-            type="checkbox"
-            checked={recurring}
-            onChange={(e) => setRecurring(e.target.checked)}
-            style={{ accentColor: 'var(--accent)' }}
-          />
-          {t('task.recurringCheckbox')}
-        </label>
         <button
           className={`asgn gap-1 ${isGreen ? 'green-on' : ''}`}
           onClick={() => setIsGreen((g) => !g)}

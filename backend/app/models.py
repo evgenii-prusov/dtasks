@@ -71,7 +71,6 @@ class Task(Base):
     title: Mapped[str] = mapped_column(String(500))
     notes: Mapped[str] = mapped_column(Text, default="")
     complexity: Mapped[str] = mapped_column(String(10), default="low")  # low | high
-    recurring: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_today: Mapped[bool] = mapped_column(Boolean, default=False)
     assigned_week: Mapped[bool] = mapped_column(Boolean, default=False)
     must_have: Mapped[bool] = mapped_column(Boolean, default=False)

@@ -103,12 +103,11 @@ async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
                 Task(
                     title="Study theory modules 1–5",
                     complexity="low",
-                    recurring=True,
                     assigned_week=True,
                     position=0,
                 ),
                 Task(title="Book next driving lesson", complexity="low", completed=True, position=1),
-                Task(title="Complete online practice tests", complexity="low", recurring=True, position=2),
+                Task(title="Complete online practice tests", complexity="low", position=2),
             ],
         ),
     ]
