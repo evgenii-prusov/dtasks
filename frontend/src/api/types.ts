@@ -11,6 +11,7 @@ export interface Task {
   must_have: boolean
   is_green: boolean
   completed: boolean
+  completed_at: string | null
   position: number
 }
 

@@ -76,6 +76,7 @@ class Task(Base):
     must_have: Mapped[bool] = mapped_column(Boolean, default=False)
     is_green: Mapped[bool] = mapped_column(Boolean, default=False)
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     position: Mapped[int] = mapped_column(Integer, default=0)
 
     project: Mapped[Project] = relationship(back_populates="tasks")

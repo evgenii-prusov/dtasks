@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 
 import msgspec
 
@@ -20,6 +20,7 @@ class TaskOut(msgspec.Struct):
     must_have: bool
     is_green: bool
     completed: bool
+    completed_at: datetime | None
     position: int
 
 
@@ -116,6 +117,7 @@ def task_out(t: Task) -> TaskOut:
         must_have=t.must_have,
         is_green=t.is_green,
         completed=t.completed,
+        completed_at=t.completed_at,
         position=t.position,
     )
 

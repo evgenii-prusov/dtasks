@@ -14,16 +14,17 @@ export function TodayView() {
   const { data: projects = [] } = useProjects()
   const [showDone, setShowDone] = useState(false)
 
+  const todayDateStr = new Date().toISOString().slice(0, 10)
+
   const must: { t: Task; p: Project }[] = []
   const today: { t: Task; p: Project }[] = []
   const week: { t: Task; p: Project }[] = []
   const doneToday: { t: Task; p: Project }[] = []
-  const doneWeek: { t: Task; p: Project }[] = []
   for (const p of projects) {
     for (const t of p.tasks) {
       if (t.completed) {
-        if (t.assigned_today) doneToday.push({ t, p })
-        else if (t.assigned_week) doneWeek.push({ t, p })
+        const completedDate = t.completed_at ? t.completed_at.slice(0, 10) : null
+        if (completedDate === todayDateStr) doneToday.push({ t, p })
         continue
       }
       if (t.must_have && t.assigned_today) must.push({ t, p })
@@ -31,7 +32,7 @@ export function TodayView() {
       else if (t.assigned_week) week.push({ t, p })
     }
   }
-  const doneCount = doneToday.length + doneWeek.length
+  const doneCount = doneToday.length
 
   const dateStr = formatDayHeading(i18n.language)
   const dayTasks = [...must, ...today]
@@ -158,18 +159,6 @@ export function TodayView() {
         </div>
       )}
 
-      {showDone && doneWeek.length > 0 && (
-        <div className="card">
-          <div className="card-head">
-            <h3 className="text-ink-3">
-              <Ic n="check" s={13} /> {t('today.sectionDoneWeek')} ({doneWeek.length})
-            </h3>
-          </div>
-          {doneWeek.map(({ t, p }) => (
-            <TaskRow key={t.id} task={t} project={p} showProject checkable />
-          ))}
-        </div>
-      )}
     </div>
   )
 }

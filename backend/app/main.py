@@ -299,11 +299,14 @@ async def update_task(task_id: int, data: TaskPatch, session: AsyncSession, user
         "complexity",
         "assigned_week",
         "is_green",
-        "completed",
     ):
         value = getattr(data, field)
         if value is not UNSET:
             setattr(task, field, value)
+
+    if data.completed is not UNSET:
+        task.completed = data.completed
+        task.completed_at = datetime.now(UTC) if data.completed else None
     if data.complexity is not UNSET and data.complexity not in ("low", "high"):
         raise ClientException(detail="complexity must be 'low' or 'high'")
 
