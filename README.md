@@ -26,12 +26,14 @@ language toggle (persisted, defaulting to the browser language).
 
 ## Development
 
-Backend (API on `:8000`, database is created and seeded on first start):
+Backend (API on `:8010` — not `:8000`, to avoid clashing with sibling local
+projects that default there too; database is created and seeded on first
+start):
 
 ```sh
 cd backend
 uv sync
-uv run litestar --app app.main:app run --port 8000
+uv run litestar --app app.main:app run --port 8010
 ```
 
 Frontend (dev server on `:5173`, proxies `/api` to the backend):
@@ -49,8 +51,8 @@ SPA fallback:
 
 ```sh
 cd frontend && npm run build
-cd ../backend && uv run litestar --app app.main:app run --port 8000
-# open http://localhost:8000
+cd ../backend && uv run litestar --app app.main:app run --port 8010
+# open http://localhost:8010
 ```
 
 For an actual internet-facing deployment (Docker + Caddy for automatic HTTPS),

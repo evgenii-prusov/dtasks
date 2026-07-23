@@ -76,7 +76,7 @@ Callback URLs you'll need:
 - **Dev**: `http://localhost:5173/api/auth/oauth/google/callback` and
   `http://localhost:5173/api/auth/oauth/github/callback` — the Vite dev
   server on `:5173` proxies `/api` to the backend, so the callback stays
-  same-origin even though the backend itself runs on `:8000`.
+  same-origin even though the backend itself runs on `:8010`.
 
 ### Google
 
