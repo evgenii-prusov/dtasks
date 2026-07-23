@@ -61,10 +61,17 @@ class Project(Base):
         cascade="all, delete-orphan",
         order_by="Task.position",
     )
+    recurrence_rules: Mapped[list[RecurrenceRule]] = relationship(
+        back_populates="project",
+        cascade="all, delete-orphan",
+    )
 
 
 class Task(Base):
     __tablename__ = "tasks"
+    __table_args__ = (
+        UniqueConstraint("recurrence_rule_id", "occurrence_date", name="uq_recurrence_occurrence_day"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
@@ -78,8 +85,30 @@ class Task(Base):
     completed: Mapped[bool] = mapped_column(Boolean, default=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     position: Mapped[int] = mapped_column(Integer, default=0)
+    recurrence_rule_id: Mapped[int | None] = mapped_column(
+        ForeignKey("recurrence_rules.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    occurrence_date: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     project: Mapped[Project] = relationship(back_populates="tasks")
+
+
+class RecurrenceRule(Base):
+    __tablename__ = "recurrence_rules"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id", ondelete="CASCADE"))
+    title: Mapped[str] = mapped_column(String(500))
+    notes: Mapped[str] = mapped_column(Text, default="")
+    complexity: Mapped[str] = mapped_column(String(10), default="low")  # low | high
+    is_green: Mapped[bool] = mapped_column(Boolean, default=False)
+    weekdays: Mapped[int] = mapped_column(Integer)  # bitmask: bit i set = date.weekday() == i (Mon=0..Sun=6)
+    # High-water mark of the last UTC date an occurrence was generated for, so deleting
+    # today's occurrence doesn't cause the next lazy-generation pass to recreate it.
+    last_generated_date: Mapped[date | None] = mapped_column(Date, nullable=True)
+
+    project: Mapped[Project] = relationship(back_populates="recurrence_rules")
 
 
 class Habit(Base):

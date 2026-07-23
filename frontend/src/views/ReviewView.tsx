@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useCreateRecurrence } from '../api/hooks'
 import { useCreateTask } from '../api/hooks'
 import { useProjects } from '../api/hooks'
 import { useUpdateProject } from '../api/hooks'
@@ -16,6 +17,7 @@ export function ReviewView() {
   const { data: projects = [], isLoading } = useProjects()
   const updateProject = useUpdateProject()
   const createTask = useCreateTask()
+  const createRecurrence = useCreateRecurrence()
   const updateTask = useUpdateTask()
 
   const total = MINUTES_PER_PROJECT * 60 * (projects.length || 1)
@@ -228,6 +230,10 @@ export function ReviewView() {
                 <AddTaskForm
                   onAdd={(task) => {
                     createTask.mutate({ projectId: p.id, task })
+                    setAddingTask(false)
+                  }}
+                  onAddRecurring={(rule) => {
+                    createRecurrence.mutate({ projectId: p.id, rule })
                     setAddingTask(false)
                   }}
                   onCancel={() => setAddingTask(false)}

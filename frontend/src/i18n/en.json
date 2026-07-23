@@ -179,7 +179,16 @@
     "moveDown": "Move down",
     "deleteTooltip": "Delete task",
     "moveToProject": "Move to project",
-    "doneToast": "\"{{title}}\" done"
+    "doneToast": "\"{{title}}\" done",
+    "repeatToggle": "Repeat",
+    "repeatTooltip": "Repeats on the selected days",
+    "recurEveryDay": "Every day",
+    "recurWeekdays": "Weekdays",
+    "recurringBadgeTooltip": "Repeats {{schedule}} — click to edit the series",
+    "editSeries": "Edit series",
+    "editSeriesTitle": "Edit recurring task",
+    "stopRepeating": "Stop repeating",
+    "confirmStopRepeating": "Stop \"{{title}}\" from repeating? Past occurrences are kept."
   },
   "quickAdd": {
     "placeholder": "Quick add task…",

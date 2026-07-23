@@ -4,7 +4,7 @@ from datetime import date, datetime
 
 import msgspec
 
-from .models import Habit, Project, Task
+from .models import Habit, Project, RecurrenceRule, Task
 
 UNSET = msgspec.UNSET
 
@@ -22,6 +22,18 @@ class TaskOut(msgspec.Struct):
     completed: bool
     completed_at: datetime | None
     position: int
+    recurrence_rule_id: int | None
+    occurrence_date: date | None
+
+
+class RecurrenceRuleOut(msgspec.Struct):
+    id: int
+    project_id: int
+    title: str
+    notes: str
+    complexity: str
+    is_green: bool
+    weekdays: int
 
 
 class ProjectOut(msgspec.Struct):
@@ -32,6 +44,7 @@ class ProjectOut(msgspec.Struct):
     notes: str
     position: int
     tasks: list[TaskOut]
+    recurrences: list[RecurrenceRuleOut]
 
 
 class HabitOut(msgspec.Struct):
@@ -84,6 +97,22 @@ class TaskPatch(msgspec.Struct):
     project_id: int | msgspec.UnsetType = UNSET
 
 
+class RecurrenceRuleCreate(msgspec.Struct):
+    title: str
+    weekdays: int
+    notes: str = ""
+    complexity: str = "low"
+    is_green: bool = False
+
+
+class RecurrenceRulePatch(msgspec.Struct):
+    title: str | msgspec.UnsetType = UNSET
+    notes: str | msgspec.UnsetType = UNSET
+    complexity: str | msgspec.UnsetType = UNSET
+    is_green: bool | msgspec.UnsetType = UNSET
+    weekdays: int | msgspec.UnsetType = UNSET
+
+
 class ProjectPatch(msgspec.Struct):
     name: str | msgspec.UnsetType = UNSET
     group: str | msgspec.UnsetType = UNSET
@@ -119,6 +148,20 @@ def task_out(t: Task) -> TaskOut:
         completed=t.completed,
         completed_at=t.completed_at,
         position=t.position,
+        recurrence_rule_id=t.recurrence_rule_id,
+        occurrence_date=t.occurrence_date,
+    )
+
+
+def recurrence_out(r: RecurrenceRule) -> RecurrenceRuleOut:
+    return RecurrenceRuleOut(
+        id=r.id,
+        project_id=r.project_id,
+        title=r.title,
+        notes=r.notes,
+        complexity=r.complexity,
+        is_green=r.is_green,
+        weekdays=r.weekdays,
     )
 
 
@@ -131,6 +174,7 @@ def project_out(p: Project) -> ProjectOut:
         notes=p.notes,
         position=p.position,
         tasks=[task_out(t) for t in sorted(p.tasks, key=lambda t: t.position)],
+        recurrences=[recurrence_out(r) for r in p.recurrence_rules],
     )
 
 

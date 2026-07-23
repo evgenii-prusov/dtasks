@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { mustHaveCount } from '../api/hooks'
+import { useCreateRecurrence } from '../api/hooks'
 import { useCreateTask } from '../api/hooks'
 import { useProjects } from '../api/hooks'
 import { useUpdateTask } from '../api/hooks'
@@ -17,6 +18,7 @@ export function PlanView() {
   const { data: projects = [] } = useProjects()
   const updateTask = useUpdateTask()
   const createTask = useCreateTask()
+  const createRecurrence = useCreateRecurrence()
   const [tab, setTab] = useState<'today' | 'week'>('today')
   const [addingTo, setAddingTo] = useState<number | null>(null)
   const [search, setSearch] = useState('')
@@ -270,6 +272,10 @@ export function PlanView() {
               <AddTaskForm
                 onAdd={(task) => {
                   createTask.mutate({ projectId: p.id, task })
+                  setAddingTo(null)
+                }}
+                onAddRecurring={(rule) => {
+                  createRecurrence.mutate({ projectId: p.id, rule })
                   setAddingTo(null)
                 }}
                 onCancel={() => setAddingTo(null)}

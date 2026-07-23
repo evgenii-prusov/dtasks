@@ -81,6 +81,36 @@ async def test_cross_tenant_task_404(make_client: MakeClient) -> None:
     assert after == before
 
 
+async def test_cross_tenant_recurrence_404(make_client: MakeClient) -> None:
+    a = await make_client("a@example.com")
+    b = await make_client("b@example.com")
+
+    a_project_id = (await a.get("/api/projects")).json()[0]["id"]
+    created = await a.post(
+        f"/api/projects/{a_project_id}/recurrences", json={"title": "A's rule", "weekdays": 127}
+    )
+    a_rule_id = created.json()["id"]
+
+    create_missing = await b.post(
+        "/api/projects/999999/recurrences", json={"title": "hacked rule", "weekdays": 127}
+    )
+    create_real = await b.post(
+        f"/api/projects/{a_project_id}/recurrences", json={"title": "hacked rule", "weekdays": 127}
+    )
+    assert create_real.status_code == 404
+    assert create_real.json() == create_missing.json()
+
+    patch_missing = await b.patch("/api/recurrences/999999", json={"title": "hack"})
+    patch_real = await b.patch(f"/api/recurrences/{a_rule_id}", json={"title": "hack"})
+    assert patch_real.status_code == 404
+    assert patch_real.json() == patch_missing.json()
+
+    delete_missing = await b.delete("/api/recurrences/999999")
+    delete_real = await b.delete(f"/api/recurrences/{a_rule_id}")
+    assert delete_real.status_code == 404
+    assert delete_real.json() == delete_missing.json()
+
+
 async def test_cross_tenant_habit_404(make_client: MakeClient) -> None:
     a = await make_client("a@example.com")
     b = await make_client("b@example.com")

@@ -45,6 +45,7 @@ describe('Sidebar project groups', () => {
       notes: '',
       position: 0,
       tasks: [],
+      recurrences: [],
     }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
       if (init?.method === 'POST') {
@@ -89,6 +90,7 @@ describe('Sidebar project groups', () => {
       notes: '',
       position: 0,
       tasks: [],
+      recurrences: [],
     }
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async (_url, init) => {
       if (init?.method === 'POST') {
@@ -167,6 +169,7 @@ describe('Sidebar project groups', () => {
         notes: '',
         position: 0,
         tasks: [],
+        recurrences: [],
       },
       {
         id: 102,
@@ -176,6 +179,7 @@ describe('Sidebar project groups', () => {
         notes: '',
         position: 1,
         tasks: [],
+        recurrences: [],
       },
     ]
 

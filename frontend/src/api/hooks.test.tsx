@@ -18,7 +18,7 @@ const navigate = vi.fn()
 vi.mock('@tanstack/react-router', () => ({ useNavigate: () => navigate }))
 
 function project(id: number, name: string, group = 'Work'): Project {
-  return { id, name, group, description: '', notes: '', position: id, tasks: [] }
+  return { id, name, group, description: '', notes: '', position: id, tasks: [], recurrences: [] }
 }
 
 function habit(id: number, name: string): Habit {

@@ -6,6 +6,9 @@ import type {
   Project,
   ProjectCreate,
   ProjectPatch,
+  RecurrenceRule,
+  RecurrenceRuleCreate,
+  RecurrenceRulePatch,
   SignupPayload,
   Task,
   TaskCreate,
@@ -72,6 +75,14 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ direction }),
     }),
+  createRecurrence: (projectId: number, rule: RecurrenceRuleCreate) =>
+    request<RecurrenceRule>(`/api/projects/${projectId}/recurrences`, {
+      method: 'POST',
+      body: JSON.stringify(rule),
+    }),
+  updateRecurrence: (id: number, patch: RecurrenceRulePatch) =>
+    request<RecurrenceRule>(`/api/recurrences/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  deleteRecurrence: (id: number) => request<void>(`/api/recurrences/${id}`, { method: 'DELETE' }),
   listHabits: () => request<Habit[]>('/api/habits'),
   createHabit: (habit: HabitCreate) =>
     request<Habit>('/api/habits', { method: 'POST', body: JSON.stringify(habit) }),
