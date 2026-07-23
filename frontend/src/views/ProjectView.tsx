@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { useCreateTask, useDeleteProject, useProjects, useUpdateProject } from '../api/hooks'
+import {
+  useCreateRecurrence,
+  useCreateTask,
+  useDeleteProject,
+  useProjects,
+  useUpdateProject,
+} from '../api/hooks'
 import { groupLabel } from '../i18n'
 import { isDefaultProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
@@ -14,6 +20,7 @@ export function ProjectView({ project }: { project: Project }) {
   const updateProject = useUpdateProject()
   const deleteProject = useDeleteProject()
   const createTask = useCreateTask()
+  const createRecurrence = useCreateRecurrence()
   const { data: allProjects = [] } = useProjects()
 
   const isDefault = isDefaultProject(project)
@@ -161,6 +168,10 @@ export function ProjectView({ project }: { project: Project }) {
           <AddTaskForm
             onAdd={(task) => {
               createTask.mutate({ projectId: project.id, task })
+              setAddingTask(false)
+            }}
+            onAddRecurring={(rule) => {
+              createRecurrence.mutate({ projectId: project.id, rule })
               setAddingTask(false)
             }}
             onCancel={() => setAddingTask(false)}

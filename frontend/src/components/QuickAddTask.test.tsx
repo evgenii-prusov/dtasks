@@ -15,6 +15,7 @@ const projects: Project[] = [
     notes: '',
     position: 0,
     tasks: [],
+    recurrences: [],
   },
   {
     id: 2,
@@ -24,6 +25,7 @@ const projects: Project[] = [
     notes: '',
     position: 1,
     tasks: [],
+    recurrences: [],
   },
   {
     id: 3,
@@ -33,6 +35,7 @@ const projects: Project[] = [
     notes: '',
     position: 2,
     tasks: [],
+    recurrences: [],
   },
 ]
 

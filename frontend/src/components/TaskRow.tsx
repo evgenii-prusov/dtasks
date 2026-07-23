@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useDeleteTask, useReorderTask, useUpdateTask } from '../api/hooks'
+import {
+  useDeleteRecurrence,
+  useDeleteTask,
+  useReorderTask,
+  useUpdateRecurrence,
+  useUpdateTask,
+} from '../api/hooks'
 import type { Complexity, Project, Task } from '../api/types'
+import { weekdayShortLabels } from '../lib/dates'
+import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
 import { Ic } from './Icon'
 import { useShowUndoToast } from './UndoToast'
 
@@ -30,10 +38,12 @@ export function TaskRow({
   right?: ReactNode
   allProjects?: Project[]
 }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const updateTask = useUpdateTask()
   const reorderTask = useReorderTask()
   const deleteTask = useDeleteTask()
+  const updateRecurrence = useUpdateRecurrence()
+  const deleteRecurrence = useDeleteRecurrence()
   const showUndo = useShowUndoToast()
   const [editing, setEditing] = useState(false)
   const [title, setTitle] = useState(task.title)
@@ -42,6 +52,13 @@ export function TaskRow({
   const [isGreen, setIsGreen] = useState(task.is_green)
   const [selectedProjectId, setSelectedProjectId] = useState(task.project_id)
   const [swiped, setSwiped] = useState(false)
+
+  const rule = project?.recurrences.find((r) => r.id === task.recurrence_rule_id)
+  const [editingSeries, setEditingSeries] = useState(false)
+  const [seriesTitle, setSeriesTitle] = useState('')
+  const [seriesComplexity, setSeriesComplexity] = useState<Complexity>('low')
+  const [seriesIsGreen, setSeriesIsGreen] = useState(false)
+  const [seriesWeekdays, setSeriesWeekdays] = useState(new Set<number>())
 
   const touchStartX = useRef<number | null>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
@@ -103,6 +120,104 @@ export function TaskRow({
   const cancel = () => setEditing(false)
   const remove = () => {
     if (confirm(t('task.confirmDelete', { title: task.title }))) deleteTask.mutate(task.id)
+  }
+
+  const startEditSeries = () => {
+    if (!rule) return
+    setSwiped(false)
+    setSeriesTitle(rule.title)
+    setSeriesComplexity(rule.complexity)
+    setSeriesIsGreen(rule.is_green)
+    setSeriesWeekdays(new Set(maskToWeekdays(rule.weekdays)))
+    setEditingSeries(true)
+  }
+  const saveSeries = () => {
+    if (!rule || seriesWeekdays.size === 0) return
+    updateRecurrence.mutate({
+      id: rule.id,
+      patch: {
+        title: seriesTitle.trim() || rule.title,
+        complexity: seriesComplexity,
+        is_green: seriesIsGreen,
+        weekdays: weekdaysToMask(seriesWeekdays),
+      },
+    })
+    setEditingSeries(false)
+  }
+  const cancelSeries = () => setEditingSeries(false)
+  const stopRepeating = () => {
+    if (!rule) return
+    if (confirm(t('task.confirmStopRepeating', { title: rule.title }))) {
+      deleteRecurrence.mutate(rule.id)
+      setEditingSeries(false)
+    }
+  }
+  const toggleSeriesWeekday = (day: number) => {
+    setSeriesWeekdays((prev) => {
+      const next = new Set(prev)
+      if (next.has(day)) next.delete(day)
+      else next.add(day)
+      return next
+    })
+  }
+
+  if (editingSeries && rule) {
+    return (
+      <div className={`task-row items-start ${task.is_green ? 'green' : ''}`}>
+        {checkable && <div className="cb mt-[3px]" />}
+        <div className="min-w-0 flex-1">
+          <div className="mb-[5px] text-[11px] font-semibold text-ink-3">
+            {t('task.editSeriesTitle')}
+          </div>
+          <input
+            className="input mb-[5px] px-2 py-[5px] text-[13px]"
+            value={seriesTitle}
+            onChange={(e) => setSeriesTitle(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && saveSeries()}
+            autoFocus
+          />
+          <div className="mb-1.5 flex flex-wrap items-center gap-1">
+            {weekdayShortLabels(i18n.language).map((label, day) => (
+              <button
+                key={day}
+                type="button"
+                className={`asgn gap-1 ${seriesWeekdays.has(day) ? 'on' : ''}`}
+                onClick={() => toggleSeriesWeekday(day)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1.5">
+            <select
+              className="sel"
+              value={seriesComplexity}
+              onChange={(e) => setSeriesComplexity(e.target.value as Complexity)}
+            >
+              <option value="low">{t('common.lowComplexity')}</option>
+              <option value="high">{t('common.highComplexity')}</option>
+            </select>
+            <button
+              className={`asgn gap-1 ${seriesIsGreen ? 'green-on' : ''}`}
+              onClick={() => setSeriesIsGreen((g) => !g)}
+              title={t('task.greenTooltip')}
+            >
+              <Ic n="leaf" s={11} /> {t('task.greenToggle')}
+            </button>
+            <div className="flex-1" />
+            <button className="btn btn-g btn-danger btn-s" onClick={stopRepeating}>
+              {t('task.stopRepeating')}
+            </button>
+            <button className="btn btn-g btn-s" onClick={cancelSeries}>
+              {t('common.cancel')}
+            </button>
+            <button className="btn btn-p btn-s" onClick={saveSeries}>
+              {t('common.save')}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   if (editable && editing) {
@@ -223,6 +338,20 @@ export function TaskRow({
                 title={t('task.greenTooltip')}
               >
                 <Ic n="leaf" s={12} />
+              </span>
+            )}
+            {editable && rule && (
+              <span
+                className="mr-1 inline-flex cursor-pointer align-[-1px] text-ink-3 hover:text-ink-1"
+                title={t('task.recurringBadgeTooltip', {
+                  schedule: describeRecurrence(rule.weekdays, t, i18n.language),
+                })}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  startEditSeries()
+                }}
+              >
+                ↺
               </span>
             )}
             {task.title}

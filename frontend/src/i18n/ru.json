@@ -181,7 +181,16 @@
     "moveDown": "Ниже",
     "deleteTooltip": "Удалить задачу",
     "moveToProject": "Переместить в проект",
-    "doneToast": "«{{title}}» выполнено"
+    "doneToast": "«{{title}}» выполнено",
+    "repeatToggle": "Повтор",
+    "repeatTooltip": "Повторяется в выбранные дни",
+    "recurEveryDay": "Каждый день",
+    "recurWeekdays": "По будням",
+    "recurringBadgeTooltip": "Повторяется: {{schedule}} — нажмите, чтобы изменить серию",
+    "editSeries": "Изменить серию",
+    "editSeriesTitle": "Изменить повторяющуюся задачу",
+    "stopRepeating": "Остановить повтор",
+    "confirmStopRepeating": "Остановить повтор «{{title}}»? Прошлые выполнения сохранятся."
   },
   "quickAdd": {
     "placeholder": "Быстро добавить задачу…",

@@ -8,6 +8,8 @@ import type {
   Project,
   ProjectCreate,
   ProjectPatch,
+  RecurrenceRuleCreate,
+  RecurrenceRulePatch,
   SignupPayload,
   TaskCreate,
   TaskPatch,
@@ -170,6 +172,32 @@ export function useReorderTask() {
   return useMutation({
     mutationFn: ({ id, direction }: { id: number; direction: 'up' | 'down' }) =>
       api.reorderTask(id, direction),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useCreateRecurrence() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, rule }: { projectId: number; rule: RecurrenceRuleCreate }) =>
+      api.createRecurrence(projectId, rule),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useUpdateRecurrence() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: RecurrenceRulePatch }) =>
+      api.updateRecurrence(id, patch),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
+  })
+}
+
+export function useDeleteRecurrence() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.deleteRecurrence(id),
     onSettled: () => qc.invalidateQueries({ queryKey: ['projects'] }),
   })
 }

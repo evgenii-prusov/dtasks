@@ -11,13 +11,13 @@ from litestar import Litestar, Request, Response, delete, get, patch, post, put
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
-from sqlalchemy import select
+from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from . import db
 from .auth import auth_router, session_auth, session_store
-from .models import Base, Habit, HabitLog, Project, Task, User
+from .models import Base, Habit, HabitLog, Project, RecurrenceRule, Task, User
 from .schemas import (
     UNSET,
     HabitCreate,
@@ -26,12 +26,16 @@ from .schemas import (
     ProjectCreate,
     ProjectOut,
     ProjectPatch,
+    RecurrenceRuleCreate,
+    RecurrenceRuleOut,
+    RecurrenceRulePatch,
     ReorderPayload,
     TaskCreate,
     TaskOut,
     TaskPatch,
     habit_out,
     project_out,
+    recurrence_out,
     task_out,
 )
 
@@ -70,7 +74,7 @@ async def _get_project(session: AsyncSession, project_id: int, user_id: int) -> 
         await session.execute(
             select(Project)
             .where(Project.id == project_id, Project.user_id == user_id)
-            .options(selectinload(Project.tasks))
+            .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
         )
     ).scalar_one_or_none()
     if project is None:
@@ -85,6 +89,17 @@ async def _get_habit(session: AsyncSession, habit_id: int, user_id: int) -> Habi
     if habit is None:
         raise NotFoundException(detail="Habit not found")
     return habit
+
+
+async def _get_recurrence_rule(session: AsyncSession, rule_id: int, user_id: int) -> RecurrenceRule:
+    rule = (
+        await session.execute(
+            select(RecurrenceRule).where(RecurrenceRule.id == rule_id, RecurrenceRule.user_id == user_id)
+        )
+    ).scalar_one_or_none()
+    if rule is None:
+        raise NotFoundException(detail="Recurrence rule not found")
+    return rule
 
 
 async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, user_id: int) -> int:
@@ -158,15 +173,69 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
         await session.commit()
 
 
+async def _ensure_recurring_occurrences(session: AsyncSession, user_id: int) -> None:
+    """Lazily materialize today's Task occurrence for each due RecurrenceRule.
+
+    Guards generation with ``last_generated_date`` (a high-water mark) rather than
+    "does a live Task row exist for today" — the latter would resurrect an occurrence
+    the user just deleted, since the very next ['projects'] refetch would see no row
+    and recreate it. The high-water mark makes "delete today's occurrence" behave as
+    a real skip: last_generated_date already advanced past today, so it stays gone
+    until the next due day.
+    """
+    today = datetime.now(UTC).date()
+    weekday_bit = 1 << today.weekday()
+    rules = (
+        (
+            await session.execute(
+                select(RecurrenceRule).where(
+                    RecurrenceRule.user_id == user_id,
+                    RecurrenceRule.weekdays.op("&")(weekday_bit) != 0,
+                    or_(
+                        RecurrenceRule.last_generated_date.is_(None),
+                        RecurrenceRule.last_generated_date < today,
+                    ),
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not rules:
+        return
+    for rule in rules:
+        positions = (
+            (await session.execute(select(Task.position).where(Task.project_id == rule.project_id)))
+            .scalars()
+            .all()
+        )
+        session.add(
+            Task(
+                project_id=rule.project_id,
+                title=rule.title,
+                notes=rule.notes,
+                complexity=rule.complexity,
+                is_green=rule.is_green,
+                assigned_today=True,
+                recurrence_rule_id=rule.id,
+                occurrence_date=today,
+                position=max(positions, default=-1) + 1,
+            )
+        )
+        rule.last_generated_date = today
+    await session.commit()
+
+
 @get("/api/projects")
 async def list_projects(session: AsyncSession, user: User) -> list[ProjectOut]:
     await _ensure_default_projects(session, user.id)
+    await _ensure_recurring_occurrences(session, user.id)
     projects = (
         (
             await session.execute(
                 select(Project)
                 .where(Project.user_id == user.id)
-                .options(selectinload(Project.tasks))
+                .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
                 .order_by(Project.position)
             )
         )
@@ -192,6 +261,7 @@ async def create_project(data: ProjectCreate, session: AsyncSession, user: User)
         group=data.group,
         position=max(positions, default=-1) + 1,
         tasks=[],
+        recurrence_rules=[],
     )
     session.add(project)
     await session.commit()
@@ -258,7 +328,7 @@ async def reorder_project(
             await session.execute(
                 select(Project)
                 .where(Project.user_id == user.id)
-                .options(selectinload(Project.tasks))
+                .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
                 .order_by(Project.position)
             )
         )
@@ -361,6 +431,63 @@ async def reorder_task(
     return [task_out(t) for t in sorted(tasks, key=lambda t: t.position)]
 
 
+@post("/api/projects/{project_id:int}/recurrences")
+async def create_recurrence(
+    project_id: int, data: RecurrenceRuleCreate, session: AsyncSession, user: User
+) -> RecurrenceRuleOut:
+    project = await _get_project(session, project_id, user.id)
+    if data.complexity not in ("low", "high"):
+        raise ClientException(detail="complexity must be 'low' or 'high'")
+    if not (0 < data.weekdays < 128):
+        raise ClientException(detail="weekdays must be a non-empty bitmask of the 7 weekday bits")
+    title = data.title.strip()
+    if not title:
+        raise ClientException(detail="title must not be empty")
+    rule = RecurrenceRule(
+        user_id=user.id,
+        project_id=project.id,
+        title=title,
+        notes=data.notes,
+        complexity=data.complexity,
+        is_green=data.is_green,
+        weekdays=data.weekdays,
+    )
+    session.add(rule)
+    await session.commit()
+    return recurrence_out(rule)
+
+
+@patch("/api/recurrences/{rule_id:int}")
+async def update_recurrence(
+    rule_id: int, data: RecurrenceRulePatch, session: AsyncSession, user: User
+) -> RecurrenceRuleOut:
+    rule = await _get_recurrence_rule(session, rule_id, user.id)
+    if data.complexity is not UNSET and data.complexity not in ("low", "high"):
+        raise ClientException(detail="complexity must be 'low' or 'high'")
+    if data.weekdays is not UNSET and not (0 < data.weekdays < 128):
+        raise ClientException(detail="weekdays must be a non-empty bitmask of the 7 weekday bits")
+    for field in ("title", "notes", "complexity", "is_green", "weekdays"):
+        value = getattr(data, field)
+        if value is not UNSET:
+            setattr(rule, field, value)
+    if rule.title.strip() == "":
+        raise ClientException(detail="title must not be empty")
+    await session.commit()
+    return recurrence_out(rule)
+
+
+@delete("/api/recurrences/{rule_id:int}", status_code=204)
+async def delete_recurrence(rule_id: int, session: AsyncSession, user: User) -> None:
+    rule = await _get_recurrence_rule(session, rule_id, user.id)
+    # Explicit nullification rather than relying on the DB-level ON DELETE SET NULL:
+    # generated occurrences must keep their history even if FK enforcement is off.
+    await session.execute(
+        update(Task).where(Task.recurrence_rule_id == rule.id).values(recurrence_rule_id=None)
+    )
+    await session.delete(rule)
+    await session.commit()
+
+
 @get("/api/habits")
 async def list_habits(session: AsyncSession, user: User) -> list[HabitOut]:
     habits = (
@@ -456,6 +583,9 @@ route_handlers: list = [
     update_task,
     delete_task,
     reorder_task,
+    create_recurrence,
+    update_recurrence,
+    delete_recurrence,
     list_habits,
     create_habit,
     set_habit_log,

@@ -30,8 +30,11 @@ const project: Project = {
       completed: false,
       completed_at: null,
       position: 0,
+      recurrence_rule_id: null,
+      occurrence_date: null,
     },
   ],
+  recurrences: [],
 }
 
 function renderView() {
