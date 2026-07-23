@@ -1,5 +1,7 @@
 ### Stage 1: build the frontend static assets
 FROM node:22-alpine AS frontend-build
+ARG GIT_SHA=unknown
+ENV VITE_APP_VERSION=$GIT_SHA
 WORKDIR /src/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
