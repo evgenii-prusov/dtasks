@@ -222,7 +222,7 @@ unknown codes fall back to a generic message.
 | `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET` | `.env` | Same for GitHub. |
 | `DTASKS_PUBLIC_URL`          | compose: `https://${DOMAIN}`; dev default `http://localhost:5173` | External origin used to build `redirect_uri = {PUBLIC_URL}/api/auth/oauth/{provider}/callback`. |
 
-Dev: the Vite dev server (`:5173`) proxies `/api` to the backend (`:8000`), so
+Dev: the Vite dev server (`:5173`) proxies `/api` to the backend (`:8010`), so
 the dev redirect URI is `http://localhost:5173/api/auth/oauth/{provider}/callback`
 and the whole flow stays same-origin. Register **separate dev and prod OAuth
 apps** per provider — a GitHub OAuth app allows only one callback URL.
