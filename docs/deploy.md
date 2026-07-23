@@ -29,13 +29,26 @@ idle-instance reclamation), shared with other hobby apps (dcash/dengi.dev).
 git clone <repo-url> dtasks && cd dtasks
 cp .env.example .env
 # edit .env: real DOMAIN and a private DTASKS_INVITE_CODE
-docker compose build
+GIT_SHA=$(git rev-parse --short HEAD) docker compose build
 docker compose up -d
 docker compose logs -f app   # confirm "alembic upgrade head" ran, then uvicorn started
 ```
 
 Open `https://<DOMAIN>` — TLS certificates are handled by the dinfra edge
 (it obtains one automatically the first time the site block is up).
+
+## Redeploying
+
+```sh
+git pull
+GIT_SHA=$(git rev-parse --short HEAD) docker compose build
+docker compose up -d
+```
+
+`GIT_SHA` is baked into the frontend build as a version string (shown at the
+bottom of the sidebar) so you can confirm a deploy actually picked up the
+commit you expect — compare it against `git log -1 --format=%h`. Omitting
+`GIT_SHA` still builds fine, just labels the UI `vunknown`.
 
 ## Environment variables
 

@@ -252,6 +252,9 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         <Ic n="globe" s={14} />
         {lang === 'en' ? 'Русский' : 'English'}
       </button>
+      <div className="px-[18px] pt-1 text-[10px] text-ink-3" title="Build version">
+        v{__APP_VERSION__}
+      </div>
     </div>
   )
 }
