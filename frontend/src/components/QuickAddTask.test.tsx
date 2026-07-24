@@ -179,5 +179,32 @@ describe('QuickAddTask', () => {
       ),
     )
   })
+
+  it('posts to /api/projects/:id/recurrences when repeat toggle is active', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    await userEvent.type(input, 'Daily Sync #Real')
+
+    const optionBtn = screen.getByRole('button', { name: /Real Work Project/i })
+    await userEvent.click(optionBtn)
+
+    // Enable repeat toggle
+    const repeatBtn = screen.getByRole('button', { name: /repeat/i })
+    await userEvent.click(repeatBtn)
+
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/3/recurrences',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Daily Sync', weekdays: 127 }),
+        }),
+      ),
+    )
+  })
 })
+
 

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCreateProject, useCreateTask, useProjects } from '../api/hooks'
+import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } from '../api/hooks'
 import type { Project } from '../api/types'
+import { weekdayShortLabels } from '../lib/dates'
+import { weekdaysToMask } from '../lib/recurrence'
 import { Ic } from './Icon'
 
 interface AutocompleteOption {
@@ -11,14 +13,17 @@ interface AutocompleteOption {
 }
 
 export function QuickAddTask() {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { data: projects = [] } = useProjects()
   const createTask = useCreateTask()
+  const createRecurrence = useCreateRecurrence()
   const createProject = useCreateProject()
 
   const [title, setTitle] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
   const [showPrompt, setShowPrompt] = useState(false)
+  const [repeating, setRepeating] = useState(false)
+  const [weekdays, setWeekdays] = useState(new Set<number>([0, 1, 2, 3, 4, 5, 6]))
 
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -68,6 +73,15 @@ export function QuickAddTask() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
+  const toggleWeekday = (day: number) => {
+    setWeekdays((prev) => {
+      const next = new Set(prev)
+      if (next.has(day)) next.delete(day)
+      else next.add(day)
+      return next
+    })
+  }
+
   const selectOption = (opt: AutocompleteOption) => {
     if (opt.isNew) {
       setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, ` #${opt.name}`).trimStart())
@@ -81,6 +95,7 @@ export function QuickAddTask() {
   const handleAdd = async (groupOverride?: 'Work' | 'Personal') => {
     const rawTitle = title.trim()
     if (!rawTitle) return
+    if (repeating && weekdays.size === 0) return
 
     let cleanTitle = rawTitle
     let targetProjectId: number | null = selectedProjectId
@@ -118,10 +133,20 @@ export function QuickAddTask() {
     }
 
     if (targetProjectId !== null) {
-      createTask.mutate({
-        projectId: targetProjectId,
-        task: { title: cleanTitle },
-      })
+      if (repeating) {
+        createRecurrence.mutate({
+          projectId: targetProjectId,
+          rule: {
+            title: cleanTitle,
+            weekdays: weekdaysToMask(weekdays),
+          },
+        })
+      } else {
+        createTask.mutate({
+          projectId: targetProjectId,
+          task: { title: cleanTitle },
+        })
+      }
       reset()
       return
     }
@@ -137,10 +162,20 @@ export function QuickAddTask() {
     // Clear prompt and assign to default project of the chosen group
     const defaultProj = targetGroup === 'Work' ? defaultWorkProj : defaultPersonalProj
     if (defaultProj) {
-      createTask.mutate({
-        projectId: defaultProj.id,
-        task: { title: cleanTitle },
-      })
+      if (repeating) {
+        createRecurrence.mutate({
+          projectId: defaultProj.id,
+          rule: {
+            title: cleanTitle,
+            weekdays: weekdaysToMask(weekdays),
+          },
+        })
+      } else {
+        createTask.mutate({
+          projectId: defaultProj.id,
+          task: { title: cleanTitle },
+        })
+      }
     }
     reset()
   }
@@ -150,6 +185,8 @@ export function QuickAddTask() {
     setSelectedProjectId(null)
     setShowPrompt(false)
     setShowAutocomplete(false)
+    setRepeating(false)
+    setWeekdays(new Set([0, 1, 2, 3, 4, 5, 6]))
   }
 
   return (
@@ -223,14 +260,38 @@ export function QuickAddTask() {
           </div>
 
           <button
+            type="button"
+            className={`asgn gap-1 h-[34px] px-3 ${repeating ? 'on' : ''}`}
+            onClick={() => setRepeating((v) => !v)}
+            title={t('task.repeatTooltip')}
+          >
+            <Ic n="plan" s={11} /> {t('task.repeatToggle')}
+          </button>
+
+          <button
             className="btn btn-p btn-s h-[34px] px-4 font-semibold shrink-0"
             onClick={() => handleAdd()}
-            disabled={!title.trim()}
+            disabled={!title.trim() || (repeating && weekdays.size === 0)}
           >
             <Ic n="plus" s={12} />
             {t('quickAdd.submit')}
           </button>
         </div>
+
+        {repeating && (
+          <div className="flex flex-wrap items-center gap-1 text-xs">
+            {weekdayShortLabels(i18n.language).map((label, day) => (
+              <button
+                key={day}
+                type="button"
+                className={`asgn gap-1 ${weekdays.has(day) ? 'on' : ''}`}
+                onClick={() => toggleWeekday(day)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {showPrompt && (
           <div className="flex items-center gap-3 px-3 py-2 rounded bg-surface-2 border border-line text-[13px] text-ink-2 animate-[fadeIn_0.2s_ease]">
