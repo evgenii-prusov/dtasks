@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 backend/.venv/
 backend/*.sqlite
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
 backend/db_backups/
 backend/.sessions/
 
