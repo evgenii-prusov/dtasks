@@ -46,6 +46,7 @@ export const HOTKEYS = {
   rowComplete: { chords: ['x', 'space'], labelKey: 'hotkeys.rowComplete', group: 'tasks', local: true },
   rowToday: { chords: ['t'], labelKey: 'hotkeys.rowToday', group: 'tasks', local: true },
   rowWeek: { chords: ['w'], labelKey: 'hotkeys.rowWeek', group: 'tasks', local: true },
+  rowGreen: { chords: ['l'], labelKey: 'hotkeys.rowGreen', group: 'tasks', local: true },
   rowEditSeries: { chords: ['e'], labelKey: 'hotkeys.rowEditSeries', group: 'tasks', local: true },
   rowMoveUp: { chords: ['['], labelKey: 'hotkeys.rowMoveUp', group: 'tasks', local: true },
   rowMoveDown: { chords: [']'], labelKey: 'hotkeys.rowMoveDown', group: 'tasks', local: true },
