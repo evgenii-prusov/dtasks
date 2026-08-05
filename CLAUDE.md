@@ -102,13 +102,32 @@ If only `git push` happens (no `bd dolt push`), the remote clone's `bd` database
 
 ## Build & Test
 
-_Add your build and test commands here_
+Use the make targets — they carry the environment (dev invite code, schema
+migration, ports, pidfiles) that starting things by hand does not.
 
 ```bash
-# Example:
-# npm install
-# npm test
+make install                  # uv sync + npm install
+make start / stop / status    # run both servers in the background
+make logs                     # tail both logs
+make test                     # backend pytest + frontend vitest and Playwright
+make test-e2e                 # Playwright only; it starts the servers itself
+make db-upgrade               # alembic upgrade head against the dev database
 ```
+
+Notes for a fresh environment:
+
+- Never background a server by hand. `make start` writes pidfiles and logs to
+  `.run/`; a hand-rolled `&` loses the process and the output with it.
+- The dev invite code is `test-invite-code`. Signup needs it, and only the make
+  targets set it.
+- Skipping `make db-upgrade` gives you a backend that starts, binds the port,
+  and then fails every request with `no such table: users` — the dev database
+  has no schema of its own.
+- `npx playwright test` boots the backend and Vite itself; do not start them
+  first.
+- `bd` may not exist in a cloud sandbox. If it is missing, skip the beads
+  workflow above and describe follow-up work in the PR instead — do not try to
+  install it or sync Dolt.
 
 ## Architecture Overview
 
