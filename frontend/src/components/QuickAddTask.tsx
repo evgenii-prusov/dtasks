@@ -92,43 +92,48 @@ export function QuickAddTask() {
     setShowAutocomplete(false)
   }
 
-  const handleAdd = async (groupOverride?: 'Work' | 'Personal') => {
+  const handleAdd = async (groupOverride?: 'Work' | 'Personal', preselectedProjectId?: number) => {
     const rawTitle = title.trim()
     if (!rawTitle) return
     if (repeating && weekdays.size === 0) return
 
     let cleanTitle = rawTitle
-    let targetProjectId: number | null = selectedProjectId
+    let targetProjectId: number | null = preselectedProjectId ?? selectedProjectId
 
-    // Check if title has explicit #Tag
-    const tagMatch = rawTitle.match(/#([^\s#]+(?:\s+[^\s#]+)*)$/) || rawTitle.match(/#([^\s#]+)/)
-    if (tagMatch) {
-      const fullHash = tagMatch[0]
-      const tagText = tagMatch[1].trim()
+    if (targetProjectId !== null) {
+      // Project already known — strip any trailing #tag from the (possibly stale) title
+      cleanTitle = rawTitle.replace(/\s*#[^\s#]*$/, '').trim() || rawTitle
+    } else {
+      // No pre-selected project — try to find/create one from a #tag in the title
+      const tagMatch = rawTitle.match(/#([^\s#]+(?:\s+[^\s#]+)*)$/) || rawTitle.match(/#([^\s#]+)/)
+      if (tagMatch) {
+        const fullHash = tagMatch[0]
+        const tagText = tagMatch[1].trim()
 
-      const existingProj =
-        userProjects.find(
-          (p) =>
-            p.name.toLowerCase() === tagText.toLowerCase() ||
-            p.name.toLowerCase() === fullHash.substring(1).toLowerCase(),
-        ) ?? userProjects.find((p) => p.name.toLowerCase().includes(tagText.toLowerCase()))
+        const existingProj =
+          userProjects.find(
+            (p) =>
+              p.name.toLowerCase() === tagText.toLowerCase() ||
+              p.name.toLowerCase() === fullHash.substring(1).toLowerCase(),
+          ) ?? userProjects.find((p) => p.name.toLowerCase().includes(tagText.toLowerCase()))
 
-      if (existingProj) {
-        targetProjectId = existingProj.id
-        cleanTitle = rawTitle.replace(fullHash, '').trim()
-        if (!cleanTitle) cleanTitle = existingProj.name
-      } else {
-        cleanTitle = rawTitle.replace(fullHash, '').trim()
-        if (!cleanTitle) cleanTitle = tagText
+        if (existingProj) {
+          targetProjectId = existingProj.id
+          cleanTitle = rawTitle.replace(fullHash, '').trim()
+          if (!cleanTitle) cleanTitle = existingProj.name
+        } else {
+          cleanTitle = rawTitle.replace(fullHash, '').trim()
+          if (!cleanTitle) cleanTitle = tagText
 
-        try {
-          const newProj = await createProject.mutateAsync({
-            name: tagText,
-            group: groupOverride || 'Work',
-          })
-          targetProjectId = newProj.id
-        } catch {
-          // Fallback if creation fails
+          try {
+            const newProj = await createProject.mutateAsync({
+              name: tagText,
+              group: groupOverride || 'Work',
+            })
+            targetProjectId = newProj.id
+          } catch {
+            // Fallback if creation fails
+          }
         }
       }
     }
@@ -218,10 +223,11 @@ export function QuickAddTask() {
                     e.preventDefault()
                     const opt = autocompleteOptions[selectedIndex]
                     selectOption(opt)
-                    // For existing projects with a non-empty title, submit immediately
+                    // For existing projects with a non-empty title, submit immediately.
+                    // Pass the project ID directly to avoid reading stale selectedProjectId state.
                     if (!opt.isNew && opt.project) {
                       const cleanTitle = title.replace(/(?:^|\s)#([^\s#]*)$/, '').trim()
-                      if (cleanTitle) handleAdd()
+                      if (cleanTitle) handleAdd(undefined, opt.project.id)
                     }
                     return
                   }
@@ -284,6 +290,24 @@ export function QuickAddTask() {
             {t('quickAdd.submit')}
           </button>
         </div>
+
+        {selectedProjectId !== null && (() => {
+          const proj = projects.find((p) => p.id === selectedProjectId)
+          return proj ? (
+            <div className="flex items-center gap-1.5 text-xs text-ink-2 animate-[fadeIn_0.15s_ease]">
+              <span className="text-ink-3">{t('quickAdd.projectLabel')}:</span>
+              <span className="font-medium text-accent">#{proj.name}</span>
+              <button
+                type="button"
+                className="text-ink-3 hover:text-ink ml-0.5"
+                onClick={() => setSelectedProjectId(null)}
+                title={t('common.cancel')}
+              >
+                <Ic n="x" s={10} />
+              </button>
+            </div>
+          ) : null
+        })()}
 
         {repeating && (
           <div className="flex flex-wrap items-center gap-1 text-xs">
