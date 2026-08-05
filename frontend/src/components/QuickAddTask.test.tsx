@@ -196,6 +196,31 @@ describe('QuickAddTask', () => {
     )
   })
 
+  it('submits without Work/Personal prompt when # alone is typed and project selected via keyboard', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    // Type # with no letters — autocomplete shows all user projects
+    await userEvent.type(input, 'Buy groceries #')
+
+    expect(screen.getByRole('button', { name: /Real Work Project/i })).toBeInTheDocument()
+
+    // Press Enter — should select the highlighted project and submit, NOT show the Work/Personal prompt
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.queryByText('Is this for Work or Personal?')).not.toBeInTheDocument()
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/3/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Buy groceries' }),
+        }),
+      ),
+    )
+  })
+
   it('creates a new project automatically when #tag does not match any existing project', async () => {
     renderQuickAddTask()
 
