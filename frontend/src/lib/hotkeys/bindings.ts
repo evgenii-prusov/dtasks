@@ -4,13 +4,18 @@
  * so the three cannot drift apart.
  */
 
+import type { ParseKeys } from 'i18next'
+
 export type HotkeyGroup = 'navigation' | 'tasks' | 'general'
+
+/** A key that exists in the translation catalogs, checked at compile time. */
+export type LabelKey = ParseKeys
 
 export interface HotkeyDef {
   /** Normalized chords, as produced by `eventToChord`. */
   chords: string[]
   /** i18n key for the human-readable action name. */
-  labelKey: string
+  labelKey: LabelKey
   group: HotkeyGroup
   /**
    * Handled by a focused element's own onKeyDown rather than the global
