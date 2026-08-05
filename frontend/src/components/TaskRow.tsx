@@ -88,6 +88,34 @@ export function TaskRow({
     wasEditing.current = editing || editingSeries
   }, [editing, editingSeries, nav, task.id])
 
+  // Escape key handler while editing task
+  useEffect(() => {
+    if (!editing) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault()
+        e.stopPropagation()
+        setEditing(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [editing])
+
+  // Escape key handler while editing series
+  useEffect(() => {
+    if (!editingSeries) return
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' || e.key === 'Esc') {
+        e.preventDefault()
+        e.stopPropagation()
+        setEditingSeries(false)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [editingSeries])
+
   // Close swipe when tapping outside
   useEffect(() => {
     if (!swiped) return
@@ -314,7 +342,17 @@ export function TaskRow({
       <div
         className={`task-row items-start ${task.is_green ? 'green' : ''}`}
         data-hotkeys-off
-        onKeyDown={(e) => e.key === 'Escape' && cancelSeries()}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            e.preventDefault()
+            e.stopPropagation()
+            cancelSeries()
+          } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault()
+            saveSeries()
+          }
+        }}
       >
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
@@ -325,7 +363,16 @@ export function TaskRow({
             className="input mb-[5px] px-2 py-[5px] text-[13px]"
             value={seriesTitle}
             onChange={(e) => setSeriesTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && saveSeries()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Esc') {
+                e.preventDefault()
+                e.stopPropagation()
+                cancelSeries()
+              } else if (e.key === 'Enter') {
+                e.preventDefault()
+                saveSeries()
+              }
+            }}
             autoFocus
           />
           <div className="mb-1.5 flex flex-wrap items-center gap-1">
@@ -377,7 +424,18 @@ export function TaskRow({
       <div
         className={`task-row items-start ${task.is_green ? 'green' : ''}`}
         data-hotkeys-off
-        onKeyDown={(e) => e.key === 'Escape' && cancel()}
+        tabIndex={-1}
+        onKeyDown={(e) => {
+          if (e.key === 'Escape' || e.key === 'Esc') {
+            e.preventDefault()
+            e.stopPropagation()
+            cancel()
+          } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            e.preventDefault()
+            e.stopPropagation()
+            save()
+          }
+        }}
       >
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
@@ -385,13 +443,34 @@ export function TaskRow({
             className="input mb-[5px] px-2 py-[5px] text-[13px]"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && save()}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Esc') {
+                e.preventDefault()
+                e.stopPropagation()
+                cancel()
+              } else if (e.key === 'Enter') {
+                e.preventDefault()
+                e.stopPropagation()
+                save()
+              }
+            }}
             autoFocus
           />
           <textarea
             className="input textarea mb-1.5 min-h-11 text-xs"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape' || e.key === 'Esc') {
+                e.preventDefault()
+                e.stopPropagation()
+                cancel()
+              } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault()
+                e.stopPropagation()
+                save()
+              }
+            }}
             placeholder={t('task.notesPlaceholder')}
           />
           <div className="flex items-center gap-1.5">

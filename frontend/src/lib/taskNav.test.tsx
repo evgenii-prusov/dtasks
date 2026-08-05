@@ -147,6 +147,28 @@ describe('task row navigation', () => {
     await waitFor(() => expect(activeRowId()).toBe('1'))
   })
 
+  it('exits edit mode when Escape is pressed from notes textarea', async () => {
+    renderApp('/')
+    await screen.findByText('Must fix the build')
+
+    await userEvent.keyboard('j{Enter}')
+    const notesInput = await screen.findByPlaceholderText('Notes…')
+    await userEvent.type(notesInput, '{Escape}')
+    await waitFor(() => expect(activeRowId()).toBe('1'))
+  })
+
+  it('saves edit when Ctrl+Enter is pressed in notes textarea', async () => {
+    renderApp('/')
+    await screen.findByText('Must fix the build')
+
+    await userEvent.keyboard('j{Enter}')
+    const notesInput = await screen.findByPlaceholderText('Notes…')
+    await userEvent.type(notesInput, 'Important details{Control>}{Enter}{/Control}')
+    await waitFor(() => expect(patches).toHaveLength(1))
+    expect(patches[0].url).toContain('/api/tasks/1')
+    expect(patches[0].body).toMatchObject({ notes: 'Important details' })
+  })
+
   it('completes the focused row with x and moves to the next one', async () => {
     renderApp('/')
     await screen.findByText('Must fix the build')
