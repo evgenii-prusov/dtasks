@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createAppRouter } from '../../router'
 import type { User } from '../../api/types'
+import { HOTKEYS } from './bindings'
+import en from '../../i18n/en.json'
 
 const user: User = { id: 1, email: 'k@example.com' } as User
 
@@ -73,6 +75,17 @@ describe('shortcuts help', () => {
 
     await userEvent.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+  })
+
+  it('lists every declared binding, so the help cannot drift from the table', async () => {
+    renderApp('/')
+
+    await userEvent.keyboard('?')
+    const dialog = await screen.findByRole('dialog')
+
+    for (const def of Object.values(HOTKEYS)) {
+      expect(dialog).toHaveTextContent(en.hotkeys[def.labelKey.split('.')[1] as never])
+    }
   })
 
   it('suppresses page navigation while open', async () => {

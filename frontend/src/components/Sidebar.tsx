@@ -17,6 +17,7 @@ import { Ic, type IconName } from './Icon'
 import { Kbd } from './Kbd'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useOverlayOpen } from '../lib/hotkeys/HotkeyProvider'
+import { useOverlays } from './OverlayHost'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
 
@@ -64,6 +65,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
   const navigate = useNavigate()
 
   const overlayOpen = useOverlayOpen()
+  const { openPalette, openHelp } = useOverlays()
   const [addingGroup, setAddingGroup] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const submittingRef = useRef(false)
@@ -129,6 +131,20 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         </svg>
         DTask
       </div>
+
+      <button
+        type="button"
+        className="nav"
+        onClick={() => {
+          close()
+          openPalette()
+        }}
+      >
+        <Ic n="search" s={14} /> {t('palette.openLabel')}
+        <span className="ml-auto hidden opacity-60 md:inline-flex">
+          <Kbd chord={HOTKEYS.palette.chords[0]} />
+        </span>
+      </button>
 
       <NavLink
         to="/"
@@ -293,6 +309,13 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
       <button className="nav" onClick={toggleLang}>
         <Ic n="globe" s={14} />
         {lang === 'en' ? 'Русский' : 'English'}
+      </button>
+      <button className="nav" onClick={openHelp}>
+        <Ic n="help" s={14} />
+        {t('hotkeys.title')}
+        <span className="ml-auto hidden opacity-60 md:inline-flex">
+          <Kbd chord={HOTKEYS.help.chords[0]} />
+        </span>
       </button>
       <div className="px-[18px] pt-1 text-[10px] text-ink-3" title="Build version">
         v{__APP_VERSION__}
