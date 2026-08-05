@@ -111,6 +111,40 @@ class RecurrenceRule(Base):
     project: Mapped[Project] = relationship(back_populates="recurrence_rules")
 
 
+class Event(Base):
+    """One append-only record of something the user did.
+
+    Never updated, only inserted (and eventually pruned), so downstream analytics
+    can treat ``id`` as a monotonic cursor and ``event_id`` as a dedup key when
+    reading incrementally.
+
+    ``input`` is a first-class column rather than a ``props`` key because the
+    primary question this table exists to answer -- is the user moving from
+    mouse to keyboard? -- filters on it in every query.
+    """
+
+    __tablename__ = "events"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    # Client-generated UUID. Unique so a retried batch inserts nothing twice.
+    event_id: Mapped[str] = mapped_column(String(36), unique=True)
+    user_id: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    # Per browser tab, so a hotkey miss can be tied to the mouse action that followed it.
+    session_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    # occurred_at is the client's clock (skewable); received_at is ours. Order by received_at.
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    source: Mapped[str] = mapped_column(String(10))  # web | api
+    input: Mapped[str] = mapped_column(String(10), default="unknown")  # keyboard|mouse|touch|pen|unknown
+    name: Mapped[str] = mapped_column(String(50))
+    entity_type: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    entity_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    surface: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    props: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON object of scalars
+    app_version: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    schema_version: Mapped[int] = mapped_column(Integer, default=1)
+
+
 class Habit(Base):
     __tablename__ = "habits"
 
