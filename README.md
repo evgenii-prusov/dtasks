@@ -26,22 +26,32 @@ language toggle (persisted, defaulting to the browser language).
 
 ## Development
 
-Backend (API on `:8010` — not `:8000`, to avoid clashing with sibling local
-projects that default there too; database is created and seeded on first
-start):
-
 ```sh
-cd backend
-uv sync
-uv run litestar --app app.main:app run --port 8010
+make install    # uv sync + npm install
+make start      # backend + frontend in the background
+make status     # what is running, and where
+make logs       # tail both logs
+make stop
 ```
 
-Frontend (dev server on `:5173`, proxies `/api` to the backend):
+The backend serves the API on `:8010` — not `:8000`, to avoid clashing with
+sibling local projects that default there too — and the Vite dev server runs on
+`:5173`, proxying `/api` to it. `make start` runs `alembic upgrade head` first,
+so a fresh clone gets its schema; starting the backend by hand without that
+leaves you with a running server that answers every request with
+`no such table: users`. Accounts are created through the normal signup form,
+which asks for an invite code: in development it is `test-invite-code`, set by
+the make targets via `DTASKS_INVITE_CODE`. Each new account is seeded with
+starter projects and habits.
+
+To run either half in the foreground instead, use `make dev-backend` or
+`make dev-frontend`.
+
+Tests:
 
 ```sh
-cd frontend
-npm install
-npm run dev
+make test       # backend pytest + frontend vitest and Playwright
+make test-e2e   # end-to-end only; Playwright starts the servers itself
 ```
 
 ## Production
