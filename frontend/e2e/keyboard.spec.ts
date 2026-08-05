@@ -49,8 +49,11 @@ test('a task can be created, scheduled and completed without the mouse', async (
   const quickAdd = page.getByPlaceholder(/Quick add task/)
   await expect(quickAdd).toBeFocused()
   await quickAdd.fill('Keyboard smoke task #Smoke')
-  // The #tag autocomplete is open and would claim the first Enter; Escape
-  // dismisses just the dropdown, leaving the typed text intact.
+  // The #tag autocomplete would claim the first Enter, so Escape dismisses the
+  // dropdown first. It has to be open when that Escape lands: quick add opens
+  // it from an effect, and the same key with no dropdown showing clears the
+  // field instead, leaving Enter nothing to submit.
+  await expect(page.getByRole('button', { name: /Create project "Smoke"/ })).toBeVisible()
   await page.keyboard.press('Escape')
   await page.keyboard.press('Enter')
 
