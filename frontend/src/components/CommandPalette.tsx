@@ -9,6 +9,7 @@ import {
   type CommandItem,
   type CommandKind,
 } from '../lib/commands/useCommandItems'
+import { setNavCause, track } from '../lib/analytics'
 import { setPendingQuickAdd } from '../lib/pendingQuickAdd'
 import { parseTaskInput } from '../lib/taskInput'
 import type { LabelKey } from '../lib/hotkeys/bindings'
@@ -49,6 +50,11 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   }, [pathname])
 
   const itemRanRef = useRef(false)
+  // Read by the unmount handler, which must not re-run when either changes.
+  const queryRef = useRef(query)
+  queryRef.current = query
+  const flatRef = useRef(flat)
+  flatRef.current = flat
 
   useEffect(() => setActiveIndex(0), [query])
 
@@ -59,6 +65,34 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
       if (!itemRanRef.current && previous && document.contains(previous)) previous.focus()
     }
   }, [])
+
+  // Closing without picking anything, after typing, is the clearest signal the
+  // palette did not have what the user wanted.
+  useEffect(() => {
+    return () => {
+      if (!itemRanRef.current) {
+        track('palette.dismiss', {
+          query_length: queryRef.current.trim().length,
+          had_results: flatRef.current.length > 0,
+        })
+      }
+    }
+  }, [])
+
+  // Debounced: recording every keystroke would say more about typing speed than
+  // about whether the search worked.
+  useEffect(() => {
+    const trimmed = query.trim()
+    if (!trimmed) return
+    const id = setTimeout(() => {
+      track('palette.query', {
+        query_length: trimmed.length,
+        result_count: flat.length,
+        top_kind: flat[0]?.kind ?? null,
+      })
+    }, 400)
+    return () => clearTimeout(id)
+  }, [query, flat])
 
   // Keep the highlighted row visible without moving focus off the input.
   useEffect(() => {
@@ -88,17 +122,27 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
 
   const run = (item: CommandItem) => {
     itemRanRef.current = true
+    // `rank` grades the scorer: selections clustered at 0 mean the ranking is
+    // good, a fat tail means the top hit is usually wrong.
+    track('palette.select', {
+      kind: item.kind,
+      rank: flat.indexOf(item),
+      query_length: query.trim().length,
+    })
     switch (item.target.type) {
       case 'page':
+        setNavCause('palette')
         navigate({ to: item.target.to })
         break
       case 'project':
+        setNavCause('palette')
         navigate({
           to: '/projects/$projectId',
           params: { projectId: String(item.target.projectId) },
         })
         break
       case 'task':
+        setNavCause('palette')
         navigate({
           to: '/projects/$projectId',
           params: { projectId: String(item.target.projectId) },

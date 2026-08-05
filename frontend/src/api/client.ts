@@ -1,3 +1,5 @@
+import { currentSurface } from '../lib/analytics'
+import { currentModality } from '../lib/inputModality'
 import type {
   AuthProviders,
   Habit,
@@ -24,10 +26,33 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * Tells the backend which input drove this request, so the event it records
+ * carries a modality. One place covers every mutation the app makes, now and
+ * later -- which is what keeps the mouse-vs-keyboard ratio honest as features
+ * are added.
+ */
+function analyticsHeaders(method: string): Record<string, string> {
+  if (method === 'GET' || method === 'HEAD') return {}
+  const headers: Record<string, string> = { 'x-dtask-input': currentModality() }
+  const surface = currentSurface()
+  if (surface) headers['x-dtask-surface'] = surface
+  try {
+    if (typeof __APP_VERSION__ === 'string') headers['x-dtask-version'] = __APP_VERSION__
+  } catch {
+    /* version not defined in this build */
+  }
+  return headers
+}
+
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
-    headers: { 'content-type': 'application/json' },
     ...init,
+    headers: {
+      'content-type': 'application/json',
+      ...analyticsHeaders(init?.method ?? 'GET'),
+      ...init?.headers,
+    },
   })
   if (!res.ok) {
     let detail = res.statusText

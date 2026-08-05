@@ -1,4 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
+import { setNavCause } from '../analytics'
 import { HOTKEYS } from './bindings'
 import { useHotkey } from './useHotkey'
 
@@ -9,12 +10,13 @@ import { useHotkey } from './useHotkey'
 export function useGlobalHotkeys() {
   const navigate = useNavigate()
   const go = (to: string) => () => {
+    setNavCause('hotkey')
     navigate({ to })
   }
 
-  useHotkey(HOTKEYS.goToday.chords, go('/'), { layer: 'global' })
-  useHotkey(HOTKEYS.goPlan.chords, go('/plan'), { layer: 'global' })
-  useHotkey(HOTKEYS.goReview.chords, go('/review'), { layer: 'global' })
-  useHotkey(HOTKEYS.goHabits.chords, go('/habits'), { layer: 'global' })
-  useHotkey(HOTKEYS.goReport.chords, go('/report'), { layer: 'global' })
+  useHotkey(HOTKEYS.goToday.chords, go('/'), { layer: 'global', name: 'goToday' })
+  useHotkey(HOTKEYS.goPlan.chords, go('/plan'), { layer: 'global', name: 'goPlan' })
+  useHotkey(HOTKEYS.goReview.chords, go('/review'), { layer: 'global', name: 'goReview' })
+  useHotkey(HOTKEYS.goHabits.chords, go('/habits'), { layer: 'global', name: 'goHabits' })
+  useHotkey(HOTKEYS.goReport.chords, go('/report'), { layer: 'global', name: 'goReport' })
 }

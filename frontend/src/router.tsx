@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-router'
 import { Sidebar } from './components/Sidebar'
 import { UndoToastProvider } from './components/UndoToast'
+import { setSurfaceResolver, takeNavCause, track } from './lib/analytics'
 import { HotkeyProvider } from './lib/hotkeys/HotkeyProvider'
 import { useGlobalHotkeys } from './lib/hotkeys/useGlobalHotkeys'
 import { OverlayHost } from './components/OverlayHost'
@@ -196,6 +197,27 @@ export const queryClient = createQueryClient({
 })
 
 export const router = createAppRouter(queryClient)
+
+/** Route path -> the `surface` recorded on events and outbound mutations. */
+const SURFACE_BY_ROUTE: Record<string, string> = {
+  '/': 'today',
+  '/plan': 'plan',
+  '/review': 'review',
+  '/habits': 'habits',
+  '/report': 'report',
+}
+
+function surfaceForPath(path: string): string | null {
+  if (path.startsWith('/projects/')) return 'project'
+  return SURFACE_BY_ROUTE[path] ?? null
+}
+
+setSurfaceResolver(() => surfaceForPath(router.state.location.pathname))
+
+router.subscribe('onResolved', ({ toLocation }) => {
+  const to = surfaceForPath(toLocation.pathname)
+  track('nav.view', { to: to ?? 'other', via: takeNavCause() })
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

@@ -4,6 +4,7 @@ import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../ap
 import type { Habit } from '../api/types'
 import { AddHabitForm } from '../components/AddHabitForm'
 import { Ic } from '../components/Icon'
+import { track } from '../lib/analytics'
 import {
   formatDayMonth,
   formatMonthShort,
@@ -85,6 +86,13 @@ export function HabitsView() {
 
   const cycle = (h: Habit, date: string) => {
     const cur = h.log[date] ?? 0
+    // `days_ago` separates logging today from backfilling the grid, which are
+    // different habits of use even though they share a control.
+    track('habit.cell_click', {
+      state_from: cur,
+      state_to: (cur + 1) % 3,
+      days_ago: Math.round((Date.now() - new Date(date).getTime()) / 86_400_000),
+    })
     setHabitLog.mutate({ habitId: h.id, day: date, state: (cur + 1) % 3 })
   }
 

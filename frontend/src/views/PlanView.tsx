@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { mustHaveCount } from '../api/hooks'
 import { useCreateRecurrence } from '../api/hooks'
@@ -10,6 +10,7 @@ import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
 import { QuickAddTask } from '../components/QuickAddTask'
+import { track } from '../lib/analytics'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
 import { useTaskNav } from '../lib/taskNav'
@@ -53,12 +54,16 @@ export function PlanView() {
       setSearch('')
       setFocusQuickAdd(true)
     },
-    { enabled: query.length > 0 },
+    { enabled: query.length > 0, name: 'newTask' },
   )
 
-  useHotkey(HOTKEYS.togglePlanTab.chords, () => {
-    setTab((tb) => (tb === 'today' ? 'week' : 'today'))
-  })
+  useHotkey(
+    HOTKEYS.togglePlanTab.chords,
+    () => {
+      setTab((tb) => (tb === 'today' ? 'week' : 'today'))
+    },
+    { name: 'togglePlanTab' },
+  )
 
   const searchResults = query
     ? projects.flatMap((p) =>
@@ -67,6 +72,17 @@ export function PlanView() {
           .map((t) => ({ task: t, project: p })),
       )
     : []
+
+  // Debounced so this measures searches, not keystrokes. Length and result
+  // count only -- the query itself is the user's task titles.
+  const resultCount = searchResults.length
+  useEffect(() => {
+    if (!query) return
+    const id = setTimeout(() => {
+      track('search.query', { query_length: query.length, result_count: resultCount })
+    }, 400)
+    return () => clearTimeout(id)
+  }, [query, resultCount])
 
   return (
     <div>
@@ -114,6 +130,12 @@ export function PlanView() {
             if (e.key === 'ArrowDown' || e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
               if (searchResults.length > 0) {
                 e.preventDefault()
+                // Searching then acting on a result is the whole point; a search
+                // that never gets here is a search that did not work.
+                track('search.enter_results', {
+                  via: e.key.toLowerCase(),
+                  result_count: searchResults.length,
+                })
                 nav.focus(searchResults[0].task.id)
               }
               return
@@ -121,8 +143,13 @@ export function PlanView() {
             if (e.key === 'Escape') {
               e.preventDefault()
               if (searchResults.length > 0 && document.activeElement === e.currentTarget) {
+                track('search.enter_results', {
+                  via: 'escape',
+                  result_count: searchResults.length,
+                })
                 nav.focus(searchResults[0].task.id)
               } else {
+                track('search.clear', { via: 'escape' })
                 setSearch('')
                 e.currentTarget.blur()
               }
@@ -133,7 +160,10 @@ export function PlanView() {
         {search && (
           <button
             className="absolute right-[8px] top-1/2 -translate-y-1/2 text-ink-3 hover:text-ink"
-            onClick={() => setSearch('')}
+            onClick={() => {
+              track('search.clear', { via: 'button' })
+              setSearch('')
+            }}
             tabIndex={-1}
             aria-label="Clear search"
           >

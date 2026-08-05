@@ -68,6 +68,16 @@ export type HotkeyName = keyof typeof HOTKEYS
 
 export const HOTKEY_GROUP_ORDER: HotkeyGroup[] = ['navigation', 'tasks', 'general']
 
+/**
+ * Every chord the app binds anywhere, including the `local` ones a focused
+ * element handles itself. Used to tell a shortcut that failed to fire from an
+ * ordinary keystroke that was never a shortcut at all -- only the former is
+ * worth recording as friction.
+ */
+export const ALL_CHORDS: ReadonlySet<string> = new Set(
+  Object.values(HOTKEYS).flatMap((def) => def.chords),
+)
+
 /** First tokens of multi-key chords, e.g. `g`. */
 export const SEQUENCE_PREFIXES: ReadonlySet<string> = new Set(
   Object.values(HOTKEYS)

@@ -13,6 +13,7 @@ import {
 import { useTheme } from '../theme'
 import { groupLabel, useLanguage } from '../i18n'
 import { isDefaultProject } from '../api/types'
+import { setNavCause, track } from '../lib/analytics'
 import { Ic, type IconName } from './Icon'
 import { Kbd } from './Kbd'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
@@ -39,7 +40,17 @@ function NavLink({
   onClick?: () => void
 }) {
   return (
-    <Link to={to} className="nav" activeProps={{ className: 'nav on' }} onClick={onClick}>
+    <Link
+      to={to}
+      className="nav"
+      activeProps={{ className: 'nav on' }}
+      onClick={() => {
+        // Separates clicking the sidebar from the `g` jumps and the palette,
+        // which all end at the same route.
+        setNavCause('sidebar')
+        onClick?.()
+      }}
+    >
       <Ic n={icon} s={14} /> {label}
       {badge != null && <span className={`nav-badge ${badgeMust ? 'must' : ''}`}>{badge}</span>}
       {/* Teaches the shortcut in place. Hidden on touch layouts, where the
@@ -209,7 +220,10 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                     params={{ projectId: String(defaultProject.id) }}
                     className="nav italic text-ink-3"
                     activeProps={{ className: 'nav on' }}
-                    onClick={close}
+                    onClick={() => {
+                      setNavCause('sidebar')
+                      close()
+                    }}
                   >
                     <Ic n="folder" s={13} />
                     <span className="overflow-hidden text-ellipsis whitespace-nowrap">
@@ -224,7 +238,10 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                       params={{ projectId: String(p.id) }}
                       className="nav !pr-[52px]"
                       activeProps={{ className: 'nav on' }}
-                      onClick={close}
+                      onClick={() => {
+                        setNavCause('sidebar')
+                        close()
+                      }}
                     >
                       <Ic n="folder" s={13} />
                       <span className="overflow-hidden text-ellipsis whitespace-nowrap">
@@ -301,12 +318,24 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
           </button>
         </>
       )}
-      <button className="nav" onClick={toggle}>
+      <button
+        className="nav"
+        onClick={() => {
+          track('pref.theme', { to: theme === 'dark' ? 'light' : 'dark' })
+          toggle()
+        }}
+      >
         <Ic n={theme === 'dark' ? 'sun' : 'moon'} s={14} />
         {theme === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
       </button>
       {/* Language names stay in their own language, so they live outside the catalogs. */}
-      <button className="nav" onClick={toggleLang}>
+      <button
+        className="nav"
+        onClick={() => {
+          track('pref.lang', { to: lang === 'en' ? 'ru' : 'en' })
+          toggleLang()
+        }}
+      >
         <Ic n="globe" s={14} />
         {lang === 'en' ? 'Русский' : 'English'}
       </button>

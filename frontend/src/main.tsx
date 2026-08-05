@@ -21,7 +21,13 @@ import { QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import './index.css'
 import './i18n'
+import { installAnalytics } from './lib/analytics'
+import { installInputModalityTracking } from './lib/inputModality'
 import { queryClient, router } from './router'
+
+// Before render, so the very first gesture of a session is attributed.
+installInputModalityTracking()
+installAnalytics()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
