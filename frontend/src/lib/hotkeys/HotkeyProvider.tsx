@@ -35,6 +35,7 @@ interface HotkeyApi {
   unregister: (id: string) => void
   /** Suppresses every binding below the overlay layer until the returned function runs. */
   pushOverlay: () => () => void
+  hasPendingPrefix: () => boolean
 }
 
 const HotkeyApiContext = createContext<HotkeyApi | null>(null)
@@ -44,6 +45,7 @@ const noopApi: HotkeyApi = {
   register: () => {},
   unregister: () => {},
   pushOverlay: () => () => {},
+  hasPendingPrefix: () => false,
 }
 
 /**
@@ -71,6 +73,10 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const hasPendingPrefix = useCallback(() => {
+    return pendingPrefix.current !== null
+  }, [])
+
   const register = useCallback((id: string, registration: HotkeyRegistration) => {
     const existing = bindings.current.get(id)
     bindings.current.set(id, {
@@ -96,8 +102,8 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const api = useMemo<HotkeyApi>(
-    () => ({ register, unregister, pushOverlay }),
-    [register, unregister, pushOverlay],
+    () => ({ register, unregister, pushOverlay, hasPendingPrefix }),
+    [register, unregister, pushOverlay, hasPendingPrefix],
   )
 
   useEffect(() => {
