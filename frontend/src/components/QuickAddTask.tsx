@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } from '../api/hooks'
 import type { Project } from '../api/types'
+import { track } from '../lib/analytics'
 import { weekdayShortLabels } from '../lib/dates'
 import { weekdaysToMask } from '../lib/recurrence'
 import { parseTaskInput } from '../lib/taskInput'
@@ -35,10 +36,14 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingTitle = usePendingQuickAdd()
 
-  useHotkey(HOTKEYS.newTask.chords, () => {
-    inputRef.current?.focus()
-    inputRef.current?.select()
-  })
+  useHotkey(
+    HOTKEYS.newTask.chords,
+    () => {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    },
+    { name: 'newTask' },
+  )
 
   // Lets a parent that renders this conditionally (e.g. Plan while searching)
   // hand focus over as soon as the field appears.
@@ -82,6 +87,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
 
   useEffect(() => {
     if (tagQuery !== null && autocompleteOptions.length > 0) {
+      track('quickadd.autocomplete_shown', { option_count: autocompleteOptions.length })
       setShowAutocomplete(true)
       setSelectedIndex(0)
     } else {
@@ -109,6 +115,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   }
 
   const selectOption = (opt: AutocompleteOption) => {
+    track('quickadd.autocomplete_select', { is_new: opt.isNew })
     if (opt.isNew) {
       setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, ` #${opt.name}`).trimStart())
     } else if (opt.project) {
@@ -149,6 +156,15 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     }
 
     if (targetProjectId !== null) {
+      // `resolved` says which route through the #tag rules the user actually
+      // took, which is the useful thing about quick add -- derived from the
+      // parse result rather than measured inside the (pure) parser.
+      track('quickadd.submit', {
+        resolved: (preselectedProjectId ?? selectedProjectId) !== null ? 'preselected' : 'tag',
+        had_hash: rawTitle.includes('#'),
+        repeating,
+        weekday_count: repeating ? weekdays.size : 0,
+      })
       if (repeating) {
         createRecurrence.mutate({
           projectId: targetProjectId,
@@ -171,9 +187,17 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     const targetGroup = groupOverride
     if (!targetGroup) {
       // It's ambiguous, ask the user!
+      track('quickadd.group_prompt_shown', { had_hash: rawTitle.includes('#') })
       setShowPrompt(true)
       return
     }
+
+    track('quickadd.submit', {
+      resolved: 'default',
+      had_hash: rawTitle.includes('#'),
+      repeating,
+      weekday_count: repeating ? weekdays.size : 0,
+    })
 
     // Clear prompt and assign to default project of the chosen group
     const defaultProj = targetGroup === 'Work' ? defaultWorkProj : defaultPersonalProj
@@ -346,13 +370,19 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
             <div className="flex gap-1.5">
               <button
                 className="btn btn-g btn-s bg-surface hover:bg-surface-2"
-                onClick={() => handleAdd('Work')}
+                onClick={() => {
+                  track('quickadd.group_prompt_choice', { group: 'Work' })
+                  handleAdd('Work')
+                }}
               >
                 {t('quickAdd.work')}
               </button>
               <button
                 className="btn btn-g btn-s bg-surface hover:bg-surface-2"
-                onClick={() => handleAdd('Personal')}
+                onClick={() => {
+                  track('quickadd.group_prompt_choice', { group: 'Personal' })
+                  handleAdd('Personal')
+                }}
               >
                 {t('quickAdd.personal')}
               </button>

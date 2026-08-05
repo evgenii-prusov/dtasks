@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { track } from '../lib/analytics'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkeyApi } from '../lib/hotkeys/HotkeyProvider'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
@@ -27,17 +28,30 @@ export function OverlayHost({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const api = useHotkeyApi()
 
-  const openPalette = () => setPaletteOpen(true)
-  const openHelp = () => setHelpOpen(true)
+  // `via` separates the two chords from a click, so it is visible whether the
+  // palette is being reached by keyboard at all.
+  const openPalette = (via: string) => () => {
+    track('palette.open', { via })
+    setPaletteOpen(true)
+  }
+  const openHelp = (via: string) => () => {
+    // Opening help repeatedly means the shortcuts are not sticking.
+    track('help.open', { via })
+    setHelpOpen(true)
+  }
 
-  useHotkey(HOTKEYS.help.chords, openHelp, { layer: 'global' })
+  useHotkey(HOTKEYS.help.chords, openHelp('hotkey'), { layer: 'global', name: 'help' })
   // Cmd/Ctrl+K reaches the palette even from inside a text field; a bare `/`
   // must not, or it could never be typed.
-  useHotkey(HOTKEYS.palette.inputChords, openPalette, { layer: 'global', allowInInput: true })
+  useHotkey(HOTKEYS.palette.inputChords, openPalette('mod+k'), {
+    layer: 'global',
+    allowInInput: true,
+    name: 'palette',
+  })
   useHotkey(
     HOTKEYS.palette.chords.filter((c) => !HOTKEYS.palette.inputChords.includes(c)),
-    openPalette,
-    { layer: 'global' },
+    openPalette('slash'),
+    { layer: 'global', name: 'palette' },
   )
 
   const anyOpen = helpOpen || paletteOpen
@@ -47,7 +61,7 @@ export function OverlayHost({ children }: { children: ReactNode }) {
   }, [anyOpen, api])
 
   return (
-    <OverlayContext.Provider value={{ openPalette, openHelp }}>
+    <OverlayContext.Provider value={{ openPalette: openPalette('click'), openHelp: openHelp('click') }}>
       {children}
       {paletteOpen && <CommandPalette onClose={() => setPaletteOpen(false)} />}
       {helpOpen && <ShortcutsHelp onClose={() => setHelpOpen(false)} />}

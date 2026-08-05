@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
+import type { HotkeyName } from './bindings'
 import { useHotkeyApi, type HotkeyLayer } from './HotkeyProvider'
 
 export interface UseHotkeyOptions {
@@ -7,6 +8,8 @@ export interface UseHotkeyOptions {
   layer?: HotkeyLayer
   /** Allow the binding to fire while a text field has focus (Cmd+K, Escape). */
   allowInInput?: boolean
+  /** Name from `HOTKEYS`, recorded when this binding wins a key. */
+  name?: HotkeyName
 }
 
 /**
@@ -18,7 +21,7 @@ export interface UseHotkeyOptions {
 export function useHotkey(
   chords: string | string[],
   handler: () => void | boolean,
-  { enabled = true, layer = 'page', allowInInput = false }: UseHotkeyOptions = {},
+  { enabled = true, layer = 'page', allowInInput = false, name }: UseHotkeyOptions = {},
 ) {
   const id = useId()
   const api = useHotkeyApi()
@@ -35,7 +38,8 @@ export function useHotkey(
       layer,
       allowInInput,
       enabled: true,
+      name,
     })
     return () => api.unregister(id)
-  }, [api, id, chordKey, layer, allowInInput, enabled])
+  }, [api, id, chordKey, layer, allowInInput, enabled, name])
 }

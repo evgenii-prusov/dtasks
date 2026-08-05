@@ -8,7 +8,8 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { SEQUENCE_PREFIXES, SEQUENCE_TIMEOUT_MS } from './bindings'
+import { track } from '../analytics'
+import { ALL_CHORDS, SEQUENCE_PREFIXES, SEQUENCE_TIMEOUT_MS } from './bindings'
 import {
   eventToAliasChord,
   eventToChord,
@@ -28,6 +29,13 @@ export interface HotkeyRegistration {
   layer: HotkeyLayer
   allowInInput: boolean
   enabled: boolean
+  /**
+   * Which shortcut this is, for usage tracking. Carried on the registration
+   * rather than looked up from the chord because chords are ambiguous --
+   * `enter`, `escape` and `arrowdown` each appear in several bindings, and only
+   * the winning registration knows which layer claimed the key.
+   */
+  name?: string
 }
 
 interface HotkeyApi {
@@ -121,7 +129,13 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
         .sort((a, b) => LAYER_RANK[b.layer] - LAYER_RANK[a.layer] || b.seq - a.seq)
 
       for (const binding of matches) {
-        if (binding.handler() !== false) return true
+        if (binding.handler() !== false) {
+          // One place covers every global/page/overlay shortcut in the app.
+          // `layer` shows when a view's binding shadowed a global one, which is
+          // the signal for shortcuts quietly colliding.
+          track('hotkey.use', { name: binding.name ?? null, chord, layer: binding.layer }, 'keyboard')
+          return true
+        }
       }
       return false
     }
@@ -160,6 +174,15 @@ export function HotkeyProvider({ children }: { children: ReactNode }) {
       const alias = eventToAliasChord(e)
       if (dispatch(chord, blocked) || (alias && dispatch(alias, blocked))) {
         e.preventDefault()
+        return
+      }
+
+      // A real shortcut that did nothing. `blocked` means focus was in a text
+      // field, which is the common case: the user reached for the keyboard and
+      // had to fall back to the mouse. That fallback is the concrete obstacle
+      // to going keyboard-only, so it is worth more than any success count.
+      if (ALL_CHORDS.has(chord)) {
+        track('hotkey.miss', { chord, blocked }, 'keyboard')
       }
     }
 

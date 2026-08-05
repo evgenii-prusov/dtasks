@@ -8,6 +8,7 @@ import { useReorderTask } from '../api/hooks'
 import { useUpdateRecurrence } from '../api/hooks'
 import { useUpdateTask } from '../api/hooks'
 import type { Complexity, Project, Task } from '../api/types'
+import { track } from '../lib/analytics'
 import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
 import { useIsActiveRow, useTaskNav } from '../lib/taskNav'
@@ -234,9 +235,13 @@ export function TaskRow({
     if (e.metaKey || e.ctrlKey || e.altKey) return
     if (hotkeyApi.hasPendingPrefix()) return
 
+    // Every branch below routes through here, so one call instruments all the
+    // row shortcuts. They are dispatched locally and never reach HotkeyProvider,
+    // which is why they need their own tracking to count toward keyboard usage.
     const handled = () => {
       e.preventDefault()
       e.stopPropagation()
+      track('hotkey.use', { name: null, chord: e.key.toLowerCase(), layer: 'row' }, 'keyboard')
     }
 
     switch (e.key) {

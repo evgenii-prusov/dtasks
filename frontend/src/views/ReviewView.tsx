@@ -9,6 +9,7 @@ import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
+import { track } from '../lib/analytics'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
 import { useTaskNav } from '../lib/taskNav'
@@ -35,6 +36,12 @@ export function ReviewView() {
   const nav = useTaskNav()
 
   const p = projects[idx]
+  // The timer effect must not restart when these change -- it would drop the
+  // interval and lose the countdown -- so it reads them through refs.
+  const idxRef = useRef(idx)
+  idxRef.current = idx
+  const projectCountRef = useRef(projects.length)
+  projectCountRef.current = projects.length
 
   useHotkey(
     HOTKEYS.newTask.chords,
@@ -43,12 +50,15 @@ export function ReviewView() {
       setAddingTask(true)
       newTaskRef.current?.focus()
     },
-    { enabled: !!p && !done },
+    { enabled: !!p && !done, name: 'newTask' },
   )
 
   // Initialize the session budget once projects with tasks arrive
   useEffect(() => {
-    if (projects.some((proj) => proj.tasks.length > 0) && left === null) setLeft(total)
+    if (projects.some((proj) => proj.tasks.length > 0) && left === null) {
+      track('review.start', { project_count: projects.length })
+      setLeft(total)
+    }
   }, [projects, left, total])
 
   useEffect(() => {
@@ -65,6 +75,12 @@ export function ReviewView() {
       setLeft((t) => {
         if (t === null) return t
         if (t <= 1) {
+          // How far through the projects the timer ran out tells you whether
+          // the 5-min-per-project budget is realistic.
+          track('review.finish', {
+            reached_index: idxRef.current,
+            project_count: projectCountRef.current,
+          })
           setRunning(false)
           setDone(true)
           return 0

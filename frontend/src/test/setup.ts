@@ -38,6 +38,12 @@ Object.defineProperty(globalThis, 'localStorage', {
 Element.prototype.scrollIntoView ??= () => {}
 Object.defineProperty(globalThis, 'scrollTo', { configurable: true, value: () => {} })
 
+// Analytics off by default: the suites stub fetch and assert on the calls the
+// app makes, so a background flush would show up as a phantom request. The
+// analytics tests re-enable it explicitly via resetAnalytics().
+const { disableAnalytics } = await import('../lib/analytics')
+disableAnalytics()
+
 // Import i18n dynamically so its module-scope init runs against the
 // MemoryStorage patch above, not Node's throwing localStorage accessor.
 const { default: i18n } = await import('../i18n')

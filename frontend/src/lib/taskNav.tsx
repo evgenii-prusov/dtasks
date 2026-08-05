@@ -187,8 +187,8 @@ function TaskNavHotkeys() {
   const nav = useTaskNav()
   // Declining (returning false) when there are no rows leaves the arrow keys
   // to the browser, so the page still scrolls.
-  useHotkey(HOTKEYS.rowNext.chords, () => nav.move(1), { layer: 'global' })
-  useHotkey(HOTKEYS.rowPrev.chords, () => nav.move(-1), { layer: 'global' })
+  useHotkey(HOTKEYS.rowNext.chords, () => nav.move(1), { layer: 'global', name: 'rowNext' })
+  useHotkey(HOTKEYS.rowPrev.chords, () => nav.move(-1), { layer: 'global', name: 'rowPrev' })
   return null
 }
 

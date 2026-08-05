@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
+import { track } from '../lib/analytics'
 
 interface ToastState {
   id: number
@@ -40,6 +41,7 @@ export function UndoToastProvider({ children }: { children: ReactNode }) {
 
   const showUndo = useCallback((title: string, onUndo: () => void) => {
     clearTimers()
+    track('undo.shown', {})
     setFading(false)
     setToast({ id: Date.now(), title, onUndo })
     fadeTimer.current = setTimeout(startDismiss, VISIBLE_MS)
@@ -48,6 +50,8 @@ export function UndoToastProvider({ children }: { children: ReactNode }) {
   const handleUndo = () => {
     if (!toast) return
     clearTimers()
+    // Against undo.shown this gives the regret rate for completing a task.
+    track('undo.used', {})
     toast.onUndo()
     startDismiss()
   }
