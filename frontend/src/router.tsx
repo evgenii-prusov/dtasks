@@ -145,10 +145,19 @@ function ProjectRouteComponent() {
   return <ProjectView project={project} />
 }
 
+interface ProjectSearch {
+  /** Set by a command-palette task jump; consumed and stripped by ProjectView. */
+  task?: number
+}
+
 const projectRoute = createRoute({
   getParentRoute: () => authedRoute,
   path: '/projects/$projectId',
   component: ProjectRouteComponent,
+  validateSearch: (search: Record<string, unknown>): ProjectSearch => {
+    const task = Number(search.task)
+    return Number.isFinite(task) && task > 0 ? { task } : {}
+  },
 })
 
 const routeTree = rootRoute.addChildren([

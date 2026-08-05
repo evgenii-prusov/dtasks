@@ -4,6 +4,8 @@ import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } fro
 import type { Project } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
 import { weekdaysToMask } from '../lib/recurrence'
+import { parseTaskInput } from '../lib/taskInput'
+import { clearPendingQuickAdd, usePendingQuickAdd } from '../lib/pendingQuickAdd'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
 import { Ic } from './Icon'
@@ -31,6 +33,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const [selectedIndex, setSelectedIndex] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+  const pendingTitle = usePendingQuickAdd()
 
   useHotkey(HOTKEYS.newTask.chords, () => {
     inputRef.current?.focus()
@@ -42,6 +45,15 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   useEffect(() => {
     if (autoFocus) inputRef.current?.focus()
   }, [autoFocus])
+
+  // The command palette parks text here when it cannot resolve a project on
+  // its own; picking it up keeps all the #tag and Work/Personal logic here.
+  useEffect(() => {
+    if (pendingTitle === null) return
+    setTitle(pendingTitle)
+    clearPendingQuickAdd()
+    inputRef.current?.focus()
+  }, [pendingTitle])
 
   // Find default projects (named '...')
   const defaultWorkProj = projects.find((p) => p.name === '...' && p.group === 'Work')
@@ -118,36 +130,20 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
       // Project already known — strip any trailing #tag from the (possibly stale) title
       cleanTitle = rawTitle.replace(/\s*#[^\s#]*$/, '').trim() || rawTitle
     } else {
-      // No pre-selected project — try to find/create one from a #tag in the title
-      const tagMatch = rawTitle.match(/#([^\s#]+(?:\s+[^\s#]+)*)$/) || rawTitle.match(/#([^\s#]+)/)
-      if (tagMatch) {
-        const fullHash = tagMatch[0]
-        const tagText = tagMatch[1].trim()
+      // No pre-selected project — find or create one from a #tag in the title.
+      const parsed = parseTaskInput(rawTitle, userProjects)
+      cleanTitle = parsed.cleanTitle
+      targetProjectId = parsed.projectId
 
-        const existingProj =
-          userProjects.find(
-            (p) =>
-              p.name.toLowerCase() === tagText.toLowerCase() ||
-              p.name.toLowerCase() === fullHash.substring(1).toLowerCase(),
-          ) ?? userProjects.find((p) => p.name.toLowerCase().includes(tagText.toLowerCase()))
-
-        if (existingProj) {
-          targetProjectId = existingProj.id
-          cleanTitle = rawTitle.replace(fullHash, '').trim()
-          if (!cleanTitle) cleanTitle = existingProj.name
-        } else {
-          cleanTitle = rawTitle.replace(fullHash, '').trim()
-          if (!cleanTitle) cleanTitle = tagText
-
-          try {
-            const newProj = await createProject.mutateAsync({
-              name: tagText,
-              group: groupOverride || 'Work',
-            })
-            targetProjectId = newProj.id
-          } catch {
-            // Fallback if creation fails
-          }
+      if (parsed.newProjectName) {
+        try {
+          const newProj = await createProject.mutateAsync({
+            name: parsed.newProjectName,
+            group: groupOverride || 'Work',
+          })
+          targetProjectId = newProj.id
+        } catch {
+          // Fallback if creation fails
         }
       }
     }

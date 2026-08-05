@@ -22,6 +22,11 @@ export interface HotkeyDef {
    * dispatcher. Listed here for the help overlay, never registered.
    */
   local?: boolean
+  /**
+   * Subset of `chords` that still fire while a text field has focus. Modifier
+   * combos qualify; a bare `/` must not, or it could never be typed.
+   */
+  inputChords?: string[]
 }
 
 export const HOTKEYS = {
@@ -43,7 +48,12 @@ export const HOTKEYS = {
   rowDelete: { chords: ['delete', 'backspace'], labelKey: 'hotkeys.rowDelete', group: 'tasks', local: true },
 
   // ── General ───────────────────────────────────────────────────
-  palette: { chords: ['mod+k', '/'], labelKey: 'hotkeys.palette', group: 'general' },
+  palette: {
+    chords: ['mod+k', '/'],
+    inputChords: ['mod+k'],
+    labelKey: 'hotkeys.palette',
+    group: 'general',
+  },
   help: { chords: ['shift+/'], labelKey: 'hotkeys.help', group: 'general' },
   close: { chords: ['escape'], labelKey: 'hotkeys.close', group: 'general', local: true },
 } satisfies Record<string, HotkeyDef>
