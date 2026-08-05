@@ -21,6 +21,7 @@ export type IconName =
   | 'chart'
   | 'chevron-down'
   | 'chevron-up'
+  | 'help'
 
 const paths = (c: string): Record<IconName, ReactNode> => ({
   today: (
@@ -138,6 +139,19 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
   ),
   'chevron-up': (
     <path d="M4 10l4-4 4 4" stroke={c} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+  ),
+  help: (
+    <>
+      <circle cx="8" cy="8" r="6.5" stroke={c} strokeWidth="1.5" fill="none" />
+      <path
+        d="M6.2 6.2a1.8 1.8 0 1 1 2.3 1.9c-.4.2-.5.5-.5.9v.3"
+        stroke={c}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <circle cx="8" cy="11.6" r="0.9" fill={c} />
+    </>
   ),
 })
 

@@ -65,8 +65,9 @@ function LayoutWithToast() {
   return (
     <HotkeyProvider>
       <UndoToastProvider>
-        <Layout />
-        <OverlayHost />
+        <OverlayHost>
+          <Layout />
+        </OverlayHost>
       </UndoToastProvider>
     </HotkeyProvider>
   )

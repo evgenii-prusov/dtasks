@@ -23,8 +23,13 @@ function label(token: string): string {
   return TOKEN_LABELS[token] ?? (token.length === 1 ? token.toUpperCase() : token)
 }
 
+/** Chords better shown as the character they produce than as their parts. */
+const CHORD_ALIASES: Record<string, string> = { 'shift+/': '?' }
+
 /** Splits `mod+shift+k` into its display caps. */
 function caps(chord: string): string[] {
+  const alias = CHORD_ALIASES[chord]
+  if (alias) return [alias]
   return chord.split('+').map(label)
 }
 
