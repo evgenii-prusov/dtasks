@@ -23,6 +23,17 @@ export function formatDayHeading(locale: string, d: Date = new Date()): string {
   )
 }
 
+/** Parse a YYYY-MM-DD key as a local-timezone date (`new Date(key)` is UTC). */
+export function parseISODate(key: string): Date {
+  const [y, m, d] = key.split('-').map(Number)
+  return new Date(y, m - 1, d)
+}
+
+/** Day + month for habit cell hints, e.g. "Jul 4" / «4 июл.». */
+export function formatDayMonth(locale: string, d: Date): string {
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short' })
+}
+
 /** Short month name for grid labels, e.g. "Jul" / «Июл.». */
 export function formatMonthShort(locale: string, d: Date): string {
   return capitalize(d.toLocaleDateString(locale, { month: 'short' }))

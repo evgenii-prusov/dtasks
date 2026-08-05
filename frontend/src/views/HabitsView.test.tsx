@@ -63,6 +63,34 @@ describe('HabitsView add habit scroll-into-view', () => {
   })
 })
 
+describe('HabitsView heatmap cell hint', () => {
+  it('shows the day and month of the hovered cell and hides it on unhover', async () => {
+    const habits: Habit[] = [{ id: 1, name: 'Read', subtitle: '', position: 0, log: {} }]
+    // The refetch must return the same habit, otherwise the card (and the cell
+    // being hovered) unmounts mid-test.
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async () =>
+        new Response(JSON.stringify(habits), {
+          status: 200,
+          headers: { 'content-type': 'application/json' },
+        }),
+    )
+    renderView(habits)
+
+    const today = document.querySelector('.hcell.istoday') as HTMLElement
+    expect(today).toBeTruthy()
+
+    await userEvent.hover(today)
+    const hint = await screen.findByRole('tooltip')
+    expect(hint).toHaveTextContent(
+      new Date().toLocaleDateString('en', { day: 'numeric', month: 'short' }),
+    )
+
+    await userEvent.unhover(today)
+    expect(screen.queryByRole('tooltip')).not.toBeInTheDocument()
+  })
+})
+
 describe('HabitsView add habit', () => {
   it('shows and hides the add-habit form via the toggle button', async () => {
     renderView()
