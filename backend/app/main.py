@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from . import db
+from .analytics import AnalyticsMiddleware, annotate, ingest_events
 from .auth import auth_router, session_auth, session_store
 from .models import Base, Habit, HabitLog, Project, RecurrenceRule, Task, User
 from .schemas import (
@@ -361,8 +362,32 @@ async def create_task(project_id: int, data: TaskCreate, session: AsyncSession, 
 
 
 @patch("/api/tasks/{task_id:int}")
-async def update_task(task_id: int, data: TaskPatch, session: AsyncSession, user: User) -> TaskOut:
+async def update_task(
+    task_id: int, data: TaskPatch, session: AsyncSession, user: User, request: Request
+) -> TaskOut:
     task = await _get_task(session, task_id, user.id)
+
+    # One route, five features: completing, scheduling, prioritizing, moving and
+    # renaming all arrive as PATCH /api/tasks/{id}. Record which fields the patch
+    # actually carried so they can be told apart downstream.
+    annotate(
+        request,
+        fields=[
+            field
+            for field in (
+                "title",
+                "notes",
+                "complexity",
+                "assigned_today",
+                "assigned_week",
+                "must_have",
+                "is_green",
+                "completed",
+                "project_id",
+            )
+            if getattr(data, field) is not UNSET
+        ],
+    )
 
     for field in (
         "title",
@@ -590,6 +615,7 @@ route_handlers: list = [
     create_habit,
     set_habit_log,
     delete_habit,
+    ingest_events,
 ]
 if FRONTEND_DIST.is_dir():
     route_handlers.append(create_static_files_router(path="/", directories=[FRONTEND_DIST], html_mode=True))
@@ -597,6 +623,7 @@ if FRONTEND_DIST.is_dir():
 app = Litestar(
     route_handlers=route_handlers,
     dependencies={"session": db.provide_session, "user": provide_user},
+    middleware=[AnalyticsMiddleware()],
     lifespan=[lifespan],
     on_app_init=[session_auth.on_app_init],
     stores={"sessions": session_store()},

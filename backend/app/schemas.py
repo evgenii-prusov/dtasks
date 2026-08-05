@@ -134,6 +134,26 @@ class HabitLogPayload(msgspec.Struct):
     state: int  # 0|1|2
 
 
+class EventIn(msgspec.Struct):
+    """One client-reported event. Every field is untrusted and validated on ingest."""
+
+    event_id: str
+    name: str
+    occurred_at: datetime
+    session_id: str | None = None
+    input: str = "unknown"
+    surface: str | None = None
+    entity_type: str | None = None
+    entity_id: int | None = None
+    app_version: str | None = None
+    # Scalars only; sanitize_props() drops anything else before it is stored.
+    props: dict[str, object] | None = None
+
+
+class EventBatchIn(msgspec.Struct):
+    events: list[EventIn]
+
+
 def task_out(t: Task) -> TaskOut:
     return TaskOut(
         id=t.id,
