@@ -77,12 +77,23 @@ see [`docs/deploy.md`](docs/deploy.md).
 | GET    | `/api/auth/oauth/{provider}/login` | Start Google/GitHub OAuth login, redirects to the provider |
 | GET    | `/api/auth/oauth/{provider}/callback` | Provider redirects back here to complete OAuth login |
 | GET    | `/api/auth/providers`         | `{google, github}` — which OAuth providers are configured |
+| POST   | `/api/events`                 | Batch of browser-reported usage events (max 50) |
 
 Rules mirrored from the design: marking a task Must Have also assigns it to
 Today; removing it from Today clears Must Have; at most 2 active Must Have
 tasks per day.
 
 Full auth design (sessions, OAuth flow, account-linking rules): [`docs/auth.md`](docs/auth.md).
+
+## Usage analytics
+
+Every mutating request and every keyboard/mouse interaction is recorded to an
+append-only `events` table, so you can see which features are actually used —
+and in particular track a mouse-to-keyboard migration over time. No free text
+(search queries, task titles) is ever stored. Set `DTASKS_ANALYTICS_ENABLED=0`
+to turn it off.
+
+Event dictionary, ready-made SQL and dbt notes: [`docs/analytics.md`](docs/analytics.md).
 
 ## Design source
 
