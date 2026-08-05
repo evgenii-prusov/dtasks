@@ -206,6 +206,17 @@
     "submit": "Добавить",
     "createProject": "Создать проект «{{name}}»"
   },
+  "palette": {
+    "title": "Искать везде",
+    "placeholder": "Поиск по страницам, проектам и задачам…",
+    "groupPages": "Страницы",
+    "groupProjects": "Проекты",
+    "groupTasks": "Задачи",
+    "groupActions": "Действия",
+    "empty": "Ничего не найдено",
+    "createTask": "Создать задачу «{{title}}»",
+    "openLabel": "Поиск"
+  },
   "hotkeys": {
     "title": "Горячие клавиши",
     "hint": "Нажмите ?, чтобы увидеть горячие клавиши",

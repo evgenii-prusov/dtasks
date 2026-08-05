@@ -16,6 +16,7 @@ import { isDefaultProject } from '../api/types'
 import { Ic, type IconName } from './Icon'
 import { Kbd } from './Kbd'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
+import { useOverlayOpen } from '../lib/hotkeys/HotkeyProvider'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
 
@@ -62,6 +63,7 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
   const logout = useLogout()
   const navigate = useNavigate()
 
+  const overlayOpen = useOverlayOpen()
   const [addingGroup, setAddingGroup] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const submittingRef = useRef(false)
@@ -255,7 +257,11 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
                   if (e.key === 'Enter') submitAdding(group)
                   if (e.key === 'Escape') cancelAdding()
                 }}
-                onBlur={() => submitAdding(group)}
+                // An overlay opening steals focus; that must not count as
+                // confirming a half-typed project name.
+                onBlur={() => {
+                  if (!overlayOpen) submitAdding(group)
+                }}
                 placeholder={t('sidebar.projectNamePlaceholder')}
               />
             </div>

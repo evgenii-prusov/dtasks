@@ -204,6 +204,17 @@
     "submit": "Add",
     "createProject": "Create project \"{{name}}\""
   },
+  "palette": {
+    "title": "Search everything",
+    "placeholder": "Search pages, projects and tasks…",
+    "groupPages": "Pages",
+    "groupProjects": "Projects",
+    "groupTasks": "Tasks",
+    "groupActions": "Actions",
+    "empty": "No matches",
+    "createTask": "Create task \"{{title}}\"",
+    "openLabel": "Search"
+  },
   "hotkeys": {
     "title": "Keyboard shortcuts",
     "hint": "Press ? for keyboard shortcuts",

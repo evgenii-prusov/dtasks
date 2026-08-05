@@ -33,6 +33,11 @@ Object.defineProperty(globalThis, 'localStorage', {
   value: new MemoryStorage(),
 })
 
+// jsdom implements neither of these; keyboard navigation calls both to keep
+// the active row or option visible.
+Element.prototype.scrollIntoView ??= () => {}
+Object.defineProperty(globalThis, 'scrollTo', { configurable: true, value: () => {} })
+
 // Import i18n dynamically so its module-scope init runs against the
 // MemoryStorage patch above, not Node's throwing localStorage accessor.
 const { default: i18n } = await import('../i18n')
