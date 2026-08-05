@@ -1,10 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { type MouseEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateHabit, useDeleteHabit, useHabits, useSetHabitLog } from '../api/hooks'
 import type { Habit } from '../api/types'
 import { AddHabitForm } from '../components/AddHabitForm'
 import { Ic } from '../components/Icon'
-import { formatMonthShort, toISODate, todayISO, weekdayShortLabels } from '../lib/dates'
+import {
+  formatDayMonth,
+  formatMonthShort,
+  parseISODate,
+  toISODate,
+  todayISO,
+  weekdayShortLabels,
+} from '../lib/dates'
 
 const WEEKS = 16
 
@@ -49,6 +56,9 @@ export function HabitsView() {
   const createHabit = useCreateHabit()
   const [addingHabit, setAddingHabit] = useState(false)
   const [justAddedId, setJustAddedId] = useState<number | null>(null)
+  // Day/month hint for the hovered heatmap cell. Rendered outside the grid's
+  // horizontal scroll container (which would clip it) and positioned viewport-fixed.
+  const [cellHint, setCellHint] = useState<{ x: number; y: number; label: string } | null>(null)
   const habitRefs = useRef<Record<number, HTMLDivElement | null>>({})
   const todayKey = todayISO()
   const days = useMemo(buildDays, [])
@@ -65,9 +75,26 @@ export function HabitsView() {
     }
   }, [habits, justAddedId])
 
+  // The hint is viewport-fixed, so any scroll would leave it detached from its cell.
+  useEffect(() => {
+    if (!cellHint) return
+    const hide = () => setCellHint(null)
+    window.addEventListener('scroll', hide, true)
+    return () => window.removeEventListener('scroll', hide, true)
+  }, [cellHint])
+
   const cycle = (h: Habit, date: string) => {
     const cur = h.log[date] ?? 0
     setHabitLog.mutate({ habitId: h.id, day: date, state: (cur + 1) % 3 })
+  }
+
+  const showCellHint = (e: MouseEvent<HTMLDivElement>, dateKey: string) => {
+    const r = e.currentTarget.getBoundingClientRect()
+    setCellHint({
+      x: r.left + r.width / 2,
+      y: r.top,
+      label: formatDayMonth(i18n.language, parseISODate(dateKey)),
+    })
   }
 
   const remove = (h: Habit) => {
@@ -175,7 +202,7 @@ export function HabitsView() {
                   style={{ gridTemplateColumns: `repeat(${weekStarts.length}, 16px)` }}
                 >
                   {weekStarts.map((w, wi) => {
-                    const d = new Date(w)
+                    const d = parseISODate(w)
                     const label = d.getDate() <= 7 ? formatMonthShort(i18n.language, d) : ''
                     return (
                       <div key={wi} className="w-[13px] text-center text-[9px] text-ink-3">
@@ -211,6 +238,8 @@ export function HabitsView() {
                           key={dateKey}
                           className={`hcell s${val} ${isFuture ? 'future' : ''} ${isToday ? 'istoday' : ''}`}
                           onClick={() => !isFuture && cycle(h, dateKey)}
+                          onMouseEnter={(e) => showCellHint(e, dateKey)}
+                          onMouseLeave={() => setCellHint(null)}
                         />
                       )
                     })}
@@ -235,6 +264,12 @@ export function HabitsView() {
           </div>
         )
       })}
+
+      {cellHint && (
+        <div className="hcell-hint" role="tooltip" style={{ left: cellHint.x, top: cellHint.y }}>
+          {cellHint.label}
+        </div>
+      )}
     </div>
   )
 }
