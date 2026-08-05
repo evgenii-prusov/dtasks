@@ -53,6 +53,16 @@ export function ReviewView() {
     { enabled: !!p && !done, name: 'newTask' },
   )
 
+  // Mirrors the "Next →" button, including stopping at the last project rather
+  // than wrapping: the walk through the projects is meant to end.
+  useHotkey(
+    HOTKEYS.reviewNextProject.chords,
+    () => {
+      setIdx((i) => i + 1)
+    },
+    { enabled: idx < projects.length - 1 && !done, name: 'reviewNextProject' },
+  )
+
   // Initialize the session budget once projects with tasks arrive
   useEffect(() => {
     if (projects.some((proj) => proj.tasks.length > 0) && left === null) {
@@ -365,6 +375,7 @@ export function ReviewView() {
               className="btn btn-p btn-s w-full"
               disabled={idx === projects.length - 1}
               onClick={() => setIdx((i) => i + 1)}
+              title={t('review.nextHotkey')}
             >
               {t('review.next')}
             </button>
