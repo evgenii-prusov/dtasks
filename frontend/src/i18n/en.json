@@ -14,6 +14,7 @@
     "add": "Add",
     "addTask": "Add task",
     "newTaskHotkey": "Add task — press N",
+    "close": "Close",
     "cancel": "Cancel",
     "save": "Save",
     "edit": "Edit",
@@ -202,5 +203,28 @@
     "personal": "Personal",
     "submit": "Add",
     "createProject": "Create project \"{{name}}\""
+  },
+  "hotkeys": {
+    "title": "Keyboard shortcuts",
+    "hint": "Press ? for keyboard shortcuts",
+    "groupNavigation": "Navigation",
+    "groupTasks": "Tasks",
+    "groupGeneral": "General",
+    "goToday": "Go to Today",
+    "goPlan": "Go to Plan",
+    "goReview": "Go to Review",
+    "goHabits": "Go to Habits",
+    "goReport": "Go to Report",
+    "newTask": "New task",
+    "rowNext": "Next task",
+    "rowPrev": "Previous task",
+    "rowEdit": "Edit task",
+    "rowComplete": "Complete task",
+    "rowToday": "Schedule for today",
+    "rowWeek": "Schedule for this week",
+    "rowDelete": "Delete task",
+    "palette": "Search everything",
+    "help": "Show this list",
+    "close": "Close or cancel"
   }
 }

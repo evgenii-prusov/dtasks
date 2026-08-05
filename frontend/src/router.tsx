@@ -11,6 +11,8 @@ import {
 import { Sidebar } from './components/Sidebar'
 import { UndoToastProvider } from './components/UndoToast'
 import { HotkeyProvider } from './lib/hotkeys/HotkeyProvider'
+import { useGlobalHotkeys } from './lib/hotkeys/useGlobalHotkeys'
+import { OverlayHost } from './components/OverlayHost'
 import { TodayView } from './views/TodayView'
 import { PlanView } from './views/PlanView'
 import { ReviewView } from './views/ReviewView'
@@ -23,6 +25,7 @@ import { createQueryClient } from './queryClient'
 
 function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  useGlobalHotkeys()
   return (
     <div className="flex h-dvh">
       {/* Mobile overlay */}
@@ -59,6 +62,7 @@ function LayoutWithToast() {
     <HotkeyProvider>
       <UndoToastProvider>
         <Layout />
+        <OverlayHost />
       </UndoToastProvider>
     </HotkeyProvider>
   )

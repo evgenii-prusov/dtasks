@@ -14,6 +14,8 @@ import { useTheme } from '../theme'
 import { groupLabel, useLanguage } from '../i18n'
 import { isDefaultProject } from '../api/types'
 import { Ic, type IconName } from './Icon'
+import { Kbd } from './Kbd'
+import { HOTKEYS } from '../lib/hotkeys/bindings'
 
 const DEFAULT_GROUPS = ['Work', 'Personal']
 
@@ -23,6 +25,7 @@ function NavLink({
   label,
   badge,
   badgeMust,
+  chord,
   onClick,
 }: {
   to: string
@@ -30,12 +33,20 @@ function NavLink({
   label: string
   badge?: number | null
   badgeMust?: boolean
+  chord?: string
   onClick?: () => void
 }) {
   return (
     <Link to={to} className="nav" activeProps={{ className: 'nav on' }} onClick={onClick}>
       <Ic n={icon} s={14} /> {label}
       {badge != null && <span className={`nav-badge ${badgeMust ? 'must' : ''}`}>{badge}</span>}
+      {/* Teaches the shortcut in place. Hidden on touch layouts, where the
+          badge also competes for the same slot. */}
+      {chord && badge == null && (
+        <span className="ml-auto hidden opacity-60 md:inline-flex">
+          <Kbd chord={chord} />
+        </span>
+      )}
     </Link>
   )
 }
@@ -123,12 +134,37 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         label={t('nav.today')}
         badge={todayCount > 0 ? todayCount : null}
         badgeMust={mustCount > 0}
+        chord={HOTKEYS.goToday.chords[0]}
         onClick={close}
       />
-      <NavLink to="/plan" icon="plan" label={t('nav.plan')} onClick={close} />
-      <NavLink to="/review" icon="review" label={t('nav.review')} onClick={close} />
-      <NavLink to="/habits" icon="habits" label={t('nav.habits')} onClick={close} />
-      <NavLink to="/report" icon="chart" label={t('nav.report')} onClick={close} />
+      <NavLink
+        to="/plan"
+        icon="plan"
+        label={t('nav.plan')}
+        chord={HOTKEYS.goPlan.chords[0]}
+        onClick={close}
+      />
+      <NavLink
+        to="/review"
+        icon="review"
+        label={t('nav.review')}
+        chord={HOTKEYS.goReview.chords[0]}
+        onClick={close}
+      />
+      <NavLink
+        to="/habits"
+        icon="habits"
+        label={t('nav.habits')}
+        chord={HOTKEYS.goHabits.chords[0]}
+        onClick={close}
+      />
+      <NavLink
+        to="/report"
+        icon="chart"
+        label={t('nav.report')}
+        chord={HOTKEYS.goReport.chords[0]}
+        onClick={close}
+      />
 
       <hr className="s-divider" />
 
