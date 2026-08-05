@@ -10,6 +10,8 @@ import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
 import { QuickAddTask } from '../components/QuickAddTask'
+import { HOTKEYS } from '../lib/hotkeys/bindings'
+import { useHotkey } from '../lib/hotkeys/useHotkey'
 
 const MUST_LIMIT = 2
 
@@ -22,6 +24,7 @@ export function PlanView() {
   const [tab, setTab] = useState<'today' | 'week'>('today')
   const [addingTo, setAddingTo] = useState<number | null>(null)
   const [search, setSearch] = useState('')
+  const [focusQuickAdd, setFocusQuickAdd] = useState(false)
 
   const mustCount = mustHaveCount(projects)
   const greenTodayCount = projects.reduce(
@@ -39,6 +42,18 @@ export function PlanView() {
   }
 
   const query = search.trim().toLowerCase()
+
+  // Quick add is hidden while searching, so it cannot claim the hotkey itself:
+  // drop the search first and hand focus to the field once it is back.
+  useHotkey(
+    HOTKEYS.newTask.chords,
+    () => {
+      setSearch('')
+      setFocusQuickAdd(true)
+    },
+    { enabled: query.length > 0 },
+  )
+
   const searchResults = query
     ? projects.flatMap((p) =>
         p.tasks
@@ -85,7 +100,10 @@ export function PlanView() {
         <input
           className="input w-full pl-[30px] pr-7"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          onChange={(e) => {
+            setSearch(e.target.value)
+            setFocusQuickAdd(false)
+          }}
           onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
           placeholder={t('plan.searchPlaceholder')}
         />
@@ -101,7 +119,7 @@ export function PlanView() {
         )}
       </div>
 
-      {!query && <QuickAddTask />}
+      {!query && <QuickAddTask autoFocus={focusQuickAdd} />}
 
       {query ? (
         <div className="card">

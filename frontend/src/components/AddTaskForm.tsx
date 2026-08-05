@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type Ref } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { Complexity, RecurrenceRuleCreate, TaskCreate } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
@@ -9,10 +9,13 @@ export function AddTaskForm({
   onAdd,
   onAddRecurring,
   onCancel,
+  titleRef,
 }: {
   onAdd: (task: TaskCreate) => void
   onAddRecurring?: (rule: RecurrenceRuleCreate) => void
   onCancel: () => void
+  /** Lets the parent re-focus the title field, e.g. from the new-task hotkey. */
+  titleRef?: Ref<HTMLInputElement>
 }) {
   const { t, i18n } = useTranslation()
   const [title, setTitle] = useState('')
@@ -57,8 +60,13 @@ export function AddTaskForm({
   }
 
   return (
-    <div className="add-form">
+    <div
+      className="add-form"
+      data-hotkeys-off
+      onKeyDown={(e) => e.key === 'Escape' && onCancel()}
+    >
       <input
+        ref={titleRef}
         className="input mb-[7px]"
         placeholder={t('task.titlePlaceholder')}
         value={title}
