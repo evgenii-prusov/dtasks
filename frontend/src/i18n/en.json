@@ -234,6 +234,7 @@
     "rowComplete": "Complete task",
     "rowToday": "Schedule for today",
     "rowWeek": "Schedule for this week",
+    "rowGreen": "Toggle green status",
     "rowEditSeries": "Edit recurring series",
     "rowMoveUp": "Move task up",
     "rowMoveDown": "Move task down",

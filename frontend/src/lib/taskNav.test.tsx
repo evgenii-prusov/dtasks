@@ -174,6 +174,18 @@ describe('task row navigation', () => {
     expect(patches[0].body).toMatchObject({ assigned_week: true, assigned_today: false })
   })
 
+  it('toggles green status with l', async () => {
+    renderApp('/plan')
+    await screen.findByText('Backlog item')
+
+    await userEvent.keyboard('jjjj')
+    expect(activeRowId()).toBe('4')
+    await userEvent.keyboard('l')
+
+    await waitFor(() => expect(patches).toHaveLength(1))
+    expect(patches[0].body).toMatchObject({ is_green: true })
+  })
+
   it('deletes on Delete only after the confirm is accepted', async () => {
     const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
     renderApp('/')

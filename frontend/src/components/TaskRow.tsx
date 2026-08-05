@@ -172,6 +172,10 @@ export function TaskRow({
     })
   }
 
+  const toggleGreen = () => {
+    updateTask.mutate({ id: task.id, patch: { is_green: !task.is_green } })
+  }
+
   /**
    * Row-level shortcuts. This handler only exists on the non-editing render,
    * so the inline edit forms below are immune to it without extra guards.
@@ -219,6 +223,10 @@ export function TaskRow({
       case 'w':
         handled()
         schedule('week')
+        return
+      case 'l':
+        handled()
+        toggleGreen()
         return
       case '[':
         if (!reorderable || isFirst) return
