@@ -149,6 +149,53 @@ describe('QuickAddTask', () => {
     )
   })
 
+  it('assigns task via partial #tag match when submitting without clicking autocomplete option', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    // "Real" is a partial match for "Real Work Project" (id=3)
+    await userEvent.type(input, 'Buy milk #Real')
+
+    // Autocomplete shows the match
+    expect(screen.getByRole('button', { name: /Real Work Project/i })).toBeInTheDocument()
+
+    // Submit WITHOUT clicking the autocomplete option — click Add directly
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/3/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Buy milk' }),
+        }),
+      ),
+    )
+  })
+
+  it('selects project and submits task in one Enter press via keyboard autocomplete', async () => {
+    renderQuickAddTask()
+
+    const input = screen.getByPlaceholderText('Quick add task…')
+    await userEvent.type(input, 'Task title #Real')
+
+    // Autocomplete shows with "Real Work Project" at index 0 (highlighted)
+    expect(screen.getByRole('button', { name: /Real Work Project/i })).toBeInTheDocument()
+
+    // Single Enter: should select the project AND submit the task
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/3/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Task title' }),
+        }),
+      ),
+    )
+  })
+
   it('creates a new project automatically when #tag does not match any existing project', async () => {
     renderQuickAddTask()
 

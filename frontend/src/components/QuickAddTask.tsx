@@ -106,11 +106,12 @@ export function QuickAddTask() {
       const fullHash = tagMatch[0]
       const tagText = tagMatch[1].trim()
 
-      const existingProj = userProjects.find(
-        (p) =>
-          p.name.toLowerCase() === tagText.toLowerCase() ||
-          p.name.toLowerCase() === fullHash.substring(1).toLowerCase(),
-      )
+      const existingProj =
+        userProjects.find(
+          (p) =>
+            p.name.toLowerCase() === tagText.toLowerCase() ||
+            p.name.toLowerCase() === fullHash.substring(1).toLowerCase(),
+        ) ?? userProjects.find((p) => p.name.toLowerCase().includes(tagText.toLowerCase()))
 
       if (existingProj) {
         targetProjectId = existingProj.id
@@ -215,7 +216,13 @@ export function QuickAddTask() {
                   }
                   if (e.key === 'Enter' || e.key === 'Tab') {
                     e.preventDefault()
-                    selectOption(autocompleteOptions[selectedIndex])
+                    const opt = autocompleteOptions[selectedIndex]
+                    selectOption(opt)
+                    // For existing projects with a non-empty title, submit immediately
+                    if (!opt.isNew && opt.project) {
+                      const cleanTitle = title.replace(/(?:^|\s)#([^\s#]*)$/, '').trim()
+                      if (cleanTitle) handleAdd()
+                    }
                     return
                   }
                 }
