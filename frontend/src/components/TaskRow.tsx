@@ -69,6 +69,10 @@ export function TaskRow({
   const touchStartX = useRef<number | null>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLInputElement>(null)
+  const notesRef = useRef<HTMLTextAreaElement>(null)
+  /** Set when the editor is opened by the description chord rather than Enter. */
+  const openInNotes = useRef(false)
   const nav = useTaskNav()
   const hotkeyApi = useHotkeyApi()
   const isActive = useIsActiveRow(task.id)
@@ -90,6 +94,22 @@ export function TaskRow({
     if (wasEditing.current && !editing && !editingSeries) nav.focus(task.id)
     wasEditing.current = editing || editingSeries
   }, [editing, editingSeries, nav, task.id])
+
+  // Opening the editor puts the caret in the title with the text selected, so
+  // Enter → type → Enter is a complete rename without touching the mouse.
+  // Opened by the description chord instead, it starts in the notes field.
+  useEffect(() => {
+    if (!editing) return
+    if (openInNotes.current) {
+      openInNotes.current = false
+      caretToEnd(notesRef.current)
+      return
+    }
+    const el = titleRef.current
+    if (!el) return
+    el.focus()
+    el.select()
+  }, [editing])
 
   // Escape key handler while editing task
   useEffect(() => {
@@ -177,6 +197,33 @@ export function TaskRow({
     setEditing(false)
   }
   const cancel = () => setEditing(false)
+
+  /**
+   * Cmd/Ctrl+↓ and Cmd/Ctrl+↑ move between the title and the description while
+   * the editor is open. Bare Enter belongs to save, and Tab has to keep walking
+   * the whole form, so the jump needs a chord of its own.
+   */
+  const caretToEnd = (el: HTMLInputElement | HTMLTextAreaElement | null) => {
+    if (!el) return
+    el.focus()
+    el.setSelectionRange(el.value.length, el.value.length)
+  }
+  const isFieldJump = (e: React.KeyboardEvent, key: 'ArrowDown' | 'ArrowUp') =>
+    e.key === key && (e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey
+  /** True when the key was a jump between the two fields. */
+  const handleFieldJump = (e: React.KeyboardEvent) => {
+    const target = isFieldJump(e, 'ArrowDown')
+      ? notesRef.current
+      : isFieldJump(e, 'ArrowUp')
+        ? titleRef.current
+        : null
+    if (!target) return false
+    e.preventDefault()
+    e.stopPropagation()
+    caretToEnd(target)
+    return true
+  }
+
   const remove = () => {
     // Declare the intent first: confirm() blanks document.activeElement, so
     // the registry cannot otherwise tell this row was the focused one.
@@ -232,12 +279,24 @@ export function TaskRow({
    */
   const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (isTypingTarget(e.target)) return
+
+    // The one chord the row answers: the key that reaches the description from
+    // inside the editor also opens the editor there.
+    if (editable && isFieldJump(e, 'ArrowDown')) {
+      e.preventDefault()
+      e.stopPropagation()
+      track('hotkey.use', { name: 'rowEditNotes', chord: 'mod+arrowdown', layer: 'row' }, 'keyboard')
+      openInNotes.current = true
+      startEdit()
+      return
+    }
     if (e.metaKey || e.ctrlKey || e.altKey) return
     if (hotkeyApi.hasPendingPrefix()) return
 
     // Every branch below routes through here, so one call instruments all the
-    // row shortcuts. They are dispatched locally and never reach HotkeyProvider,
-    // which is why they need their own tracking to count toward keyboard usage.
+    // bare row shortcuts. They are dispatched locally and never reach
+    // HotkeyProvider, which is why they need their own tracking to count
+    // toward keyboard usage.
     const handled = () => {
       e.preventDefault()
       e.stopPropagation()
@@ -448,31 +507,38 @@ export function TaskRow({
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
           <input
+            ref={titleRef}
             className="input mb-[5px] px-2 py-[5px] text-[13px]"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            aria-label={t('common.title')}
             onKeyDown={(e) => {
               if (e.key === 'Escape' || e.key === 'Esc') {
                 e.preventDefault()
                 e.stopPropagation()
                 cancel()
+              } else if (handleFieldJump(e)) {
+                return
               } else if (e.key === 'Enter') {
                 e.preventDefault()
                 e.stopPropagation()
                 save()
               }
             }}
-            autoFocus
           />
           <textarea
+            ref={notesRef}
             className="input textarea mb-1.5 min-h-11 text-xs"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
+            aria-label={t('common.notes')}
             onKeyDown={(e) => {
               if (e.key === 'Escape' || e.key === 'Esc') {
                 e.preventDefault()
                 e.stopPropagation()
                 cancel()
+              } else if (handleFieldJump(e)) {
+                return
               } else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
                 e.preventDefault()
                 e.stopPropagation()

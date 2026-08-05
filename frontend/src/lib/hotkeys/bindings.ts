@@ -53,6 +53,18 @@ export const HOTKEYS = {
   rowWeek: { chords: ['w'], labelKey: 'hotkeys.rowWeek', group: 'tasks', local: true },
   rowMust: { chords: ['m'], labelKey: 'hotkeys.rowMust', group: 'tasks', local: true },
   rowGreen: { chords: ['l'], labelKey: 'hotkeys.rowGreen', group: 'tasks', local: true },
+  rowEditNotes: {
+    chords: ['mod+arrowdown'],
+    labelKey: 'hotkeys.rowEditNotes',
+    group: 'tasks',
+    local: true,
+  },
+  rowEditTitle: {
+    chords: ['mod+arrowup'],
+    labelKey: 'hotkeys.rowEditTitle',
+    group: 'tasks',
+    local: true,
+  },
   rowEditSeries: { chords: ['e'], labelKey: 'hotkeys.rowEditSeries', group: 'tasks', local: true },
   rowMoveUp: { chords: ['['], labelKey: 'hotkeys.rowMoveUp', group: 'tasks', local: true },
   rowMoveDown: { chords: [']'], labelKey: 'hotkeys.rowMoveDown', group: 'tasks', local: true },
