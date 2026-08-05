@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { QueryClient } from '@tanstack/react-query'
 import {
   createRootRouteWithContext,
@@ -6,6 +6,7 @@ import {
   createRouter,
   Outlet,
   redirect,
+  useNavigate,
   type RouterHistory,
 } from '@tanstack/react-router'
 import { Sidebar } from './components/Sidebar'
@@ -13,6 +14,7 @@ import { UndoToastProvider } from './components/UndoToast'
 import { HotkeyProvider } from './lib/hotkeys/HotkeyProvider'
 import { useGlobalHotkeys } from './lib/hotkeys/useGlobalHotkeys'
 import { OverlayHost } from './components/OverlayHost'
+import { TaskNavProvider, useTaskNav } from './lib/taskNav'
 import { TodayView } from './views/TodayView'
 import { PlanView } from './views/PlanView'
 import { ReviewView } from './views/ReviewView'
@@ -50,7 +52,9 @@ function Layout() {
           </button>
         </div>
         <div className="max-w-[880px] px-4 py-6 md:px-12 md:py-9">
-          <Outlet />
+          <TaskNavProvider>
+            <Outlet />
+          </TaskNavProvider>
         </div>
       </div>
     </div>
@@ -139,8 +143,20 @@ const reportRoute = createRoute({
 
 function ProjectRouteComponent() {
   const { projectId } = projectRoute.useParams()
+  const { task: jumpToTaskId } = projectRoute.useSearch()
   const { data: projects = [] } = useProjects()
+  const navigate = useNavigate()
+  const nav = useTaskNav()
   const project = projects.find((p) => p.id === Number(projectId))
+
+  // A command-palette task jump arrives as ?task=<id>. Rows register during
+  // commit, so by the time this effect runs the target is focusable. Strip the
+  // param afterwards so a reload or a back-navigation doesn't repeat the jump.
+  useEffect(() => {
+    if (!jumpToTaskId || !project) return
+    if (nav.focus(jumpToTaskId)) navigate({ to: '.', search: {}, replace: true })
+  }, [jumpToTaskId, project, nav, navigate])
+
   if (!project) return null
   return <ProjectView project={project} />
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   useDeleteRecurrence,
@@ -10,6 +10,7 @@ import {
 import type { Complexity, Project, Task } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
+import { useIsActiveRow, useTaskNav } from '../lib/taskNav'
 import { Ic } from './Icon'
 import { useShowUndoToast } from './UndoToast'
 
@@ -65,6 +66,26 @@ export function TaskRow({
   const touchStartX = useRef<number | null>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
+  const nav = useTaskNav()
+  const isActive = useIsActiveRow(task.id)
+
+  // One ref feeding both the swipe outside-click check and the nav registry.
+  // Must be stable: an inline callback ref is torn down and re-attached on
+  // every render, which would look like the row being removed and re-added.
+  const setRowRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      rowRef.current = el
+      nav.register(task.id, el)
+    },
+    [nav, task.id],
+  )
+
+  // Saving or cancelling an inline edit should hand focus back to the row.
+  const wasEditing = useRef(false)
+  useEffect(() => {
+    if (wasEditing.current && !editing && !editingSeries) nav.focus(task.id)
+    wasEditing.current = editing || editingSeries
+  }, [editing, editingSeries, nav, task.id])
 
   // Close swipe when tapping outside
   useEffect(() => {
@@ -125,7 +146,96 @@ export function TaskRow({
   }
   const cancel = () => setEditing(false)
   const remove = () => {
+    // Declare the intent first: confirm() blanks document.activeElement, so
+    // the registry cannot otherwise tell this row was the focused one.
+    nav.requestFocusAfterRemoval(task.id)
     if (confirm(t('task.confirmDelete', { title: task.title }))) deleteTask.mutate(task.id)
+  }
+
+  const toggleComplete = () => {
+    const completing = !task.completed
+    updateTask.mutate({ id: task.id, patch: { completed: completing } })
+    if (completing) {
+      nav.requestFocusAfterRemoval(task.id)
+      showUndo(task.title, () => updateTask.mutate({ id: task.id, patch: { completed: false } }))
+    }
+  }
+
+  const schedule = (when: 'today' | 'week') => {
+    updateTask.mutate({
+      id: task.id,
+      patch:
+        when === 'today'
+          ? { assigned_today: !task.assigned_today, assigned_week: false }
+          : { assigned_week: !task.assigned_week, assigned_today: false },
+    })
+  }
+
+  /**
+   * Row-level shortcuts. This handler only exists on the non-editing render,
+   * so the inline edit forms below are immune to it without extra guards.
+   */
+  const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget) return
+    if (e.metaKey || e.ctrlKey || e.altKey) return
+
+    const handled = () => {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    switch (e.key) {
+      case 'j':
+      case 'ArrowDown':
+        handled()
+        nav.move(1)
+        return
+      case 'k':
+      case 'ArrowUp':
+        handled()
+        nav.move(-1)
+        return
+      case 'Enter':
+        if (!editable) return
+        handled()
+        startEdit()
+        return
+      case 'e':
+        if (!editable || !rule) return
+        handled()
+        startEditSeries()
+        return
+      case 'x':
+      case ' ':
+        if (!checkable) return
+        handled()
+        toggleComplete()
+        return
+      case 't':
+        handled()
+        schedule('today')
+        return
+      case 'w':
+        handled()
+        schedule('week')
+        return
+      case '[':
+        if (!reorderable || isFirst) return
+        handled()
+        reorderTask.mutate({ id: task.id, direction: 'up' })
+        return
+      case ']':
+        if (!reorderable || isLast) return
+        handled()
+        reorderTask.mutate({ id: task.id, direction: 'down' })
+        return
+      case 'Delete':
+      case 'Backspace':
+        if (!deletable) return
+        handled()
+        remove()
+        return
+    }
   }
 
   const startEditSeries = () => {
@@ -169,7 +279,11 @@ export function TaskRow({
 
   if (editingSeries && rule) {
     return (
-      <div className={`task-row items-start ${task.is_green ? 'green' : ''}`}>
+      <div
+        className={`task-row items-start ${task.is_green ? 'green' : ''}`}
+        data-hotkeys-off
+        onKeyDown={(e) => e.key === 'Escape' && cancelSeries()}
+      >
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
           <div className="mb-[5px] text-[11px] font-semibold text-ink-3">
@@ -228,7 +342,11 @@ export function TaskRow({
 
   if (editable && editing) {
     return (
-      <div className={`task-row items-start ${task.is_green ? 'green' : ''}`}>
+      <div
+        className={`task-row items-start ${task.is_green ? 'green' : ''}`}
+        data-hotkeys-off
+        onKeyDown={(e) => e.key === 'Escape' && cancel()}
+      >
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
           <input
@@ -321,8 +439,15 @@ export function TaskRow({
 
   return (
     <div
-      ref={rowRef}
+      ref={setRowRef}
       className={`task-row relative overflow-hidden ${task.is_green ? 'green' : ''}`}
+      data-task-row={task.id}
+      data-active={isActive || undefined}
+      // Roving tabindex: only the current row is a tab stop.
+      tabIndex={isActive ? 0 : -1}
+      aria-label={task.title}
+      onFocus={() => nav.setActive(task.id)}
+      onKeyDown={onRowKeyDown}
       onTouchStart={hasSwipeActions ? handleTouchStart : undefined}
       onTouchEnd={hasSwipeActions ? handleTouchEnd : undefined}
     >
@@ -336,18 +461,7 @@ export function TaskRow({
         }
       >
         {checkable && (
-          <div
-            className={`cb ${task.completed ? 'done' : ''}`}
-            onClick={() => {
-              const completing = !task.completed
-              updateTask.mutate({ id: task.id, patch: { completed: completing } })
-              if (completing) {
-                showUndo(task.title, () =>
-                  updateTask.mutate({ id: task.id, patch: { completed: false } }),
-                )
-              }
-            }}
-          />
+          <div className={`cb ${task.completed ? 'done' : ''}`} onClick={toggleComplete} />
         )}
         <div
           className={`min-w-0 flex-1 ${editable ? 'cursor-text' : ''}`}
