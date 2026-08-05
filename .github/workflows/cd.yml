@@ -6,9 +6,21 @@ on:
     paths-ignore:
       - 'infra/**'
 
+# Two merges landing close together would otherwise deploy concurrently and
+# could reach the server out of order. Queueing them (rather than
+# cancel-in-progress) keeps the newest commit last without ever interrupting a
+# run mid-deploy: the SSH step's remote `docker compose up` is not something
+# GitHub can cancel cleanly, and a half-applied update is worse than a wait.
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Native ARM64, matching the A1 Flex target: the same image built through
+    # QEMU emulation on an x86 runner took upwards of five minutes. Free for
+    # public repositories.
+    runs-on: ubuntu-24.04-arm
     permissions:
       contents: read
       packages: write
@@ -16,8 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # A1 Flex is ARM64; QEMU lets the x86 runner cross-compile for it.
-      - uses: docker/setup-qemu-action@v3
+      # No QEMU: the runner is already the target architecture.
       - uses: docker/setup-buildx-action@v3
 
       - name: Set image name and short SHA
