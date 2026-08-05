@@ -12,6 +12,7 @@ import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
 import { useIsActiveRow, useTaskNav } from '../lib/taskNav'
 import { isTypingTarget } from '../lib/hotkeys/keyEvent'
+import { useHotkeyApi } from '../lib/hotkeys/HotkeyProvider'
 import { Ic } from './Icon'
 import { useShowUndoToast } from './UndoToast'
 
@@ -68,6 +69,7 @@ export function TaskRow({
   const actionsRef = useRef<HTMLDivElement>(null)
   const rowRef = useRef<HTMLDivElement>(null)
   const nav = useTaskNav()
+  const hotkeyApi = useHotkeyApi()
   const isActive = useIsActiveRow(task.id)
 
   // One ref feeding both the swipe outside-click check and the nav registry.
@@ -230,6 +232,7 @@ export function TaskRow({
   const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (isTypingTarget(e.target)) return
     if (e.metaKey || e.ctrlKey || e.altKey) return
+    if (hotkeyApi.hasPendingPrefix()) return
 
     const handled = () => {
       e.preventDefault()

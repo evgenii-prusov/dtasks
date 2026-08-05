@@ -269,4 +269,16 @@ describe('task row navigation', () => {
     await waitFor(() => expect(patches).toHaveLength(1))
     expect(patches[0].body).toMatchObject({ assigned_today: true, assigned_week: false })
   })
+
+  it('navigates to Today on g t when a task row is focused in Plan view without scheduling it', async () => {
+    const router = renderApp('/plan')
+    await screen.findByText('Backlog item')
+
+    await userEvent.keyboard('j')
+    expect(activeRowId()).toBe('1')
+
+    await userEvent.keyboard('gt')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+    expect(patches).toHaveLength(0)
+  })
 })
