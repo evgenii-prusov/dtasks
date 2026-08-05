@@ -401,6 +401,24 @@ body {
     outline: 2px solid var(--accent);
     outline-offset: 1px;
   }
+  /* Day/month hint for the hovered heatmap cell (position set inline). */
+  .hcell-hint {
+    position: fixed;
+    z-index: 60;
+    transform: translate(-50%, -100%);
+    margin-top: -7px;
+    padding: 3px 7px;
+    border-radius: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    color: var(--text-2);
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    pointer-events: none;
+  }
 
   .asgn {
     display: inline-flex;

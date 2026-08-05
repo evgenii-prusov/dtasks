@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { formatDayHeading, formatMonthShort, weekdayShortLabels } from './dates'
+import {
+  formatDayHeading,
+  formatDayMonth,
+  formatMonthShort,
+  parseISODate,
+  weekdayShortLabels,
+} from './dates'
 
 describe('formatDayHeading', () => {
   const date = new Date(2026, 6, 4) // Saturday, July 4 2026
@@ -19,6 +25,22 @@ describe('formatMonthShort', () => {
   it('returns capitalized short month names', () => {
     expect(formatMonthShort('en', date)).toBe('Jan')
     expect(formatMonthShort('ru', date)).toMatch(/^Янв/)
+  })
+})
+
+describe('parseISODate', () => {
+  it('parses a key as a local date, not UTC midnight', () => {
+    const d = parseISODate('2026-07-04')
+    expect([d.getFullYear(), d.getMonth(), d.getDate()]).toEqual([2026, 6, 4])
+  })
+})
+
+describe('formatDayMonth', () => {
+  const date = new Date(2026, 6, 4)
+
+  it('returns the day and short month', () => {
+    expect(formatDayMonth('en', date)).toBe('Jul 4')
+    expect(formatDayMonth('ru', date)).toMatch(/^4 июл/)
   })
 })
 
