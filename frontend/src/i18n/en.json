@@ -226,6 +226,7 @@
     "goReview": "Go to Review",
     "goHabits": "Go to Habits",
     "goReport": "Go to Report",
+    "togglePlanTab": "Switch Today / Week tab",
     "newTask": "New task",
     "rowNext": "Next task",
     "rowPrev": "Previous task",

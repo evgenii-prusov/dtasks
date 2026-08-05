@@ -144,6 +144,12 @@ describe('CommandPalette', () => {
     )
     // The ?task= param is consumed, so reloading doesn't re-trigger the jump.
     expect(router.state.location.search).toEqual({})
+
+    // Press t to schedule for Today directly from the focused task row.
+    await userEvent.keyboard('t')
+    await waitFor(() =>
+      expect(screen.getByText('Today')).toBeInTheDocument(),
+    )
   })
 
   it('ranks completed tasks below open ones', async () => {

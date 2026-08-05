@@ -12,6 +12,7 @@ import { TaskRow } from '../components/TaskRow'
 import { QuickAddTask } from '../components/QuickAddTask'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
+import { useTaskNav } from '../lib/taskNav'
 
 const MUST_LIMIT = 2
 
@@ -25,6 +26,7 @@ export function PlanView() {
   const [addingTo, setAddingTo] = useState<number | null>(null)
   const [search, setSearch] = useState('')
   const [focusQuickAdd, setFocusQuickAdd] = useState(false)
+  const nav = useTaskNav()
 
   const mustCount = mustHaveCount(projects)
   const greenTodayCount = projects.reduce(
@@ -53,6 +55,10 @@ export function PlanView() {
     },
     { enabled: query.length > 0 },
   )
+
+  useHotkey(HOTKEYS.togglePlanTab.chords, () => {
+    setTab((tb) => (tb === 'today' ? 'week' : 'today'))
+  })
 
   const searchResults = query
     ? projects.flatMap((p) =>
@@ -105,10 +111,22 @@ export function PlanView() {
             setFocusQuickAdd(false)
           }}
           onKeyDown={(e) => {
-            if (e.key !== 'Escape') return
-            setSearch('')
-            // Release focus so j/k reach the task list again.
-            e.currentTarget.blur()
+            if (e.key === 'ArrowDown' || e.key === 'Enter' || (e.key === 'Tab' && !e.shiftKey)) {
+              if (searchResults.length > 0) {
+                e.preventDefault()
+                nav.focus(searchResults[0].task.id)
+              }
+              return
+            }
+            if (e.key === 'Escape') {
+              e.preventDefault()
+              if (searchResults.length > 0 && document.activeElement === e.currentTarget) {
+                nav.focus(searchResults[0].task.id)
+              } else {
+                setSearch('')
+                e.currentTarget.blur()
+              }
+            }
           }}
           placeholder={t('plan.searchPlaceholder')}
         />

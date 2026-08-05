@@ -323,6 +323,14 @@ body {
     background: var(--green-2);
     color: var(--green);
   }
+  .b-today {
+    background: var(--accent-2);
+    color: var(--accent);
+  }
+  .b-week {
+    background: var(--surface-2);
+    color: var(--text-2);
+  }
 
   /* green task: left edge stripe (leaf glyph rendered next to the title) */
   .task-row.green {

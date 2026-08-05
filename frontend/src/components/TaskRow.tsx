@@ -11,6 +11,7 @@ import type { Complexity, Project, Task } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
 import { useIsActiveRow, useTaskNav } from '../lib/taskNav'
+import { isTypingTarget } from '../lib/hotkeys/keyEvent'
 import { Ic } from './Icon'
 import { useShowUndoToast } from './UndoToast'
 
@@ -176,7 +177,7 @@ export function TaskRow({
    * so the inline edit forms below are immune to it without extra guards.
    */
   const onRowKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.target !== e.currentTarget) return
+    if (isTypingTarget(e.target)) return
     if (e.metaKey || e.ctrlKey || e.altKey) return
 
     const handled = () => {
@@ -499,6 +500,8 @@ export function TaskRow({
             <span className={`badge ${task.complexity === 'high' ? 'b-high' : 'b-low'}`}>
               {task.complexity === 'high' ? t('task.complexityHigh') : t('task.complexityLow')}
             </span>
+            {task.assigned_today && <span className="badge b-today">{t('task.scheduleToday')}</span>}
+            {task.assigned_week && <span className="badge b-week">{t('task.scheduleWeek')}</span>}
             {task.notes && <span className="text-[10px] text-ink-3">· {t('task.noteBadge')}</span>}
           </div>
         </div>

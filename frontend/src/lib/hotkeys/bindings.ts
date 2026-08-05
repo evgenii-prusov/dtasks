@@ -36,6 +36,7 @@ export const HOTKEYS = {
   goReview: { chords: ['g r'], labelKey: 'hotkeys.goReview', group: 'navigation' },
   goHabits: { chords: ['g h'], labelKey: 'hotkeys.goHabits', group: 'navigation' },
   goReport: { chords: ['g o'], labelKey: 'hotkeys.goReport', group: 'navigation' },
+  togglePlanTab: { chords: ['v'], labelKey: 'hotkeys.togglePlanTab', group: 'navigation' },
 
   // ── Tasks ─────────────────────────────────────────────────────
   newTask: { chords: ['n'], labelKey: 'hotkeys.newTask', group: 'tasks' },
