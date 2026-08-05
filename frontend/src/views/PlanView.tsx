@@ -104,7 +104,12 @@ export function PlanView() {
             setSearch(e.target.value)
             setFocusQuickAdd(false)
           }}
-          onKeyDown={(e) => e.key === 'Escape' && setSearch('')}
+          onKeyDown={(e) => {
+            if (e.key !== 'Escape') return
+            setSearch('')
+            // Release focus so j/k reach the task list again.
+            e.currentTarget.blur()
+          }}
           placeholder={t('plan.searchPlaceholder')}
         />
         {search && (

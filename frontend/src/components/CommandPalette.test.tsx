@@ -131,7 +131,7 @@ describe('CommandPalette', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/projects/7'))
   })
 
-  it('deep-links a task jump with the task id', async () => {
+  it('jumps to a task and focuses its row', async () => {
     const { router } = renderApp('/')
     const input = await openPalette()
     await userEvent.type(input, 'rollout')
@@ -139,7 +139,11 @@ describe('CommandPalette', () => {
     await userEvent.keyboard('{Enter}')
 
     await waitFor(() => expect(router.state.location.pathname).toBe('/projects/7'))
-    expect(router.state.location.search).toEqual({ task: 42 })
+    await waitFor(() =>
+      expect(document.activeElement).toHaveAttribute('data-task-row', '42'),
+    )
+    // The ?task= param is consumed, so reloading doesn't re-trigger the jump.
+    expect(router.state.location.search).toEqual({})
   })
 
   it('ranks completed tasks below open ones', async () => {

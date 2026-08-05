@@ -11,6 +11,7 @@ import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
+import { useTaskNav } from '../lib/taskNav'
 
 const MINUTES_PER_PROJECT = 5
 
@@ -31,6 +32,7 @@ export function ReviewView() {
   const [noteVal, setNoteVal] = useState('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
   const newTaskRef = useRef<HTMLInputElement>(null)
+  const nav = useTaskNav()
 
   const p = projects[idx]
 
@@ -52,6 +54,8 @@ export function ReviewView() {
   useEffect(() => {
     setNoteVal(p?.notes ?? '')
     setAddingTask(false)
+    // The previous project's rows are gone; don't leave a stale highlight.
+    nav.setActive(null)
   }, [idx, p?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
