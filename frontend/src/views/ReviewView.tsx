@@ -9,6 +9,8 @@ import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
 import { TaskRow } from '../components/TaskRow'
+import { HOTKEYS } from '../lib/hotkeys/bindings'
+import { useHotkey } from '../lib/hotkeys/useHotkey'
 
 const MINUTES_PER_PROJECT = 5
 
@@ -28,8 +30,19 @@ export function ReviewView() {
   const [addingTask, setAddingTask] = useState(false)
   const [noteVal, setNoteVal] = useState('')
   const intervalRef = useRef<ReturnType<typeof setInterval> | undefined>(undefined)
+  const newTaskRef = useRef<HTMLInputElement>(null)
 
   const p = projects[idx]
+
+  useHotkey(
+    HOTKEYS.newTask.chords,
+    () => {
+      // Mounting the form autofocuses it; refocus when it is already open.
+      setAddingTask(true)
+      newTaskRef.current?.focus()
+    },
+    { enabled: !!p && !done },
+  )
 
   // Initialize the session budget once projects with tasks arrive
   useEffect(() => {
@@ -181,7 +194,11 @@ export function ReviewView() {
                 <span className="text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
                   {t('common.openTasks')} ({openTasks.length})
                 </span>
-                <button className="btn btn-g btn-s" onClick={() => setAddingTask((a) => !a)}>
+                <button
+                  className="btn btn-g btn-s"
+                  onClick={() => setAddingTask((a) => !a)}
+                  title={t('common.newTaskHotkey')}
+                >
                   <Ic n="plus" s={11} /> {t('common.add')}
                 </button>
               </div>
@@ -237,6 +254,7 @@ export function ReviewView() {
                     setAddingTask(false)
                   }}
                   onCancel={() => setAddingTask(false)}
+                  titleRef={newTaskRef}
                 />
               )}
             </div>

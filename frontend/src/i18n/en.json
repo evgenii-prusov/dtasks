@@ -13,6 +13,7 @@
   "common": {
     "add": "Add",
     "addTask": "Add task",
+    "newTaskHotkey": "Add task — press N",
     "cancel": "Cancel",
     "save": "Save",
     "edit": "Edit",

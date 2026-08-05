@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
@@ -13,6 +13,8 @@ import { isDefaultProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
+import { HOTKEYS } from '../lib/hotkeys/bindings'
+import { useHotkey } from '../lib/hotkeys/useHotkey'
 
 export function ProjectView({ project }: { project: Project }) {
   const { t } = useTranslation()
@@ -39,6 +41,13 @@ export function ProjectView({ project }: { project: Project }) {
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(project.name)
   const [showCompleted, setShowCompleted] = useState(true)
+  const newTaskRef = useRef<HTMLInputElement>(null)
+
+  useHotkey(HOTKEYS.newTask.chords, () => {
+    // Mounting the form autofocuses it; refocus when it is already open.
+    setAddingTask(true)
+    newTaskRef.current?.focus()
+  })
 
   useEffect(() => {
     setDesc(project.description)
@@ -96,7 +105,11 @@ export function ProjectView({ project }: { project: Project }) {
           )}
         </div>
         <div className="flex items-center gap-1.5">
-          <button className="btn btn-g btn-s" onClick={() => setAddingTask((t) => !t)}>
+          <button
+            className="btn btn-g btn-s"
+            onClick={() => setAddingTask((t) => !t)}
+            title={t('common.newTaskHotkey')}
+          >
             <Ic n="plus" s={12} /> {t('common.addTask')}
           </button>
           {!isDefault && (
@@ -147,7 +160,11 @@ export function ProjectView({ project }: { project: Project }) {
           <h3>
             {t('common.openTasks')} ({open.length})
           </h3>
-          <button className="btn btn-g btn-s" onClick={() => setAddingTask((a) => !a)}>
+          <button
+            className="btn btn-g btn-s"
+            onClick={() => setAddingTask((a) => !a)}
+            title={t('common.newTaskHotkey')}
+          >
             <Ic n="plus" s={11} /> {t('common.add')}
           </button>
         </div>
@@ -175,6 +192,7 @@ export function ProjectView({ project }: { project: Project }) {
               setAddingTask(false)
             }}
             onCancel={() => setAddingTask(false)}
+            titleRef={newTaskRef}
           />
         )}
         {open.length === 0 && !addingTask && (

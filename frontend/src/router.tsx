@@ -10,6 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { Sidebar } from './components/Sidebar'
 import { UndoToastProvider } from './components/UndoToast'
+import { HotkeyProvider } from './lib/hotkeys/HotkeyProvider'
 import { TodayView } from './views/TodayView'
 import { PlanView } from './views/PlanView'
 import { ReviewView } from './views/ReviewView'
@@ -55,9 +56,11 @@ function Layout() {
 
 function LayoutWithToast() {
   return (
-    <UndoToastProvider>
-      <Layout />
-    </UndoToastProvider>
+    <HotkeyProvider>
+      <UndoToastProvider>
+        <Layout />
+      </UndoToastProvider>
+    </HotkeyProvider>
   )
 }
 

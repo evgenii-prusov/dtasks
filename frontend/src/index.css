@@ -21,6 +21,11 @@
   --green: #3e8e4f;
   --green-2: #e3f3e6;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.07);
+  /* Stacking order for app-wide layers. Sidebar (z-40) and the quick-add
+     autocomplete (z-50) sit below all of these. */
+  --z-overlay-backdrop: 9990;
+  --z-overlay: 9995;
+  --z-toast: 9999;
 }
 [data-theme='dark'] {
   --bg: #18150f;
@@ -360,6 +365,30 @@ body {
     cursor: pointer;
   }
 
+  /* ─── Keyboard focus ──────────────────────────────────────────
+     Declared after .input/.sel so it overrides their `outline: none`.
+     Uses `outline` rather than `box-shadow` because .task-row.green
+     already owns an inset box-shadow and the two would fight. */
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+  .input:focus-visible,
+  .sel:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .task-row:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: -2px;
+  }
+  /* Survives focus being dropped transiently by confirm() or a re-render,
+     so the row you were on stays visible. */
+  .task-row[data-active] {
+    background: var(--surface-2);
+  }
+
   .hgrid-scroll {
     scrollbar-width: none;
   }
@@ -525,7 +554,7 @@ body {
     gap: 12px;
     padding: 10px 12px 10px 16px;
     font-size: 13px;
-    z-index: 9999;
+    z-index: var(--z-toast);
     opacity: 1;
     transition: opacity 0.6s ease;
     max-width: calc(100vw - 48px);
@@ -533,6 +562,11 @@ body {
   }
   .undo-toast.fading {
     opacity: 0;
+  }
+  /* Referenced by `animate-[fadeIn_…]` in QuickAddTask, never defined until now. */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
   }
   @keyframes toast-slide-in {
     from { opacity: 0; transform: translateX(-50%) translateY(8px); }

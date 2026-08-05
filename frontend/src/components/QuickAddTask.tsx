@@ -4,6 +4,8 @@ import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } fro
 import type { Project } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
 import { weekdaysToMask } from '../lib/recurrence'
+import { HOTKEYS } from '../lib/hotkeys/bindings'
+import { useHotkey } from '../lib/hotkeys/useHotkey'
 import { Ic } from './Icon'
 
 interface AutocompleteOption {
@@ -12,7 +14,7 @@ interface AutocompleteOption {
   project?: Project
 }
 
-export function QuickAddTask() {
+export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}) {
   const { t, i18n } = useTranslation()
   const { data: projects = [] } = useProjects()
   const createTask = useCreateTask()
@@ -28,6 +30,18 @@ export function QuickAddTask() {
   const [showAutocomplete, setShowAutocomplete] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useHotkey(HOTKEYS.newTask.chords, () => {
+    inputRef.current?.focus()
+    inputRef.current?.select()
+  })
+
+  // Lets a parent that renders this conditionally (e.g. Plan while searching)
+  // hand focus over as soon as the field appears.
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus()
+  }, [autoFocus])
 
   // Find default projects (named '...')
   const defaultWorkProj = projects.find((p) => p.name === '...' && p.group === 'Work')
@@ -196,12 +210,14 @@ export function QuickAddTask() {
   }
 
   return (
-    <div className="card p-3 mb-6 bg-surface !overflow-visible relative">
+    <div className="card p-3 mb-6 bg-surface !overflow-visible relative" data-hotkeys-off>
       <div className="flex flex-col gap-2">
         <div className="flex gap-2 items-center">
           <div className="relative flex-1" ref={dropdownRef}>
             <input
+              ref={inputRef}
               className="input w-full animate-[fadeIn_0.2s_ease]"
+              title={t('common.newTaskHotkey')}
               value={title}
               onChange={(e) => {
                 setTitle(e.target.value)
@@ -235,7 +251,11 @@ export function QuickAddTask() {
                 if (e.key === 'Enter') handleAdd()
                 if (e.key === 'Escape') {
                   if (showAutocomplete) setShowAutocomplete(false)
-                  else reset()
+                  else {
+                    reset()
+                    // Release focus so the hotkey can re-open the field.
+                    inputRef.current?.blur()
+                  }
                 }
               }}
               placeholder={t('quickAdd.placeholder')}
