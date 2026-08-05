@@ -219,4 +219,20 @@ describe('task row navigation', () => {
     expect(activeRowId()).toBeNull()
     expect(patches).toHaveLength(0)
   })
+
+  it('moves focus from search input to task results on ArrowDown and allows scheduling with t and w', async () => {
+    renderApp('/plan')
+    await screen.findByText('Backlog item')
+
+    const search = screen.getByPlaceholderText('Search tasks…')
+    await userEvent.click(search)
+    await userEvent.type(search, 'Backlog')
+
+    await userEvent.keyboard('{ArrowDown}')
+    expect(activeRowId()).toBe('4')
+
+    await userEvent.keyboard('t')
+    await waitFor(() => expect(patches).toHaveLength(1))
+    expect(patches[0].body).toMatchObject({ assigned_today: true, assigned_week: false })
+  })
 })

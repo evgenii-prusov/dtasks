@@ -48,13 +48,15 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     return match ? Number(match[1]) : null
   }, [pathname])
 
+  const itemRanRef = useRef(false)
+
   useEffect(() => setActiveIndex(0), [query])
 
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null
     inputRef.current?.focus()
     return () => {
-      if (previous && document.contains(previous)) previous.focus()
+      if (!itemRanRef.current && previous && document.contains(previous)) previous.focus()
     }
   }, [])
 
@@ -85,6 +87,7 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   }
 
   const run = (item: CommandItem) => {
+    itemRanRef.current = true
     switch (item.target.type) {
       case 'page':
         navigate({ to: item.target.to })

@@ -99,3 +99,18 @@ describe('shortcuts help', () => {
     expect(router.state.location.pathname).toBe('/')
   })
 })
+
+describe('Plan subtab toggle', () => {
+  it('toggles between Today and Week subtabs on v key', async () => {
+    const router = renderApp('/plan')
+    await waitFor(() => expect(router.state.location.pathname).toBe('/plan'))
+
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('btn-p')
+
+    await userEvent.keyboard('v')
+    expect(screen.getByRole('button', { name: 'This week' })).toHaveClass('btn-p')
+
+    await userEvent.keyboard('v')
+    expect(screen.getByRole('button', { name: 'Today' })).toHaveClass('btn-p')
+  })
+})
