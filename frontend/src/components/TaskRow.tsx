@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import {
-  useDeleteRecurrence,
-  useDeleteTask,
-  useReorderTask,
-  useUpdateRecurrence,
-  useUpdateTask,
-} from '../api/hooks'
+import { mustHaveCount } from '../api/hooks'
+import { useDeleteRecurrence } from '../api/hooks'
+import { useDeleteTask } from '../api/hooks'
+import { useProjects } from '../api/hooks'
+import { useReorderTask } from '../api/hooks'
+import { useUpdateRecurrence } from '../api/hooks'
+import { useUpdateTask } from '../api/hooks'
 import type { Complexity, Project, Task } from '../api/types'
 import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
@@ -172,8 +172,27 @@ export function TaskRow({
     })
   }
 
+  const { data: projects = [] } = useProjects()
+  const mustCount = mustHaveCount(projects)
+
   const toggleGreen = () => {
     updateTask.mutate({ id: task.id, patch: { is_green: !task.is_green } })
+  }
+
+  const toggleMust = () => {
+    const isMustToday = task.must_have && task.assigned_today
+    if (isMustToday) {
+      updateTask.mutate({ id: task.id, patch: { must_have: false } })
+    } else {
+      if (mustCount >= 2) {
+        alert(t('plan.mustLimit', { count: 2 }))
+        return
+      }
+      updateTask.mutate({
+        id: task.id,
+        patch: { must_have: true, assigned_today: true, assigned_week: false },
+      })
+    }
   }
 
   /**
@@ -223,6 +242,10 @@ export function TaskRow({
       case 'w':
         handled()
         schedule('week')
+        return
+      case 'm':
+        handled()
+        toggleMust()
         return
       case 'l':
         handled()
