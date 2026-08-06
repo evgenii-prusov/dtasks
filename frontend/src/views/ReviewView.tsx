@@ -53,14 +53,25 @@ export function ReviewView() {
     { enabled: !!p && !done, name: 'newTask' },
   )
 
-  // Mirrors the "Next →" button, including stopping at the last project rather
-  // than wrapping: the walk through the projects is meant to end.
+  const finishReview = () => {
+    track('review.finish', {
+      reached_index: idxRef.current,
+      project_count: projectCountRef.current,
+    })
+    setRunning(false)
+    setDone(true)
+  }
+
   useHotkey(
     HOTKEYS.reviewNextProject.chords,
     () => {
-      setIdx((i) => i + 1)
+      if (idx < projects.length - 1) {
+        setIdx((i) => i + 1)
+      } else {
+        finishReview()
+      }
     },
-    { enabled: idx < projects.length - 1 && !done, name: 'reviewNextProject' },
+    { enabled: !done, name: 'reviewNextProject' },
   )
 
   // Initialize the session budget once projects with tasks arrive
@@ -371,14 +382,23 @@ export function ReviewView() {
             >
               {t('review.prev')}
             </button>
-            <button
-              className="btn btn-p btn-s w-full"
-              disabled={idx === projects.length - 1}
-              onClick={() => setIdx((i) => i + 1)}
-              title={t('review.nextHotkey')}
-            >
-              {t('review.next')}
-            </button>
+            {idx < projects.length - 1 ? (
+              <button
+                className="btn btn-p btn-s w-full"
+                onClick={() => setIdx((i) => i + 1)}
+                title={t('review.nextHotkey')}
+              >
+                {t('review.next')}
+              </button>
+            ) : (
+              <button
+                className="btn btn-p btn-s w-full"
+                onClick={finishReview}
+                title={t('review.finishHotkey')}
+              >
+                {t('review.finish')}
+              </button>
+            )}
           </div>
           <div className="mt-3.5 text-center text-[10px] leading-normal text-ink-3">
             {t('review.budgetLine1')}
