@@ -99,26 +99,32 @@ export function TaskNavProvider({ children }: { children: ReactNode }) {
       nodes.current.delete(taskId)
       if (activeId.current !== taskId) return
 
-      // Prefer the next row, fall back to the previous one.
-      const order = lastOrder.current
-      const from = order.indexOf(taskId)
-      let next: number | null = null
-      for (let i = from + 1; i < order.length && next === null; i++) {
-        if (nodes.current.has(order[i])) next = order[i]
-      }
-      for (let i = from - 1; i >= 0 && next === null; i--) {
-        if (nodes.current.has(order[i])) next = order[i]
-      }
+      // A row that swaps its element rather than leaving — opening the inline
+      // editor renders a different div — detaches and re-attaches this ref
+      // within a single commit. Waiting a microtask lets that re-register land
+      // first, so only a row that is really gone hands off to a neighbour.
+      // Without the wait, opening the editor moved both the highlight and the
+      // focus to the next row, and the caret never stayed in the title.
+      queueMicrotask(() => {
+        if (nodes.current.has(taskId) || activeId.current !== taskId) return
 
-      setActive(next)
-      // Only chase focus if this row actually had it. Without that check,
-      // typing in Plan's search box — which unmounts every row — would yank
-      // the caret out of the input on the first keystroke.
-      if (next !== null && (hadFocus || wanted)) {
-        queueMicrotask(() => {
-          nodes.current.get(next)?.focus()
-        })
-      }
+        // Prefer the next row, fall back to the previous one.
+        const order = lastOrder.current
+        const from = order.indexOf(taskId)
+        let next: number | null = null
+        for (let i = from + 1; i < order.length && next === null; i++) {
+          if (nodes.current.has(order[i])) next = order[i]
+        }
+        for (let i = from - 1; i >= 0 && next === null; i--) {
+          if (nodes.current.has(order[i])) next = order[i]
+        }
+
+        setActive(next)
+        // Only chase focus if this row actually had it. Without that check,
+        // typing in Plan's search box — which unmounts every row — would yank
+        // the caret out of the input on the first keystroke.
+        if (next !== null && (hadFocus || wanted)) nodes.current.get(next)?.focus()
+      })
     },
     [setActive],
   )

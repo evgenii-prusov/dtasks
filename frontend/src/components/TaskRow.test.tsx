@@ -4,6 +4,8 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TaskRow } from './TaskRow'
+import { TaskNavProvider } from '../lib/taskNav'
+import { HotkeyProvider } from '../lib/hotkeys/HotkeyProvider'
 import type { Task } from '../api/types'
 
 vi.mock('react-i18next', () => ({
@@ -35,6 +37,31 @@ function renderRow() {
   )
   render(<TaskRow task={task} editable checkable />, { wrapper })
   return document.querySelector('[data-task-row]') as HTMLElement
+}
+
+const sibling: Task = { ...task, id: 2, title: 'Next task', position: 1 }
+
+/**
+ * Two rows under the real providers, which is what it takes to exercise the
+ * nav registry: `j`/`k` need the hotkey layer, and the fall-back-to-a-neighbour
+ * path needs a neighbour to fall back to.
+ */
+function renderRows(tasks: Task[] = [task, sibling]) {
+  const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+  qc.setQueryData(['projects'], [])
+  const tree = (list: Task[]) => (
+    <QueryClientProvider client={qc}>
+      <HotkeyProvider>
+        <TaskNavProvider>
+          {list.map((t) => (
+            <TaskRow key={t.id} task={t} editable checkable />
+          ))}
+        </TaskNavProvider>
+      </HotkeyProvider>
+    </QueryClientProvider>
+  )
+  const { rerender } = render(tree(tasks))
+  return { show: (list: Task[]) => rerender(tree(list)) }
 }
 
 /** Opens the inline editor the way the keyboard user does: focus row, Enter. */
@@ -115,5 +142,45 @@ describe('TaskRow inline editing', () => {
 
     expect(globalThis.fetch).not.toHaveBeenCalled()
     expect(screen.getByLabelText('common.notes')).toBeInTheDocument()
+  })
+
+  // The editor renders a different element than the read-only row, so the nav
+  // registry sees the row's ref detach. Registered under a real provider and
+  // with a neighbour to fall back to, that used to read as a deleted row: the
+  // active state and the focus both jumped to the next row, leaving the open
+  // editor untypable. A lone row hid it — there was no neighbour to move to.
+  it('keeps focus in the title when a neighbouring row could take it', async () => {
+    const user = userEvent.setup()
+    renderRows()
+
+    // Reached with `j`, not a bare focus() — walking the rows is what records
+    // the order the removal path later falls back to.
+    await user.keyboard('j')
+    expect(document.querySelector('[data-task-row="1"]')).toHaveAttribute('data-active')
+
+    await user.keyboard('{Enter}')
+
+    const title = screen.getByLabelText('common.title') as HTMLInputElement
+    expect(document.activeElement).toBe(title)
+
+    // Typing has to reach the field, not the row underneath it.
+    await user.keyboard('Renamed')
+    expect(title.value).toBe('Renamed')
+  })
+
+  // The other half of the same code path: a row that really does leave — the
+  // task was completed or deleted — still has to pass focus to its neighbour.
+  it('moves focus to the next row when the active row is removed', async () => {
+    const user = userEvent.setup()
+    const { show } = renderRows()
+
+    await user.keyboard('j')
+    expect(document.querySelector('[data-task-row="1"]')).toHaveAttribute('data-active')
+
+    show([sibling])
+
+    await waitFor(() =>
+      expect(document.activeElement).toBe(document.querySelector('[data-task-row="2"]')),
+    )
   })
 })

@@ -407,6 +407,7 @@ export function TaskRow({
   if (editingSeries && rule) {
     return (
       <div
+        ref={setRowRef}
         className={`task-row items-start ${task.is_green ? 'green' : ''}`}
         data-hotkeys-off
         tabIndex={-1}
@@ -489,6 +490,10 @@ export function TaskRow({
   if (editable && editing) {
     return (
       <div
+        // Registered like the read-only row: an editor that dropped out of the
+        // nav registry would read as a deleted row and hand the active state,
+        // and the focus, to a neighbour.
+        ref={setRowRef}
         className={`task-row items-start ${task.is_green ? 'green' : ''}`}
         data-hotkeys-off
         tabIndex={-1}
