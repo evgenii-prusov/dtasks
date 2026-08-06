@@ -59,3 +59,32 @@ test('a task is renamed and given notes without leaving the keyboard', async ({ 
   await expect(page.getByLabel('Notes')).toBeFocused()
   await expect(page.getByLabel('Notes')).toHaveValue('Body text')
 })
+
+// The test above works inside a project holding a single task, which is
+// exactly the case that can't catch this: the editor swaps the row's element,
+// and with a neighbour in the list the nav registry read that as a deleted row
+// and moved the focus on to it, so the open editor took no typing at all.
+test('Enter keeps the caret in the title when the list has other rows', async ({ page }) => {
+  await signup(page)
+
+  // Plan lists every open task from the seeded account, so the row has
+  // neighbours above and below it.
+  await page.keyboard.press('g')
+  await page.keyboard.press('p')
+  await expect(page.locator('.task-row').first()).toBeVisible()
+
+  await page.keyboard.press('j')
+  await page.keyboard.press('j')
+  const target = await page.locator('.task-row[data-active]').textContent()
+
+  await page.keyboard.press('Enter')
+  const title = page.getByLabel('Title')
+  await expect(title).toBeFocused()
+
+  // Opened on the row that was actually active, with its text selected.
+  const original = await title.inputValue()
+  expect(target).toContain(original)
+
+  await page.keyboard.type('Typed into the editor')
+  await expect(title).toHaveValue('Typed into the editor')
+})
