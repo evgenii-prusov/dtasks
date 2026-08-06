@@ -74,11 +74,24 @@ describe('ReviewView next-project hotkey', () => {
     expect(currentProject()).toContain('Gamma')
   })
 
-  it('stops at the last project instead of wrapping', async () => {
+  it('finishes the review session on ArrowRight when on the last project', async () => {
     renderView()
 
-    await userEvent.keyboard('{ArrowRight}{ArrowRight}{ArrowRight}')
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
     expect(currentProject()).toContain('Gamma')
+
+    await userEvent.keyboard('{ArrowRight}')
+    expect(screen.getByText('Session complete!')).toBeInTheDocument()
+  })
+
+  it('renders Finish button on last project and completes session on click', async () => {
+    renderView()
+
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}')
+    expect(screen.getByRole('button', { name: /Finish/i })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Finish/i }))
+    expect(screen.getByText('Session complete!')).toBeInTheDocument()
   })
 
   it('does not advance while a text field has focus', async () => {
