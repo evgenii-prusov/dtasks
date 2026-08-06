@@ -73,6 +73,36 @@ test('a task can be created, scheduled and completed without the mouse', async (
   await expect(page.locator('.undo-toast')).toBeVisible()
 })
 
+test('# files a task under a default section without the Work/Personal prompt', async ({
+  page,
+}) => {
+  await signup(page)
+
+  await page.keyboard.press('n')
+  const quickAdd = page.getByPlaceholder(/Quick add task/)
+  await quickAdd.fill('Daily standup #')
+
+  // Both defaults lead the dropdown, so Work is one Enter away.
+  await expect(page.getByRole('button', { name: /Work \(Default\)/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Personal \(Default\)/ })).toBeVisible()
+  await page.keyboard.press('Enter')
+
+  await expect(page.getByText('Is this for Work or Personal?')).toHaveCount(0)
+
+  // Typing towards Personal narrows to that one option.
+  await quickAdd.fill('Book dentist #per')
+  await expect(page.getByRole('button', { name: /Personal \(Default\)/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Work \(Default\)/ })).toHaveCount(0)
+  await page.keyboard.press('Enter')
+
+  // Both landed in their default project, which Plan lists under its group.
+  await page.keyboard.press('Escape')
+  await page.keyboard.press('g')
+  await page.keyboard.press('p')
+  await expect(page.getByText('Daily standup')).toBeVisible()
+  await expect(page.getByText('Book dentist')).toBeVisible()
+})
+
 test('j and k walk the task list', async ({ page }) => {
   await signup(page)
 
