@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } from '../api/hooks'
-import type { Project } from '../api/types'
+import { isDefaultProject, type Project } from '../api/types'
 import { track } from '../lib/analytics'
 import { weekdayShortLabels } from '../lib/dates'
 import { weekdaysToMask } from '../lib/recurrence'
@@ -13,7 +13,10 @@ import { Ic } from './Icon'
 
 interface AutocompleteOption {
   isNew: boolean
+  /** What the option is called: a project name, a new tag, or a default label. */
   name: string
+  /** True for the two catch-all "..." projects, which get a friendlier label. */
+  isDefault?: boolean
   project?: Project
 }
 
@@ -61,10 +64,23 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   }, [pendingTitle])
 
   // Find default projects (named '...')
-  const defaultWorkProj = projects.find((p) => p.name === '...' && p.group === 'Work')
-  const defaultPersonalProj = projects.find((p) => p.name === '...' && p.group === 'Personal')
+  const defaultWorkProj = projects.find((p) => isDefaultProject(p) && p.group === 'Work')
+  const defaultPersonalProj = projects.find((p) => isDefaultProject(p) && p.group === 'Personal')
 
-  const userProjects = projects.filter((p) => p.name !== '...')
+  const userProjects = projects.filter((p) => !isDefaultProject(p))
+
+  // The two catch-all projects, offered by the #-menu under a readable label
+  // instead of their reserved "..." name. These are the everyday destinations,
+  // so they lead the list -- "#" then Enter files under Work.
+  const defaultChoices = [
+    { project: defaultWorkProj, group: 'Work', label: t('quickAdd.workDefault') },
+    { project: defaultPersonalProj, group: 'Personal', label: t('quickAdd.personalDefault') },
+  ].filter((c): c is typeof c & { project: Project } => c.project !== undefined)
+
+  const defaultAliases = defaultChoices.map((c) => ({
+    project: c.project,
+    aliases: [c.group, c.label],
+  }))
 
   // Detect #tag query in title (at current end or before whitespace)
   const hashMatch = title.match(/(?:^|\s)#([^\s#]*)$/)
@@ -74,6 +90,16 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const autocompleteOptions: AutocompleteOption[] = []
   if (tagQuery !== null) {
     const qLower = tagQuery.toLowerCase()
+    // Both the English group name and the translated label are searchable, so
+    // "#wo" and "#Рабо" each find the Work default.
+    defaultChoices
+      .filter(
+        (c) => c.group.toLowerCase().includes(qLower) || c.label.toLowerCase().includes(qLower),
+      )
+      .forEach((c) => {
+        autocompleteOptions.push({ isNew: false, isDefault: true, name: c.label, project: c.project })
+      })
+
     const matching = userProjects.filter((p) => p.name.toLowerCase().includes(qLower))
     matching.forEach((p) => {
       autocompleteOptions.push({ isNew: false, name: p.name, project: p })
@@ -83,6 +109,11 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     if (tagQuery.trim().length > 0 && !hasExactMatch) {
       autocompleteOptions.push({ isNew: true, name: tagQuery.trim() })
     }
+  }
+
+  const projectLabel = (p: Project) => {
+    if (!isDefaultProject(p)) return `#${p.name}`
+    return p.group === 'Work' ? t('quickAdd.workDefault') : t('quickAdd.personalDefault')
   }
 
   useEffect(() => {
@@ -115,7 +146,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   }
 
   const selectOption = (opt: AutocompleteOption) => {
-    track('quickadd.autocomplete_select', { is_new: opt.isNew })
+    track('quickadd.autocomplete_select', { is_new: opt.isNew, is_default: opt.isDefault === true })
     if (opt.isNew) {
       setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, ` #${opt.name}`).trimStart())
     } else if (opt.project) {
@@ -138,7 +169,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
       cleanTitle = rawTitle.replace(/\s*#[^\s#]*$/, '').trim() || rawTitle
     } else {
       // No pre-selected project — find or create one from a #tag in the title.
-      const parsed = parseTaskInput(rawTitle, userProjects)
+      const parsed = parseTaskInput(rawTitle, userProjects, defaultAliases)
       cleanTitle = parsed.cleanTitle
       targetProjectId = parsed.projectId
 
@@ -299,6 +330,12 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
                         <Ic n="plus" s={12} />
                         <span>{t('quickAdd.createProject', { name: opt.name })}</span>
                       </>
+                    ) : opt.isDefault ? (
+                      <>
+                        <Ic n="folder" s={12} />
+                        <span className="flex-1">{opt.name}</span>
+                        <span className="text-[10px] text-ink-3 uppercase">{opt.project!.group}</span>
+                      </>
                     ) : (
                       <>
                         <span className="font-semibold text-ink-3">#</span>
@@ -336,7 +373,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
           return proj ? (
             <div className="flex items-center gap-1.5 text-xs text-ink-2 animate-[fadeIn_0.15s_ease]">
               <span className="text-ink-3">{t('quickAdd.projectLabel')}:</span>
-              <span className="font-medium text-accent">#{proj.name}</span>
+              <span className="font-medium text-accent">{projectLabel(proj)}</span>
               <button
                 type="button"
                 className="text-ink-3 hover:text-ink ml-0.5"

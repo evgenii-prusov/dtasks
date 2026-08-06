@@ -105,7 +105,17 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
     const title = query.trim()
     if (!title) return
     const userProjects = projects.filter((p) => !isDefaultProject(p))
-    const parsed = parseTaskInput(title, userProjects)
+    // Same "#Work"/"#Personal" shorthand the quick-add dropdown offers.
+    const defaultAliases = projects
+      .filter(isDefaultProject)
+      .map((project) => ({
+        project,
+        aliases: [
+          project.group,
+          t(project.group === 'Work' ? 'quickAdd.workDefault' : 'quickAdd.personalDefault'),
+        ],
+      }))
+    const parsed = parseTaskInput(title, userProjects, defaultAliases)
 
     // Unambiguous: an explicit #tag, or we are already inside a project.
     const projectId = parsed.projectId ?? currentProjectId

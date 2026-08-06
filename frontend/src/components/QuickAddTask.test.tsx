@@ -200,13 +200,14 @@ describe('QuickAddTask', () => {
     renderQuickAddTask()
 
     const input = screen.getByPlaceholderText('Quick add task…')
-    // Type # with no letters — autocomplete shows all user projects
+    // Type # with no letters — autocomplete shows the defaults, then user projects
     await userEvent.type(input, 'Buy groceries #')
 
     expect(screen.getByRole('button', { name: /Real Work Project/i })).toBeInTheDocument()
 
-    // Press Enter — should select the highlighted project and submit, NOT show the Work/Personal prompt
-    await userEvent.keyboard('{Enter}')
+    // Arrow past the two defaults to the user project, then Enter: should select
+    // it AND submit, NOT show the Work/Personal prompt
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
 
     expect(screen.queryByText('Is this for Work or Personal?')).not.toBeInTheDocument()
 
@@ -218,6 +219,84 @@ describe('QuickAddTask', () => {
           body: JSON.stringify({ title: 'Buy groceries' }),
         }),
       ),
+    )
+  })
+
+  it('offers the Work and Personal defaults at the top of the # dropdown', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Buy groceries #')
+
+    const options = screen
+      .getAllByRole('button')
+      .map((b) => b.textContent ?? '')
+      .filter((text) => /\(Default\)|Real Work Project/.test(text))
+    expect(options).toEqual([
+      expect.stringContaining('Work (Default)'),
+      expect.stringContaining('Personal (Default)'),
+      expect.stringContaining('Real Work Project'),
+    ])
+  })
+
+  it('files under the Work default when # is followed by Enter', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Buy groceries #')
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.queryByText('Is this for Work or Personal?')).not.toBeInTheDocument()
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/1/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Buy groceries' }),
+        }),
+      ),
+    )
+  })
+
+  it('filters the defaults by name, so #pers picks the Personal default', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Call mum #pers')
+
+    expect(screen.getByRole('button', { name: /Personal \(Default\)/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Work \(Default\)/i })).not.toBeInTheDocument()
+
+    await userEvent.keyboard('{Enter}')
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/2/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Call mum' }),
+        }),
+      ),
+    )
+  })
+
+  it('treats a typed-out #Work as the Work default rather than a new project', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Write report #Work')
+    // Submit without touching the dropdown
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/1/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Write report' }),
+        }),
+      ),
+    )
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      '/api/projects',
+      expect.objectContaining({ method: 'POST' }),
     )
   })
 
