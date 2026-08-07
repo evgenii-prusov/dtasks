@@ -32,6 +32,14 @@ export function TodayView() {
       else if (t.assigned_week) week.push({ t, p })
     }
   }
+  // Green tasks first within each section; Array.prototype.sort is stable, so
+  // everything else keeps the order the projects gave us.
+  const greenFirst = (rows: { t: Task; p: Project }[]) =>
+    [...rows].sort((a, b) => Number(b.t.is_green) - Number(a.t.is_green))
+  const mustRows = greenFirst(must)
+  const todayRows = greenFirst(today)
+  const weekRows = greenFirst(week)
+
   const doneCount = doneToday.length
 
   const dateStr = formatDayHeading(i18n.language)
@@ -90,7 +98,7 @@ export function TodayView() {
               {t('today.startHere')}
             </span>
           </div>
-          {must.map(({ t, p }) => (
+          {mustRows.map(({ t, p }) => (
             <TaskRow
               key={t.id}
               task={t}
@@ -111,7 +119,7 @@ export function TodayView() {
               <Ic n="today" s={13} /> {t('today.sectionToday')} ({today.length})
             </h3>
           </div>
-          {today.map(({ t, p }) => (
+          {todayRows.map(({ t, p }) => (
             <TaskRow
               key={t.id}
               task={t}
@@ -132,7 +140,7 @@ export function TodayView() {
               <Ic n="plan" s={13} /> {t('today.sectionWeek')} ({week.length})
             </h3>
           </div>
-          {week.map(({ t, p }) => (
+          {weekRows.map(({ t, p }) => (
             <TaskRow
               key={t.id}
               task={t}
