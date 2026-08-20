@@ -57,6 +57,7 @@ export function useCommandItems(query: string): { groups: CommandGroup[]; flat: 
       { id: 'page:/review', kind: 'page', label: t('nav.review'), chord: HOTKEYS.goReview.chords[0], target: { type: 'page', to: '/review' } },
       { id: 'page:/habits', kind: 'page', label: t('nav.habits'), chord: HOTKEYS.goHabits.chords[0], target: { type: 'page', to: '/habits' } },
       { id: 'page:/report', kind: 'page', label: t('nav.report'), chord: HOTKEYS.goReport.chords[0], target: { type: 'page', to: '/report' } },
+      { id: 'page:/worklog', kind: 'page', label: t('nav.worklog'), chord: HOTKEYS.goWorkLog.chords[0], target: { type: 'page', to: '/worklog' } },
     ]
 
     const projectItems: CommandItem[] = projects.map((p: Project) => ({

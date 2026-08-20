@@ -22,6 +22,7 @@ import { ReviewView } from './views/ReviewView'
 import { HabitsView } from './views/HabitsView'
 import { ProjectView } from './views/ProjectView'
 import { ReportView } from './views/ReportView'
+import { WorkLogView } from './views/WorkLogView'
 import { WelcomeView } from './views/WelcomeView'
 import { currentUserQueryOptions, useProjects } from './api/hooks'
 import { createQueryClient } from './queryClient'
@@ -143,6 +144,12 @@ const reportRoute = createRoute({
   component: ReportView,
 })
 
+const worklogRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/worklog',
+  component: WorkLogView,
+})
+
 function ProjectRouteComponent() {
   const { projectId } = projectRoute.useParams()
   const { task: jumpToTaskId } = projectRoute.useSearch()
@@ -180,7 +187,15 @@ const projectRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   welcomeRoute,
-  authedRoute.addChildren([todayRoute, planRoute, reviewRoute, habitsRoute, reportRoute, projectRoute]),
+  authedRoute.addChildren([
+    todayRoute,
+    planRoute,
+    reviewRoute,
+    habitsRoute,
+    reportRoute,
+    worklogRoute,
+    projectRoute,
+  ]),
 ])
 
 export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
@@ -205,6 +220,7 @@ const SURFACE_BY_ROUTE: Record<string, string> = {
   '/review': 'review',
   '/habits': 'habits',
   '/report': 'report',
+  '/worklog': 'worklog',
 }
 
 function surfaceForPath(path: string): string | null {

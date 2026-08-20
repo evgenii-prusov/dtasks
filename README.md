@@ -15,6 +15,12 @@ Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats
 - **Habits** — GitHub-style contribution grid (16 weeks) with three states per
   day (none / minimal / complete), streak and total counters, click any past
   cell to cycle its state.
+- **Work Log** — a daily engineering record aimed at review season rather than
+  at execution: what you did, sorted into shipped / operational / glue &
+  mentorship / learning, with the evidence attached (PR and RFC links, the
+  impact, the problem context) and a two-tap energy/friction signal for the day.
+  Weekly and monthly rollups are computed server-side from that history. A task
+  finished today can be promoted into an entry in one click.
 
 Plus per-project pages, a light/dark theme toggle, and an English/Russian
 language toggle (persisted, defaulting to the browser language).
@@ -80,6 +86,13 @@ see [`docs/deploy.md`](docs/deploy.md).
 | GET    | `/api/habits`                 | All habits with their day logs             |
 | PUT    | `/api/habits/{id}/log`        | Set a day's state (0 none / 1 minimal / 2 complete) |
 | DELETE | `/api/habits/{id}`            | Delete a habit and its logs                |
+| GET    | `/api/worklog/entries`        | Work log entries in a date range (`?start=&end=`) |
+| POST   | `/api/worklog/entries`        | Create an entry, with its evidence links   |
+| PATCH  | `/api/worklog/entries/{id}`   | Update an entry (`links`, when sent, replaces them wholesale) |
+| DELETE | `/api/worklog/entries/{id}`   | Delete an entry and its links              |
+| GET    | `/api/worklog/days`           | Day signals in a date range                |
+| PUT    | `/api/worklog/day`            | Upsert a day's energy / friction / note (0 = unrated, 1–5) |
+| GET    | `/api/worklog/rollup`         | Weekly or monthly aggregation (`?period=week\|month&start=&end=`) |
 | POST   | `/api/auth/signup`            | Email + password + invite code signup      |
 | POST   | `/api/auth/login`             | Email + password login                     |
 | POST   | `/api/auth/logout`            | Clear the session                          |

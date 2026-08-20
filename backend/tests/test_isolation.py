@@ -185,3 +185,78 @@ async def test_project_positions_are_per_user(make_client: MakeClient) -> None:
 
     assert a_new.json()["position"] == 6
     assert b_new.json()["position"] == 6
+
+
+async def _create_entry(client, day: str = "2026-08-19", **kw) -> dict:
+    resp = await client.post(
+        "/api/worklog/entries",
+        json={"day": day, "category": "shipped", "title": "A's private work", **kw},
+    )
+    assert resp.status_code == 201, resp.text
+    return resp.json()
+
+
+async def test_cross_tenant_worklog_entry_404(make_client: MakeClient) -> None:
+    a = await make_client("a@example.com")
+    b = await make_client("b@example.com")
+
+    a_entry_id = (await _create_entry(a))["id"]
+
+    patch_missing = await b.patch("/api/worklog/entries/999999", json={"title": "hacked"})
+    patch_real = await b.patch(f"/api/worklog/entries/{a_entry_id}", json={"title": "hacked"})
+    assert patch_real.status_code == 404
+    assert patch_real.json() == patch_missing.json()
+
+    delete_missing = await b.delete("/api/worklog/entries/999999")
+    delete_real = await b.delete(f"/api/worklog/entries/{a_entry_id}")
+    assert delete_real.status_code == 404
+    assert delete_real.json() == delete_missing.json()
+
+    # A's entry is untouched by either attempt.
+    a_entries = (await a.get("/api/worklog/entries?start=2026-08-01&end=2026-08-31")).json()
+    assert [e["title"] for e in a_entries] == ["A's private work"]
+
+
+async def test_entry_cannot_borrow_another_users_task(make_client: MakeClient) -> None:
+    """`tasks` has no user_id of its own -- it scopes through Project.user_id --
+    so an unchecked task_id would let B attach A's task to B's entry."""
+    a = await make_client("a@example.com")
+    b = await make_client("b@example.com")
+
+    a_projects = (await a.get("/api/projects")).json()
+    a_task_id = next(p for p in a_projects if p["tasks"])["tasks"][0]["id"]
+
+    post_missing = await b.post(
+        "/api/worklog/entries",
+        json={"day": "2026-08-19", "category": "shipped", "title": "x", "task_id": 999999},
+    )
+    post_real = await b.post(
+        "/api/worklog/entries",
+        json={"day": "2026-08-19", "category": "shipped", "title": "x", "task_id": a_task_id},
+    )
+    assert post_real.status_code == 404
+    assert post_real.json() == post_missing.json()
+
+    # And the same on the patch path.
+    b_entry_id = (await _create_entry(b))["id"]
+    patch_real = await b.patch(f"/api/worklog/entries/{b_entry_id}", json={"task_id": a_task_id})
+    assert patch_real.status_code == 404
+
+
+async def test_worklog_lists_and_rollups_are_scoped(make_client: MakeClient) -> None:
+    a = await make_client("a@example.com")
+    b = await make_client("b@example.com")
+
+    await _create_entry(a, day="2026-08-19")
+    await a.put("/api/worklog/day", json={"day": "2026-08-19", "energy": 5, "friction": 1})
+
+    assert (await b.get("/api/worklog/entries?start=2026-08-01&end=2026-08-31")).json() == []
+    assert (await b.get("/api/worklog/days?start=2026-08-01&end=2026-08-31")).json() == []
+
+    b_rollup = (await b.get("/api/worklog/rollup?period=week&start=2026-08-17&end=2026-08-23")).json()
+    assert b_rollup["buckets"][0]["total"] == 0
+    assert b_rollup["buckets"][0]["entries"] == []
+    assert b_rollup["buckets"][0]["avg_energy"] is None
+
+    a_rollup = (await a.get("/api/worklog/rollup?period=week&start=2026-08-17&end=2026-08-23")).json()
+    assert a_rollup["buckets"][0]["total"] == 1

@@ -6,6 +6,7 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 
 import pytest
 from litestar.testing import AsyncTestClient
+from sqlalchemy import event
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 # Auth config reads these at import time, so they must be set before the app import.
@@ -46,6 +47,10 @@ async def db(monkeypatch: pytest.MonkeyPatch, tmp_path) -> AsyncIterator[async_s
     so patching them here makes the whole HTTP stack use the temp DB.
     """
     engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'test.sqlite'}")
+    # Same per-connection pragmas the real engine gets. Without foreign_keys=ON,
+    # SQLite silently ignores every ON DELETE clause, so DB-level CASCADE/SET NULL
+    # would appear to work in tests and only differ in production.
+    event.listens_for(engine.sync_engine, "connect")(app_db.set_sqlite_pragmas)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     monkeypatch.setattr(app_db, "engine", engine)
     monkeypatch.setattr(app_db, "session_factory", session_factory)

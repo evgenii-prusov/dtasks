@@ -2,6 +2,7 @@ import { currentSurface } from '../lib/analytics'
 import { currentModality } from '../lib/inputModality'
 import type {
   AuthProviders,
+  DateRange,
   Habit,
   HabitCreate,
   LoginPayload,
@@ -11,11 +12,17 @@ import type {
   RecurrenceRule,
   RecurrenceRuleCreate,
   RecurrenceRulePatch,
+  RollupPeriod,
   SignupPayload,
   Task,
   TaskCreate,
   TaskPatch,
   User,
+  WorkLogDay,
+  WorkLogEntry,
+  WorkLogEntryCreate,
+  WorkLogEntryPatch,
+  WorkLogRollup,
 } from './types'
 
 export class ApiError extends Error {
@@ -117,4 +124,25 @@ export const api = {
       body: JSON.stringify({ day, state }),
     }),
   deleteHabit: (id: number) => request<void>(`/api/habits/${id}`, { method: 'DELETE' }),
+  listWorkLogEntries: ({ start, end }: DateRange) =>
+    request<WorkLogEntry[]>(`/api/worklog/entries?start=${start}&end=${end}`),
+  createWorkLogEntry: (entry: WorkLogEntryCreate) =>
+    request<WorkLogEntry>('/api/worklog/entries', { method: 'POST', body: JSON.stringify(entry) }),
+  updateWorkLogEntry: (id: number, patch: WorkLogEntryPatch) =>
+    request<WorkLogEntry>(`/api/worklog/entries/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(patch),
+    }),
+  deleteWorkLogEntry: (id: number) =>
+    request<void>(`/api/worklog/entries/${id}`, { method: 'DELETE' }),
+  listWorkLogDays: ({ start, end }: DateRange) =>
+    request<WorkLogDay[]>(`/api/worklog/days?start=${start}&end=${end}`),
+  setWorkLogDay: (day: WorkLogDay) =>
+    request<WorkLogDay>('/api/worklog/day', { method: 'PUT', body: JSON.stringify(day) }),
+  worklogRollup: (period: RollupPeriod, range?: DateRange) =>
+    request<WorkLogRollup>(
+      range
+        ? `/api/worklog/rollup?period=${period}&start=${range.start}&end=${range.end}`
+        : `/api/worklog/rollup?period=${period}`,
+    ),
 }

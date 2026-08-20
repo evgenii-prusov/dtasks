@@ -201,6 +201,44 @@ async def test_surface_header_is_recorded_and_validated(
     assert [e.surface for e in await _events(db, "task.create")] == ["plan", None]
 
 
+async def test_worklog_mutations_are_recorded(client: AsyncTestClient, db: async_sessionmaker) -> None:
+    """ROUTE_EVENTS is a silent-failure path: a route missing from it records
+    nothing, with no error and no other failing test."""
+    created = await client.post(
+        "/api/worklog/entries",
+        json={"day": "2026-08-19", "category": "shipped", "title": "Shipped it"},
+        headers={"X-DTask-Surface": "worklog"},
+    )
+    assert created.status_code == 201, created.text
+    entry_id = created.json()["id"]
+
+    await client.patch(f"/api/worklog/entries/{entry_id}", json={"title": "Shipped it well"})
+    await client.put("/api/worklog/day", json={"day": "2026-08-19", "energy": 4})
+    await client.delete(f"/api/worklog/entries/{entry_id}")
+
+    create_events = await _events(db, "worklog.entry.create")
+    assert len(create_events) == 1
+    assert create_events[0].entity_type == "worklog_entry"
+    # "worklog" must be in SURFACES, or _clean_surface() nulls it silently.
+    assert create_events[0].surface == "worklog"
+    # No id in the path, so nothing to attribute -- and no null prop invented.
+    assert create_events[0].entity_id is None
+    assert "project_id" not in json.loads(create_events[0].props)
+
+    assert [e.entity_id for e in await _events(db, "worklog.entry.update")] == [entry_id]
+    assert [e.entity_id for e in await _events(db, "worklog.entry.delete")] == [entry_id]
+
+    day_events = await _events(db, "worklog.day.set")
+    assert len(day_events) == 1
+    assert day_events[0].entity_type == "worklog_day"
+
+
+async def test_worklog_rollup_reads_are_not_recorded(client: AsyncTestClient, db: async_sessionmaker) -> None:
+    await client.get("/api/worklog/rollup?period=week")
+    await client.get("/api/worklog/entries?start=2026-08-01&end=2026-08-31")
+    assert await _events(db, "worklog.rollup.view") == []
+
+
 # ── Ingest endpoint ───────────────────────────────────────────────────────
 
 

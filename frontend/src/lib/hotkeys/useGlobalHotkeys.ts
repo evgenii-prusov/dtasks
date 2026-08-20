@@ -19,4 +19,5 @@ export function useGlobalHotkeys() {
   useHotkey(HOTKEYS.goReview.chords, go('/review'), { layer: 'global', name: 'goReview' })
   useHotkey(HOTKEYS.goHabits.chords, go('/habits'), { layer: 'global', name: 'goHabits' })
   useHotkey(HOTKEYS.goReport.chords, go('/report'), { layer: 'global', name: 'goReport' })
+  useHotkey(HOTKEYS.goWorkLog.chords, go('/worklog'), { layer: 'global', name: 'goWorkLog' })
 }

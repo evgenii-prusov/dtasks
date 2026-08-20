@@ -170,3 +170,83 @@ class HabitLog(Base):
     state: Mapped[int] = mapped_column(Integer, default=0)  # 0 none | 1 minimal | 2 complete
 
     habit: Mapped[Habit] = relationship(back_populates="logs")
+
+
+#: Categories a work-log entry can carry. A tuple + handler validation rather than
+#: a SQLAlchemy Enum, matching how ``Task.complexity`` and ``HabitLog.state`` are done.
+WORKLOG_CATEGORIES = ("shipped", "operational", "glue", "learning")
+
+#: Kinds of evidence a link can be. "link" is the catch-all the client falls back to.
+WORKLOG_LINK_KINDS = ("pr", "rfc", "doc", "incident", "link")
+
+
+class WorkLogEntry(Base):
+    """One thing the user did on one day, with the evidence a reviewer needs.
+
+    ``day`` is supplied by the client (the browser's local date) and never derived
+    from the server clock -- the same contract as ``HabitLog.day``, and the only way
+    the day boundary stays correct for a user who isn't in UTC.
+    """
+
+    __tablename__ = "work_log_entries"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    category: Mapped[str] = mapped_column(String(20))  # shipped | operational | glue | learning
+    title: Mapped[str] = mapped_column(String(500))
+    # Why it mattered / what was broken. The half a review reader needs, and the
+    # half you always forget first.
+    context: Mapped[str] = mapped_column(Text, default="")
+    # Free text on purpose: "p95 checkout 820ms -> 340ms", "3 fewer pages/week".
+    # Metrics across entries are too heterogeneous to sum honestly, so the rollup
+    # counts entries that *carry* impact rather than aggregating the numbers.
+    impact: Mapped[str] = mapped_column(Text, default="")
+    # Set when the entry was promoted from a finished task. SET NULL so deleting the
+    # task never deletes the record of having done it.
+    task_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True, index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+    links: Mapped[list[WorkLogLink]] = relationship(
+        back_populates="entry",
+        cascade="all, delete-orphan",
+    )
+
+
+class WorkLogLink(Base):
+    """Evidence attached to an entry.
+
+    A child table rather than a JSON column on the entry because the rollup segments
+    by kind -- "4 PRs, 1 RFC this week" is the whole point of recording them.
+    """
+
+    __tablename__ = "work_log_links"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entry_id: Mapped[int] = mapped_column(ForeignKey("work_log_entries.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(20), default="link")  # pr | rfc | doc | incident | link
+    url: Mapped[str] = mapped_column(String(1000))
+    label: Mapped[str] = mapped_column(String(200), default="")
+
+    entry: Mapped[WorkLogEntry] = relationship(back_populates="links")
+
+
+class WorkLogDay(Base):
+    """The day's sentiment signal, kept independent of that day's entries.
+
+    Deliberately not a parent row of ``WorkLogEntry``: rating a day must never
+    require an entry to exist first (or the reverse), and the rollup range-scans
+    each of the two tables without a join.
+    """
+
+    __tablename__ = "work_log_days"
+    __table_args__ = (UniqueConstraint("user_id", "day", name="uq_work_log_day"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    day: Mapped[date] = mapped_column(Date, index=True)
+    energy: Mapped[int] = mapped_column(Integer, default=0)  # 0 unset | 1 drained .. 5 strong
+    friction: Mapped[int] = mapped_column(Integer, default=0)  # 0 unset | 1 smooth .. 5 blocked
+    note: Mapped[str] = mapped_column(Text, default="")  # what got in the way
