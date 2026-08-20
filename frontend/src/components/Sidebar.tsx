@@ -194,6 +194,13 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
         chord={HOTKEYS.goReport.chords[0]}
         onClick={close}
       />
+      <NavLink
+        to="/worklog"
+        icon="log"
+        label={t('nav.worklog')}
+        chord={HOTKEYS.goWorkLog.chords[0]}
+        onClick={close}
+      />
 
       <hr className="s-divider" />
 

@@ -51,7 +51,7 @@ dropped rather than quietly stored.
 | `input` | `keyboard` / `mouse` / `touch` / `pen` / `unknown`. A column, not a prop — every migration query filters on it |
 | `name` | e.g. `task.update`, `hotkey.use` |
 | `entity_type`, `entity_id` | `task` / `project` / `habit` / `recurrence` |
-| `surface` | `today`, `plan`, `review`, `habits`, `report`, `project`, `quick_add`, `sidebar`, `palette`, `help` |
+| `surface` | `today`, `plan`, `review`, `habits`, `report`, `worklog`, `project`, `quick_add`, `sidebar`, `palette`, `help` |
 | `props` | JSON object of scalars |
 | `app_version` | Git SHA, so a regression can be dated to a deploy |
 | `schema_version` | Bump when the taxonomy changes; old rows stay interpretable |
@@ -73,7 +73,13 @@ hitting the 2-must-have limit is exactly the friction worth seeing.
 | `project.create/update/delete/reorder` | | |
 | `recurrence.create/update/delete` | | |
 | `habit.create/delete`, `habit.log` | | |
+| `worklog.entry.create/update/delete` | Work log entry written | |
+| `worklog.day.set` | `PUT /api/worklog/day` — the day's energy/friction signal | |
 | `auth.signup/login/logout` | | |
+
+The work log's reads (`GET /entries`, `/days`, `/rollup`) record nothing: the
+middleware only fires on mutating requests, so a rollup being *viewed* is a
+browser event (`worklog.rollup.view`), not an API one.
 
 `task.update` is the one route that under-describes itself — completing,
 scheduling, prioritizing, moving and renaming all arrive as the same PATCH.
@@ -105,6 +111,8 @@ WHERE name = 'task.update' AND json_extract(props, '$.fields') = '["completed"]'
 | `undo.shown`, `undo.used` | Undo toast | |
 | `review.start`, `review.finish` | Review session | `project_count`, `reached_index` |
 | `habit.cell_click` | Heatmap cell cycled | `state_from`, `state_to`, `days_ago` |
+| `worklog.rollup.view` | Week/month rollup tab selected | `period` |
+| `worklog.promote_task` | A completed task promoted into an entry | `entity_id` |
 | `pref.theme`, `pref.lang` | | `to` |
 
 ## Queries

@@ -1,7 +1,9 @@
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from '@tanstack/react-router'
 import { api, ApiError } from './client'
+import { toISODate } from '../lib/dates'
 import type {
+  DateRange,
   Habit,
   HabitCreate,
   LoginPayload,
@@ -10,9 +12,15 @@ import type {
   ProjectPatch,
   RecurrenceRuleCreate,
   RecurrenceRulePatch,
+  RollupPeriod,
   SignupPayload,
+  Task,
   TaskCreate,
   TaskPatch,
+  WorkLogDay,
+  WorkLogEntry,
+  WorkLogEntryCreate,
+  WorkLogEntryPatch,
 } from './types'
 
 /** Session query, shared by useCurrentUser and the router's auth guards. */
@@ -329,4 +337,109 @@ export function useDeleteHabit() {
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['habits'] }),
   })
+}
+
+// ── Work log ───────────────────────────────────────────────────────────────
+// Every key nests under 'worklog' so one prefix invalidation refreshes the
+// entry list, the day signals and the rollups together. Writing an entry changes
+// all three, and flat sibling keys would silently leave the rollup stale.
+const WORKLOG_KEY = ['worklog'] as const
+
+export function useWorkLogEntries(range: DateRange) {
+  return useQuery({
+    queryKey: [...WORKLOG_KEY, 'entries', range.start, range.end],
+    queryFn: () => api.listWorkLogEntries(range),
+  })
+}
+
+export function useWorkLogDays(range: DateRange) {
+  return useQuery({
+    queryKey: [...WORKLOG_KEY, 'days', range.start, range.end],
+    queryFn: () => api.listWorkLogDays(range),
+  })
+}
+
+export function useWorkLogRollup(period: RollupPeriod) {
+  return useQuery({
+    queryKey: [...WORKLOG_KEY, 'rollup', period],
+    queryFn: () => api.worklogRollup(period),
+  })
+}
+
+function invalidateWorkLog(qc: ReturnType<typeof useQueryClient>) {
+  return qc.invalidateQueries({ queryKey: WORKLOG_KEY })
+}
+
+export function useCreateWorkLogEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (entry: WorkLogEntryCreate) => api.createWorkLogEntry(entry),
+    onSettled: () => invalidateWorkLog(qc),
+  })
+}
+
+export function useUpdateWorkLogEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: number; patch: WorkLogEntryPatch }) =>
+      api.updateWorkLogEntry(id, patch),
+    onSettled: () => invalidateWorkLog(qc),
+  })
+}
+
+export function useDeleteWorkLogEntry() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.deleteWorkLogEntry(id),
+    onSettled: () => invalidateWorkLog(qc),
+  })
+}
+
+/** Upsert the day's energy/friction signal. Optimistic: the picker must feel
+ * instant, the same reasoning as useSetHabitLog. */
+export function useSetWorkLogDay(range: DateRange) {
+  const qc = useQueryClient()
+  const key = [...WORKLOG_KEY, 'days', range.start, range.end]
+  return useMutation({
+    mutationFn: (day: WorkLogDay) => api.setWorkLogDay(day),
+    onMutate: async (day) => {
+      await qc.cancelQueries({ queryKey: key })
+      const previous = qc.getQueryData<WorkLogDay[]>(key)
+      if (previous) {
+        const without = previous.filter((d) => d.day !== day.day)
+        qc.setQueryData(key, [day, ...without])
+      }
+      return { previous }
+    },
+    onError: (_err, _day, ctx) => {
+      if (ctx?.previous) qc.setQueryData(key, ctx.previous)
+    },
+    onSettled: () => invalidateWorkLog(qc),
+  })
+}
+
+/**
+ * Tasks the user finished on `day` that no entry references yet.
+ *
+ * Derived from the projects query rather than fetched: completed tasks are
+ * already in the cache, so the promote list costs no extra request.
+ *
+ * `completed_at` is a UTC instant while `day` is the user's local date, so the
+ * timestamp is converted before comparing. Slicing the ISO string instead would
+ * hide a task finished this evening from anyone east of UTC (and show yesterday's
+ * to anyone west of it).
+ */
+export function unloggedCompletedTasks(
+  projects: Project[],
+  entries: WorkLogEntry[],
+  day: string,
+): { task: Task; projectName: string }[] {
+  const logged = new Set(entries.map((e) => e.task_id).filter((id): id is number => id != null))
+  const completedOn = (t: Task) =>
+    t.completed_at != null && toISODate(new Date(t.completed_at)) === day
+  return projects.flatMap((p) =>
+    p.tasks
+      .filter((t) => t.completed && completedOn(t) && !logged.has(t.id))
+      .map((task) => ({ task, projectName: p.name })),
+  )
 }

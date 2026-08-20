@@ -19,6 +19,7 @@ export type IconName =
   | 'search'
   | 'x'
   | 'chart'
+  | 'log'
   | 'chevron-down'
   | 'chevron-up'
   | 'help'
@@ -83,6 +84,18 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
     <>
       <rect x="2" y="2" width="12" height="12" rx="1.5" stroke={c} strokeWidth="1.5" fill="none" />
       <path d="M5 6h6M5 9h4" stroke={c} strokeWidth="1.5" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  log: (
+    <>
+      <path
+        d="M4 1.5h8.5a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1.5 1.5 0 0 1-1.5-1.5v-10A1.5 1.5 0 0 1 4 1.5z"
+        stroke={c}
+        strokeWidth="1.3"
+        fill="none"
+      />
+      <path d="M2.5 11.5H4" stroke={c} strokeWidth="1.3" strokeLinecap="round" fill="none" />
+      <path d="M6 5h5M6 7.5h5M6 10h3" stroke={c} strokeWidth="1.3" strokeLinecap="round" fill="none" />
     </>
   ),
   trash: (

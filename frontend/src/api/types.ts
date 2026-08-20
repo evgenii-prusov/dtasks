@@ -112,6 +112,97 @@ export interface HabitCreate {
   subtitle?: string
 }
 
+// ── Work log ───────────────────────────────────────────────────────────────
+// The four kinds of contribution a day's work falls into. Stored server-side as
+// a plain string; the union lives here, like Complexity above.
+export type EntryCategory = 'shipped' | 'operational' | 'glue' | 'learning'
+
+export const ENTRY_CATEGORIES: EntryCategory[] = ['shipped', 'operational', 'glue', 'learning']
+
+export type LinkKind = 'pr' | 'rfc' | 'doc' | 'incident' | 'link'
+
+export const LINK_KINDS: LinkKind[] = ['pr', 'rfc', 'doc', 'incident', 'link']
+
+export interface WorkLogLink {
+  id: number
+  kind: LinkKind
+  url: string
+  label: string
+}
+
+export interface WorkLogEntry {
+  id: number
+  day: string // YYYY-MM-DD, the user's local day
+  category: EntryCategory
+  title: string
+  context: string
+  impact: string
+  task_id: number | null
+  created_at: string
+  links: WorkLogLink[]
+}
+
+export interface WorkLogDay {
+  day: string
+  energy: number // 0 unset | 1 drained .. 5 strong
+  friction: number // 0 unset | 1 smooth .. 5 blocked
+  note: string
+}
+
+export interface WorkLogLinkInput {
+  url: string
+  kind?: LinkKind
+  label?: string
+}
+
+export interface WorkLogEntryCreate {
+  day: string
+  category: EntryCategory
+  title: string
+  context?: string
+  impact?: string
+  task_id?: number | null
+  links?: WorkLogLinkInput[]
+}
+
+export interface WorkLogEntryPatch {
+  day?: string
+  category?: EntryCategory
+  title?: string
+  context?: string
+  impact?: string
+  task_id?: number | null
+  /** Sent whole or not at all: present replaces the entry's links. */
+  links?: WorkLogLinkInput[]
+}
+
+export interface WorkLogBucket {
+  key: string // "2026-W34" | "2026-08"
+  start: string
+  end: string
+  total: number
+  by_category: Record<EntryCategory, number>
+  links_by_kind: Record<LinkKind, number>
+  with_impact: number
+  days_logged: number
+  avg_energy: number | null
+  avg_friction: number | null
+  friction_notes: string[]
+  entries: WorkLogEntry[]
+}
+
+export interface WorkLogRollup {
+  period: RollupPeriod
+  buckets: WorkLogBucket[]
+}
+
+export type RollupPeriod = 'week' | 'month'
+
+export interface DateRange {
+  start: string
+  end: string
+}
+
 export interface User {
   id: number
   email: string

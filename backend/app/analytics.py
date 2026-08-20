@@ -51,7 +51,19 @@ INPUT_MODALITIES = frozenset({"keyboard", "mouse", "touch", "pen"})
 UNKNOWN_INPUT = "unknown"
 
 SURFACES = frozenset(
-    {"today", "plan", "review", "habits", "report", "project", "quick_add", "sidebar", "palette", "help"}
+    {
+        "today",
+        "plan",
+        "review",
+        "habits",
+        "report",
+        "worklog",
+        "project",
+        "quick_add",
+        "sidebar",
+        "palette",
+        "help",
+    }
 )
 
 # ── Taxonomy ──────────────────────────────────────────────────────────────
@@ -83,6 +95,8 @@ CLIENT_EVENT_NAMES = frozenset(
         "review.start",
         "review.finish",
         "habit.cell_click",
+        "worklog.rollup.view",
+        "worklog.promote_task",
         "pref.theme",
         "pref.lang",
     }
@@ -90,9 +104,11 @@ CLIENT_EVENT_NAMES = frozenset(
 
 #: (method, normalized path) -> (event name, entity type, path id *is* the entity).
 #:
-#: When the last flag is False the path's id identifies the *parent* project
-#: rather than the thing being created, so it is recorded as a prop instead of
-#: as entity_id. Both such routes nest under /api/projects/{id}.
+#: When the last flag is False the path's id, if there is one, identifies the
+#: *parent* project rather than the thing being created, so it is recorded as a
+#: prop instead of as entity_id. Collection routes that carry no path id at all
+#: (POST /api/habits, the worklog routes) are False for the same reason: there is
+#: no id in the path that names the affected entity.
 ROUTE_EVENTS: dict[tuple[str, str], tuple[str, str | None, bool]] = {
     ("POST", "/api/projects"): ("project.create", "project", False),
     ("PATCH", "/api/projects/{id}"): ("project.update", "project", True),
@@ -108,6 +124,10 @@ ROUTE_EVENTS: dict[tuple[str, str], tuple[str, str | None, bool]] = {
     ("POST", "/api/habits"): ("habit.create", "habit", False),
     ("PUT", "/api/habits/{id}/log"): ("habit.log", "habit", True),
     ("DELETE", "/api/habits/{id}"): ("habit.delete", "habit", True),
+    ("POST", "/api/worklog/entries"): ("worklog.entry.create", "worklog_entry", False),
+    ("PATCH", "/api/worklog/entries/{id}"): ("worklog.entry.update", "worklog_entry", True),
+    ("DELETE", "/api/worklog/entries/{id}"): ("worklog.entry.delete", "worklog_entry", True),
+    ("PUT", "/api/worklog/day"): ("worklog.day.set", "worklog_day", False),
     ("POST", "/api/auth/signup"): ("auth.signup", None, False),
     ("POST", "/api/auth/login"): ("auth.login", None, False),
     ("POST", "/api/auth/logout"): ("auth.logout", None, False),

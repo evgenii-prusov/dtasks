@@ -39,6 +39,7 @@ from .schemas import (
     recurrence_out,
     task_out,
 )
+from .worklog import worklog_router
 
 MUST_HAVE_LIMIT = 2
 
@@ -616,6 +617,7 @@ route_handlers: list = [
     set_habit_log,
     delete_habit,
     ingest_events,
+    worklog_router,
 ]
 if FRONTEND_DIST.is_dir():
     route_handlers.append(create_static_files_router(path="/", directories=[FRONTEND_DIST], html_mode=True))
