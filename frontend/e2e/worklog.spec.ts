@@ -71,6 +71,49 @@ test.describe('Work Log', () => {
     ).toBeVisible();
   });
 
+  test('edits an entry in place, replacing its evidence', async ({ page }) => {
+    await signup(page);
+    await page.goto('/worklog');
+
+    await page.getByRole('button', { name: /Log something/ }).click();
+    await page.getByPlaceholder('What did you do?').fill('Rolled out the new queue');
+    await page.getByPlaceholder(/Paste a PR/).fill('https://github.com/acme/api/pull/1');
+    await page.getByRole('button', { name: 'Save entry' }).click();
+
+    const row = page.locator('.task-row').filter({ hasText: 'Rolled out the new queue' });
+    await expect(row).toBeVisible();
+
+    await row.getByRole('button', { name: 'Edit entry' }).click();
+
+    // The editor arrives carrying every field, including the link.
+    await expect(page.getByPlaceholder('What did you do?')).toHaveValue('Rolled out the new queue');
+    await expect(page.getByPlaceholder(/Paste a PR/)).toHaveValue(
+      'https://github.com/acme/api/pull/1',
+    );
+
+    await page.getByPlaceholder('What did you do?').fill('Rolled out the new queue to everyone');
+    await page.getByPlaceholder(/820ms/).fill('drained a 40k backlog');
+    await page.getByPlaceholder(/Paste a PR/).fill('https://acme.dev/rfc/0042-backpressure');
+    await expect(page.getByRole('combobox')).toHaveValue('pr'); // an existing kind is kept, not re-guessed
+    await page.getByRole('combobox').selectOption('rfc');
+    await page.getByRole('button', { name: 'Save changes' }).click();
+
+    const edited = page.locator('.task-row').filter({ hasText: 'Rolled out the new queue to everyone' });
+    await expect(edited).toBeVisible();
+    await expect(edited.getByText('drained a 40k backlog')).toBeVisible();
+    await expect(edited.getByRole('link', { name: 'RFC' })).toHaveAttribute(
+      'href',
+      'https://acme.dev/rfc/0042-backpressure',
+    );
+    // Replaced, not appended.
+    await expect(edited.getByRole('link', { name: 'PR' })).toHaveCount(0);
+
+    await page.reload();
+    await expect(
+      page.locator('.task-row').filter({ hasText: 'Rolled out the new queue to everyone' }),
+    ).toBeVisible();
+  });
+
   test('promotes a task completed today into a log entry', async ({ page }) => {
     await signup(page);
 

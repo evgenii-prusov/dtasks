@@ -157,6 +157,91 @@ describe('WorkLogView capture tab', () => {
   })
 })
 
+describe('WorkLogView editing', () => {
+  const withLink = () =>
+    entry(1, 'Cut checkout latency', {
+      context: 'p95 was over a second',
+      impact: '820ms -> 340ms',
+      links: [{ id: 5, kind: 'pr', url: 'https://github.com/acme/api/pull/7', label: '' }],
+    })
+
+  it('opens an editor prefilled with every field of the entry', async () => {
+    renderView({ entries: [withLink()] })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit entry' }))
+
+    expect(screen.getByPlaceholderText('What did you do?')).toHaveValue('Cut checkout latency')
+    expect(screen.getByPlaceholderText(/What was broken/)).toHaveValue('p95 was over a second')
+    expect(screen.getByPlaceholderText(/820ms/)).toHaveValue('820ms -> 340ms')
+    expect(screen.getByPlaceholderText(/Paste a PR/)).toHaveValue(
+      'https://github.com/acme/api/pull/7',
+    )
+    expect(screen.getByRole('combobox')).toHaveValue('pr')
+    expect(screen.getByLabelText('Day')).toHaveValue(TODAY)
+  })
+
+  it('PATCHes the edited fields and closes the editor', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    renderView({ entries: [withLink()] })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit entry' }))
+    const title = screen.getByPlaceholderText('What did you do?')
+    await userEvent.clear(title)
+    await userEvent.type(title, 'Halved checkout latency')
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const patch = fetchSpy.mock.calls.find(([, init]) => init?.method === 'PATCH')
+    expect(patch?.[0]).toBe('/api/worklog/entries/1')
+    const body = JSON.parse(String(patch?.[1]?.body))
+    expect(body.title).toBe('Halved checkout latency')
+    // The whole entry goes in the patch, links included -- PATCH replaces them.
+    expect(body.links).toEqual([
+      { url: 'https://github.com/acme/api/pull/7', kind: 'pr', label: '' },
+    ])
+    expect(screen.queryByPlaceholderText('What did you do?')).not.toBeInTheDocument()
+  })
+
+  it('discards changes on cancel', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    renderView({ entries: [withLink()] })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit entry' }))
+    await userEvent.type(screen.getByPlaceholderText('What did you do?'), ' EDITED')
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(fetchSpy.mock.calls.some(([, init]) => init?.method === 'PATCH')).toBe(false)
+    expect(screen.getByText('Cut checkout latency')).toBeInTheDocument()
+  })
+
+  it('drops a link that was cleared', async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('{}', { status: 200 }))
+    renderView({ entries: [withLink()] })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit entry' }))
+    await userEvent.clear(screen.getByPlaceholderText(/Paste a PR/))
+    await userEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+
+    const patch = fetchSpy.mock.calls.find(([, init]) => init?.method === 'PATCH')
+    expect(JSON.parse(String(patch?.[1]?.body)).links).toEqual([])
+  })
+
+  it('closes the editor when the add form is opened, so only one is ever live', async () => {
+    renderView({ entries: [withLink()] })
+
+    await userEvent.click(screen.getByRole('button', { name: 'Edit entry' }))
+    expect(screen.getByRole('button', { name: 'Save changes' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /Log something/ }))
+    expect(screen.queryByRole('button', { name: 'Save changes' })).not.toBeInTheDocument()
+  })
+})
+
 describe('WorkLogView rollup tabs', () => {
   it('fetches and renders the weekly rollup when the tab is selected', async () => {
     const qc = renderView()

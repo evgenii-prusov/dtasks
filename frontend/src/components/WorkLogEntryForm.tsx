@@ -1,15 +1,37 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ENTRY_CATEGORIES, LINK_KINDS } from '../api/types'
-import type { EntryCategory, LinkKind, WorkLogEntryCreate, WorkLogLinkInput } from '../api/types'
+import type { EntryCategory, LinkKind, WorkLogEntry, WorkLogLinkInput } from '../api/types'
 import { CATEGORY_LABEL_KEYS, LINK_KIND_LABEL_KEYS, inferLinkKind } from '../lib/worklog'
 import { Ic } from './Icon'
 
-export interface EntryDraft {
+/** Every field of an entry the form edits. The same shape serves a create body
+ * and a patch body, because PATCH accepts all of them (and, given `links`,
+ * replaces them wholesale). */
+export interface EntryFormValues {
+  day: string
+  category: EntryCategory
   title: string
   context: string
-  category: EntryCategory
-  taskId: number | null
+  impact: string
+  task_id: number | null
+  links: WorkLogLinkInput[]
+}
+
+export function blankEntry(day: string): EntryFormValues {
+  return { day, category: 'shipped', title: '', context: '', impact: '', task_id: null, links: [] }
+}
+
+export function entryToValues(entry: WorkLogEntry): EntryFormValues {
+  return {
+    day: entry.day,
+    category: entry.category,
+    title: entry.title,
+    context: entry.context,
+    impact: entry.impact,
+    task_id: entry.task_id,
+    links: entry.links.map(({ url, kind, label }) => ({ url, kind, label })),
+  }
 }
 
 interface LinkRow extends WorkLogLinkInput {
@@ -20,37 +42,51 @@ interface LinkRow extends WorkLogLinkInput {
 
 const EMPTY_LINK: LinkRow = { url: '', kind: 'link', label: '', kindInferred: true }
 
+/** Always leave one blank row to type into, so adding the first link is not a
+ * two-step. An existing link's kind was chosen (or accepted) already, so it is
+ * never re-inferred out from under an edit. */
+function toLinkRows(links: WorkLogLinkInput[]): LinkRow[] {
+  if (links.length === 0) return [{ ...EMPTY_LINK }]
+  return links.map((link) => ({
+    url: link.url,
+    kind: link.kind ?? 'link',
+    label: link.label ?? '',
+    kindInferred: false,
+  }))
+}
+
 export function WorkLogEntryForm({
-  day,
-  draft,
-  onAdd,
+  initial,
+  submitLabel,
+  onSubmit,
   onCancel,
 }: {
-  day: string
-  /** Prefilled when promoting a finished task; blank for a fresh entry. */
-  draft?: EntryDraft
-  onAdd: (entry: WorkLogEntryCreate) => void
+  /** Blank for a fresh entry, task-derived when promoting, entry-derived when editing. */
+  initial: EntryFormValues
+  submitLabel: string
+  onSubmit: (values: EntryFormValues) => void
   onCancel: () => void
 }) {
   const { t } = useTranslation()
-  const [title, setTitle] = useState(draft?.title ?? '')
-  const [category, setCategory] = useState<EntryCategory>(draft?.category ?? 'shipped')
-  const [context, setContext] = useState(draft?.context ?? '')
-  const [impact, setImpact] = useState('')
-  const [links, setLinks] = useState<LinkRow[]>([{ ...EMPTY_LINK }])
+  const [day, setDay] = useState(initial.day)
+  const [title, setTitle] = useState(initial.title)
+  const [category, setCategory] = useState<EntryCategory>(initial.category)
+  const [context, setContext] = useState(initial.context)
+  const [impact, setImpact] = useState(initial.impact)
+  const [links, setLinks] = useState<LinkRow[]>(() => toLinkRows(initial.links))
 
   const setLink = (i: number, patch: Partial<LinkRow>) =>
     setLinks((rows) => rows.map((row, j) => (i === j ? { ...row, ...patch } : row)))
 
   const submit = () => {
-    if (!title.trim()) return
-    onAdd({
+    if (!title.trim() || !day) return
+    onSubmit({
       day,
       category,
       title: title.trim(),
       context,
       impact,
-      task_id: draft?.taskId ?? null,
+      task_id: initial.task_id,
       links: links
         .filter((link) => link.url.trim())
         .map(({ url, kind, label }) => ({ url: url.trim(), kind, label })),
@@ -144,12 +180,22 @@ export function WorkLogEntryForm({
       </button>
 
       <div className="flex flex-wrap items-center gap-[7px]">
+        {/* Sits with the buttons rather than up top: it is prefilled with the
+            right answer nearly always, and only wanted when back-filling a day
+            or correcting one. */}
+        <input
+          type="date"
+          className="input w-auto"
+          aria-label={t('worklog.dayLabel')}
+          value={day}
+          onChange={(e) => setDay(e.target.value)}
+        />
         <div className="flex-1" />
         <button className="btn btn-g btn-s" onClick={onCancel}>
           {t('common.cancel')}
         </button>
         <button className="btn btn-p btn-s" onClick={submit}>
-          {t('worklog.save')}
+          {submitLabel}
         </button>
       </div>
     </div>

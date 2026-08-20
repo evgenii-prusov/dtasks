@@ -13,16 +13,18 @@ const CATEGORY_BADGE: Record<EntryCategory, string> = {
 
 export function WorkLogEntryRow({
   entry,
+  onEdit,
   onDelete,
 }: {
   entry: WorkLogEntry
-  /** Omitted in read-only contexts, such as the rollup's evidence list. */
+  /** Both omitted in read-only contexts, such as the rollup's evidence list. */
+  onEdit?: (entry: WorkLogEntry) => void
   onDelete?: (entry: WorkLogEntry) => void
 }) {
   const { t } = useTranslation()
 
   return (
-    <div className="task-row items-start">
+    <div className="task-row items-start gap-[5px]">
       <div className="min-w-0 flex-1">
         <div className="t-title">{entry.title}</div>
         {entry.context && <div className="mt-0.5 text-[12px] text-ink-2">{entry.context}</div>}
@@ -47,6 +49,17 @@ export function WorkLogEntryRow({
           ))}
         </div>
       </div>
+      {onEdit && (
+        <button
+          type="button"
+          className="btn btn-g btn-s"
+          aria-label={t('worklog.editTooltip')}
+          title={t('worklog.editTooltip')}
+          onClick={() => onEdit(entry)}
+        >
+          <Ic n="pencil" s={12} />
+        </button>
+      )}
       {onDelete && (
         <button
           type="button"
