@@ -6,6 +6,7 @@ import {
   useDeleteWorkLogEntry,
   useProjects,
   useSetWorkLogDay,
+  useUpdateWorkLogEntry,
   useWorkLogDays,
   useWorkLogEntries,
   useWorkLogRollup,
@@ -14,7 +15,12 @@ import { isDefaultProject } from '../api/types'
 import type { RollupPeriod, WorkLogBucket, WorkLogDay, WorkLogEntry } from '../api/types'
 import { DaySignal } from '../components/DaySignal'
 import { Ic } from '../components/Icon'
-import { WorkLogEntryForm, type EntryDraft } from '../components/WorkLogEntryForm'
+import {
+  WorkLogEntryForm,
+  blankEntry,
+  entryToValues,
+  type EntryFormValues,
+} from '../components/WorkLogEntryForm'
 import { WorkLogEntryRow } from '../components/WorkLogEntryRow'
 import { useShowUndoToast } from '../components/UndoToast'
 import { track } from '../lib/analytics'
@@ -46,11 +52,13 @@ function CaptureTab({ today }: { today: string }) {
   const { data: days = [] } = useWorkLogDays(range)
   const { data: projects = [] } = useProjects()
   const createEntry = useCreateWorkLogEntry()
+  const updateEntry = useUpdateWorkLogEntry()
   const deleteEntry = useDeleteWorkLogEntry()
   const setDay = useSetWorkLogDay(range)
   const showUndo = useShowUndoToast()
 
-  const [draft, setDraft] = useState<EntryDraft | null>(null)
+  const [draft, setDraft] = useState<EntryFormValues | null>(null)
+  const [editing, setEditing] = useState<WorkLogEntry | null>(null)
 
   const todayRow: WorkLogDay = days.find((d) => d.day === today) ?? {
     day: today,
@@ -61,7 +69,18 @@ function CaptureTab({ today }: { today: string }) {
   const promotable = unloggedCompletedTasks(projects, entries, today)
   const grouped = groupByDay(entries)
 
+  const startDraft = (values: EntryFormValues) => {
+    setEditing(null)
+    setDraft(values)
+  }
+
+  const startEditing = (entry: WorkLogEntry) => {
+    setDraft(null)
+    setEditing(entry)
+  }
+
   const remove = (entry: WorkLogEntry) => {
+    if (editing?.id === entry.id) setEditing(null)
     deleteEntry.mutate(entry.id)
     showUndo(t('worklog.entryDeleted'), () =>
       createEntry.mutate({
@@ -83,20 +102,17 @@ function CaptureTab({ today }: { today: string }) {
       {draft ? (
         <div className="card mt-6">
           <WorkLogEntryForm
-            day={today}
-            draft={draft}
-            onAdd={(entry) => {
-              createEntry.mutate(entry)
+            initial={draft}
+            submitLabel={t('worklog.save')}
+            onSubmit={(values) => {
+              createEntry.mutate(values)
               setDraft(null)
             }}
             onCancel={() => setDraft(null)}
           />
         </div>
       ) : (
-        <button
-          className="btn btn-p mt-6"
-          onClick={() => setDraft({ title: '', context: '', category: 'shipped', taskId: null })}
-        >
+        <button className="btn btn-p mt-6" onClick={() => startDraft(blankEntry(today))}>
           <Ic n="plus" s={12} /> {t('worklog.addEntry')}
         </button>
       )}
@@ -121,11 +137,11 @@ function CaptureTab({ today }: { today: string }) {
                 className="btn btn-g btn-s"
                 onClick={() => {
                   track('worklog.promote_task', { entity_id: task.id })
-                  setDraft({
+                  startDraft({
+                    ...blankEntry(today),
                     title: task.title,
                     context: task.notes,
-                    category: 'shipped',
-                    taskId: task.id,
+                    task_id: task.id,
                   })
                 }}
               >
@@ -151,9 +167,27 @@ function CaptureTab({ today }: { today: string }) {
                 {t('worklog.entryCount', { count: dayEntries.length })}
               </span>
             </div>
-            {dayEntries.map((entry) => (
-              <WorkLogEntryRow key={entry.id} entry={entry} onDelete={remove} />
-            ))}
+            {dayEntries.map((entry) =>
+              editing?.id === entry.id ? (
+                <WorkLogEntryForm
+                  key={entry.id}
+                  initial={entryToValues(entry)}
+                  submitLabel={t('worklog.saveChanges')}
+                  onSubmit={(values) => {
+                    updateEntry.mutate({ id: entry.id, patch: values })
+                    setEditing(null)
+                  }}
+                  onCancel={() => setEditing(null)}
+                />
+              ) : (
+                <WorkLogEntryRow
+                  key={entry.id}
+                  entry={entry}
+                  onEdit={startEditing}
+                  onDelete={remove}
+                />
+              ),
+            )}
           </div>
         ))
       )}

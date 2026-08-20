@@ -20,6 +20,7 @@ export type IconName =
   | 'x'
   | 'chart'
   | 'log'
+  | 'pencil'
   | 'chevron-down'
   | 'chevron-up'
   | 'help'
@@ -96,6 +97,18 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       />
       <path d="M2.5 11.5H4" stroke={c} strokeWidth="1.3" strokeLinecap="round" fill="none" />
       <path d="M6 5h5M6 7.5h5M6 10h3" stroke={c} strokeWidth="1.3" strokeLinecap="round" fill="none" />
+    </>
+  ),
+  pencil: (
+    <>
+      <path
+        d="M11.3 2.2a1.2 1.2 0 0 1 1.7 0l.8.8a1.2 1.2 0 0 1 0 1.7l-7.2 7.2-2.9.7.7-2.9 7.2-7.2z"
+        stroke={c}
+        strokeWidth="1.3"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path d="M10.2 3.3l2.5 2.5" stroke={c} strokeWidth="1.3" strokeLinecap="round" fill="none" />
     </>
   ),
   trash: (
