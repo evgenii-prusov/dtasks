@@ -54,21 +54,26 @@ test.describe('Work Log', () => {
       page.getByRole('group', { name: 'Energy' }).getByRole('button', { name: '4' }),
     ).toHaveAttribute('aria-pressed', 'true');
 
-    // The weekly rollup should count it in the current (last) bucket.
+    // The weekly rollup should count it in the current bucket.
     await page.getByRole('button', { name: 'By week' }).click();
-    const table = page.getByRole('table');
-    await expect(table).toBeVisible();
 
-    // Columns: period, total, 4 categories, with-impact, days, energy, friction.
-    const lastRow = table.locator('tbody tr').last();
-    await expect(lastRow.locator('td').nth(1)).toHaveText('1');
-    // Energy column reads back the rating given on the capture tab.
-    await expect(lastRow.locator('td').nth(8)).toHaveText('4.0');
+    // No table any more: a strip of period tiles, the current one marked.
+    await expect(page.getByRole('table')).toHaveCount(0);
+    const current = page.locator('.wcell.current');
+    await expect(current).toHaveText('1');
+    await expect(current).toHaveAttribute('aria-label', /1 entry/);
 
-    // And the bucket's evidence list repeats the entry underneath the table.
-    await expect(
-      page.locator('.card').filter({ hasText: 'Cut checkout latency' }).first(),
-    ).toBeVisible();
+    // Range totals live in chips beside the strip.
+    await expect(page.getByText('Entries').first().locator('..')).toHaveText(/Entries\s*1/);
+
+    // Only the populated period gets a card, and it carries that period's numbers.
+    const card = page.locator('.card').filter({ hasText: 'Cut checkout latency' }).first();
+    await expect(card).toBeVisible();
+    await expect(card.getByText('Energy').locator('..')).toHaveText(/Energy\s*4/);
+
+    // Clicking a tile jumps to its card rather than doing nothing.
+    await current.click();
+    await expect(card).toBeInViewport();
   });
 
   test('edits an entry in place, replacing its evidence', async ({ page }) => {
