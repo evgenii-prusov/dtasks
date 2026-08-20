@@ -12,7 +12,13 @@ import {
   useWorkLogRollup,
 } from '../api/hooks'
 import { isDefaultProject } from '../api/types'
-import type { RollupPeriod, WorkLogBucket, WorkLogDay, WorkLogEntry } from '../api/types'
+import type {
+  EntryCategory,
+  RollupPeriod,
+  WorkLogBucket,
+  WorkLogDay,
+  WorkLogEntry,
+} from '../api/types'
 import { DaySignal } from '../components/DaySignal'
 import { Ic } from '../components/Icon'
 import {
@@ -24,23 +30,19 @@ import {
 import { WorkLogEntryRow } from '../components/WorkLogEntryRow'
 import { useShowUndoToast } from '../components/UndoToast'
 import { track } from '../lib/analytics'
-import { formatDayHeading, parseISODate, todayISO } from '../lib/dates'
+import {
+  formatDayHeading,
+  formatDayMonth,
+  formatMonthShort,
+  parseISODate,
+  todayISO,
+} from '../lib/dates'
 import { CATEGORY_LABEL_KEYS, bucketLabel, groupByDay, trailingRange } from '../lib/worklog'
 import { ENTRY_CATEGORIES } from '../api/types'
 
 type Tab = 'today' | 'week' | 'month'
 
 const CAPTURE_WINDOW_DAYS = 14
-
-function Num({ n }: { n: number }) {
-  if (n === 0) return <span className="text-ink-3">—</span>
-  return <span>{n}</span>
-}
-
-function Signal({ value }: { value: number | null }) {
-  if (value == null) return <span className="text-ink-3">—</span>
-  return <span>{value.toFixed(1)}</span>
-}
 
 // ── Capture tab ────────────────────────────────────────────────────────────
 
@@ -197,21 +199,115 @@ function CaptureTab({ today }: { today: string }) {
 
 // ── Rollup tabs ────────────────────────────────────────────────────────────
 
-function BucketDetail({ bucket, period }: { bucket: WorkLogBucket; period: RollupPeriod }) {
+/** Volume ramp for a period tile: 0, 1-2, 3-5, 6+. Four steps rather than a
+ * continuous scale, so a quiet week and a busy one are distinguishable at a
+ * glance instead of a gradient nobody can read. */
+function volumeLevel(total: number): 0 | 1 | 2 | 3 {
+  if (total === 0) return 0
+  if (total <= 2) return 1
+  if (total <= 5) return 2
+  return 3
+}
+
+function topCategory(bucket: WorkLogBucket): EntryCategory | null {
+  let best: EntryCategory | null = null
+  for (const c of ENTRY_CATEGORIES) {
+    if ((bucket.by_category[c] ?? 0) > (best ? (bucket.by_category[best] ?? 0) : 0)) best = c
+  }
+  return best
+}
+
+function bucketDomId(key: string): string {
+  return `worklog-bucket-${key}`
+}
+
+function Stat({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <span className="text-[11px] text-ink-3">
+      {label}{' '}
+      <strong className={value == null ? 'text-ink-3' : 'text-ink'}>{value ?? '—'}</strong>
+    </span>
+  )
+}
+
+/** The timeline. Reads left to right, oldest to newest, because that is what a
+ * time axis means -- the current period is marked instead of moved. */
+function PeriodStrip({
+  buckets,
+  period,
+  onJump,
+}: {
+  buckets: WorkLogBucket[]
+  period: RollupPeriod
+  onJump: (bucket: WorkLogBucket) => void
+}) {
   const { t, i18n } = useTranslation()
-  if (bucket.total === 0 && bucket.friction_notes.length === 0) return null
+  const currentKey = buckets[buckets.length - 1]?.key
 
   return (
-    <div className="card mt-6">
+    <div className="card p-4">
+      <div className="flex flex-wrap gap-[5px]">
+        {buckets.map((b) => {
+          const label = bucketLabel(b.start, b.end, period, i18n.language)
+          const cat = topCategory(b)
+          const hint =
+            b.total === 0
+              ? `${label} — ${t('worklog.emptyBucket')}`
+              : `${label} — ${t('worklog.entryCount', { count: b.total })}` +
+                (cat ? ` · ${t(CATEGORY_LABEL_KEYS[cat])}` : '')
+          return (
+            <div key={b.key} className="flex flex-col items-center gap-1">
+              <button
+                type="button"
+                className={`wcell v${volumeLevel(b.total)} ${b.key === currentKey ? 'current' : ''}`}
+                title={hint}
+                aria-label={hint}
+                disabled={b.total === 0}
+                onClick={() => onJump(b)}
+              >
+                {b.total || ''}
+              </button>
+              <span className="text-[9px] text-ink-3">
+                {period === 'week'
+                  ? formatDayMonth(i18n.language, parseISODate(b.start))
+                  : formatMonthShort(i18n.language, parseISODate(b.start))}
+              </span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+function BucketDetail({ bucket, period }: { bucket: WorkLogBucket; period: RollupPeriod }) {
+  const { t, i18n } = useTranslation()
+
+  return (
+    <div className="card mt-6" id={bucketDomId(bucket.key)}>
       <div className="card-head">
         <h3>{bucketLabel(bucket.start, bucket.end, period, i18n.language)}</h3>
         <span className="text-[11px] text-ink-3">
           {t('worklog.entryCount', { count: bucket.total })}
         </span>
       </div>
+
+      {/* The per-period numbers the table used to carry, next to the evidence
+          they describe rather than a scroll away from it. */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 border-b border-line px-4 py-2.5">
+        {ENTRY_CATEGORIES.filter((c) => (bucket.by_category[c] ?? 0) > 0).map((c) => (
+          <Stat key={c} label={t(CATEGORY_LABEL_KEYS[c])} value={bucket.by_category[c] ?? 0} />
+        ))}
+        <Stat label={t('worklog.colImpact')} value={bucket.with_impact} />
+        <Stat label={t('worklog.colDays')} value={bucket.days_logged} />
+        <Stat label={t('worklog.colEnergy')} value={bucket.avg_energy} />
+        <Stat label={t('worklog.colFriction')} value={bucket.avg_friction} />
+      </div>
+
       {bucket.entries.map((entry) => (
         <WorkLogEntryRow key={entry.id} entry={entry} />
       ))}
+
       {bucket.friction_notes.length > 0 && (
         <div className="border-t border-line px-4 py-3">
           <div className="mb-1 text-[11px] font-semibold uppercase tracking-[.06em] text-ink-3">
@@ -229,7 +325,7 @@ function BucketDetail({ bucket, period }: { bucket: WorkLogBucket; period: Rollu
 }
 
 function RollupTab({ period }: { period: RollupPeriod }) {
-  const { t, i18n } = useTranslation()
+  const { t } = useTranslation()
   const { data, isLoading, isError } = useWorkLogRollup(period)
 
   if (isLoading) return null
@@ -245,78 +341,34 @@ function RollupTab({ period }: { period: RollupPeriod }) {
     { total: 0, days: 0, impact: 0 },
   )
 
+  // Newest first: the period being written up is the current one. Empty periods
+  // are left to the strip -- repeating them here would be the wall of dashes
+  // this replaced.
+  const populated = [...buckets].reverse().filter((b) => b.total > 0)
+
+  const jump = (bucket: WorkLogBucket) => {
+    document.getElementById(bucketDomId(bucket.key))?.scrollIntoView({ behavior: 'smooth' })
+  }
+
   return (
     <>
-      <div className="card overflow-x-auto">
-        <table className="w-full text-[13px]">
-          <thead>
-            <tr className="border-b border-line text-left text-[11px] font-semibold uppercase tracking-[.06em]">
-              <th className="px-4 py-3 text-ink-2">{t('worklog.colPeriod')}</th>
-              <th className="px-3 py-3 text-right text-ink">{t('worklog.colTotal')}</th>
-              {ENTRY_CATEGORIES.map((c) => (
-                <th key={c} className="px-3 py-3 text-right text-ink-2">
-                  {t(CATEGORY_LABEL_KEYS[c])}
-                </th>
-              ))}
-              <th className="px-3 py-3 text-right text-ink-2">{t('worklog.colImpact')}</th>
-              <th className="px-3 py-3 text-right text-ink-2">{t('worklog.colDays')}</th>
-              <th className="px-3 py-3 text-right text-ink-2">{t('worklog.colEnergy')}</th>
-              <th className="px-3 py-3 text-right text-ink-2">{t('worklog.colFriction')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {buckets.map((b) => (
-              <tr key={b.key} className="border-b border-line last:border-0 hover:bg-surface-2 transition-colors">
-                <td className="px-4 py-2.5 font-medium">
-                  {bucketLabel(b.start, b.end, period, i18n.language)}
-                </td>
-                <td className="px-3 py-2.5 text-right font-semibold">
-                  <Num n={b.total} />
-                </td>
-                {ENTRY_CATEGORIES.map((c) => (
-                  <td key={c} className="px-3 py-2.5 text-right">
-                    <Num n={b.by_category[c] ?? 0} />
-                  </td>
-                ))}
-                <td className="px-3 py-2.5 text-right text-accent">
-                  <Num n={b.with_impact} />
-                </td>
-                <td className="px-3 py-2.5 text-right text-ink-3">
-                  <Num n={b.days_logged} />
-                </td>
-                <td className="px-3 py-2.5 text-right">
-                  <Signal value={b.avg_energy} />
-                </td>
-                <td className="px-3 py-2.5 text-right">
-                  <Signal value={b.avg_friction} />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr className="border-t-2 border-line bg-surface-2 text-[13px]">
-              <td className="px-4 py-2.5 font-semibold text-ink-2">{t('worklog.totals')}</td>
-              <td className="px-3 py-2.5 text-right font-semibold">{totals.total || '—'}</td>
-              {ENTRY_CATEGORIES.map((c) => (
-                <td key={c} className="px-3 py-2.5 text-right font-semibold text-ink-2">
-                  {buckets.reduce((n, b) => n + (b.by_category[c] ?? 0), 0) || '—'}
-                </td>
-              ))}
-              <td className="px-3 py-2.5 text-right font-semibold text-accent">
-                {totals.impact || '—'}
-              </td>
-              <td className="px-3 py-2.5 text-right font-semibold text-ink-3">{totals.days || '—'}</td>
-              <td className="px-3 py-2.5 text-right text-ink-3">—</td>
-              <td className="px-3 py-2.5 text-right text-ink-3">—</td>
-            </tr>
-          </tfoot>
-        </table>
+      <PeriodStrip buckets={buckets} period={period} onJump={jump} />
+
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        <Stat label={t('worklog.colTotal')} value={totals.total} />
+        <Stat label={t('worklog.colImpact')} value={totals.impact} />
+        <Stat label={t('worklog.colDays')} value={totals.days} />
       </div>
 
-      {/* Newest period first: the one you're most likely to be writing up. */}
-      {[...buckets].reverse().map((b) => (
-        <BucketDetail key={b.key} bucket={b} period={period} />
-      ))}
+      {populated.length === 0 ? (
+        <div className="empty">
+          <div className="empty-icon">📓</div>
+          <div className="mb-1.5 font-semibold">{t('worklog.emptyTitle')}</div>
+          <div className="text-xs">{t('worklog.emptyBody')}</div>
+        </div>
+      ) : (
+        populated.map((b) => <BucketDetail key={b.key} bucket={b} period={period} />)
+      )}
     </>
   )
 }

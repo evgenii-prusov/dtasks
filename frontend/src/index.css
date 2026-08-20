@@ -783,3 +783,46 @@ body {
   .undo-toast-btn:hover {
     text-decoration: underline;
   }
+
+/* Rollup period tiles. The volume ramp is mixed from the accent so it tracks
+   the theme; the top step fills with the accent itself, where --bg is the one
+   text colour legible against it in both light and dark. */
+.wcell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 34px;
+  padding: 0 6px;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+.wcell:hover:not(.v0) {
+  transform: scale(1.06);
+}
+.wcell.v0 {
+  color: var(--text-3);
+  cursor: default;
+}
+.wcell.v1 {
+  background: color-mix(in srgb, var(--accent) 45%, var(--surface-2));
+}
+.wcell.v2 {
+  background: color-mix(in srgb, var(--accent) 72%, var(--surface-2));
+}
+.wcell.v3 {
+  background: var(--accent);
+  color: var(--bg);
+}
+/* The period containing today. It sits at the right end of the strip, where a
+   timeline puts the present, so it is marked rather than reordered. */
+.wcell.current {
+  border-color: var(--accent);
+}

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkLogView } from './WorkLogView'
 import { trailingRange } from '../lib/worklog'
 import { todayISO } from '../lib/dates'
-import type { Project, Task, WorkLogEntry, WorkLogRollup } from '../api/types'
+import type { Project, Task, WorkLogBucket, WorkLogEntry, WorkLogRollup } from '../api/types'
 
 vi.mock('@tanstack/react-router', () => ({
   Link: ({ children }: { children: ReactNode }) => <a>{children}</a>,
@@ -83,6 +83,23 @@ const ROLLUP: WorkLogRollup = {
     },
   ],
 }
+
+const emptyBucket: WorkLogBucket = {
+  key: '2026-W33',
+  start: '2026-08-10',
+  end: '2026-08-16',
+  total: 0,
+  by_category: { shipped: 0, operational: 0, glue: 0, learning: 0 },
+  links_by_kind: { pr: 0, rfc: 0, doc: 0, incident: 0, link: 0 },
+  with_impact: 0,
+  days_logged: 0,
+  avg_energy: null,
+  avg_friction: null,
+  friction_notes: [],
+  entries: [],
+}
+
+const emptyBucket2: WorkLogBucket = { ...emptyBucket, key: '2026-W32', start: '2026-08-03', end: '2026-08-09' }
 
 function renderView({
   entries = [] as WorkLogEntry[],
@@ -243,38 +260,89 @@ describe('WorkLogView editing', () => {
 })
 
 describe('WorkLogView rollup tabs', () => {
-  it('fetches and renders the weekly rollup when the tab is selected', async () => {
+  it('renders a period tile per bucket, carrying its entry count', async () => {
     const qc = renderView()
     qc.setQueryData(['worklog', 'rollup', 'week'], ROLLUP)
 
     await userEvent.click(screen.getByRole('button', { name: 'By week' }))
 
-    const table = await screen.findByRole('table')
-    const row = within(table).getByText('Aug 17 – Aug 23').closest('tr')!
-    // period, total, then shipped / operational / glue / learning, with-impact,
-    // days, energy, friction. Total sits second so it survives the horizontal
-    // scroll this ten-column table needs in the 880px content column.
-    expect(within(row).getAllByRole('cell').map((c) => c.textContent)).toEqual([
-      'Aug 17 – Aug 23',
-      '2',
-      '1',
-      '—',
-      '1',
-      '—',
-      '1',
-      '2',
-      '4.5',
-      '2.0',
-    ])
+    const tile = await screen.findByRole('button', { name: /Aug 17 – Aug 23/ })
+    expect(tile).toHaveTextContent('2')
+    // Two entries lands on the first volume step, and the newest bucket is marked.
+    expect(tile.className).toContain('v1')
+    expect(tile.className).toContain('current')
+    expect(tile).toHaveAccessibleName(/2 entries/)
   })
 
-  it('lists the bucket evidence and friction notes below the table', async () => {
+  it('renders an empty bucket as a disabled tile with no count', async () => {
+    const qc = renderView()
+    qc.setQueryData(['worklog', 'rollup', 'week'], {
+      period: 'week',
+      buckets: [emptyBucket, ROLLUP.buckets[0]],
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'By week' }))
+
+    const tile = await screen.findByRole('button', { name: /Aug 10 – Aug 16/ })
+    expect(tile).toBeDisabled()
+    expect(tile).toHaveTextContent('')
+    expect(tile).toHaveAccessibleName(/Nothing logged/)
+  })
+
+  it('shows range totals as chips rather than a totals row', async () => {
+    const qc = renderView()
+    qc.setQueryData(['worklog', 'rollup', 'week'], {
+      period: 'week',
+      buckets: [emptyBucket, ROLLUP.buckets[0]],
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'By week' }))
+
+    await waitFor(() => expect(screen.queryByRole('table')).not.toBeInTheDocument())
+    // The same labels repeat on each period card, and the range chips come
+    // first in the DOM -- so index 0 is the range-wide figure.
+    expect(screen.getAllByText('Entries')[0].parentElement).toHaveTextContent('Entries 2')
+    expect(screen.getAllByText('With impact')[0].parentElement).toHaveTextContent('With impact 1')
+  })
+
+  it('gives a card only to periods that have entries, newest first', async () => {
+    const older = {
+      ...ROLLUP.buckets[0],
+      key: '2026-W33',
+      start: '2026-08-10',
+      end: '2026-08-16',
+      total: 1,
+      entries: [entry(20, 'Older thing', { day: '2026-08-10' })],
+      friction_notes: [],
+    }
+    const qc = renderView()
+    qc.setQueryData(['worklog', 'rollup', 'week'], {
+      period: 'week',
+      buckets: [emptyBucket2, older, ROLLUP.buckets[0]],
+    })
+
+    await userEvent.click(screen.getByRole('button', { name: 'By week' }))
+
+    const headings = await screen.findAllByRole('heading', { level: 3 })
+    expect(headings.map((h) => h.textContent)).toEqual(['Aug 17 – Aug 23', 'Aug 10 – Aug 16'])
+  })
+
+  it('lists the bucket evidence, its numbers and friction notes in the card', async () => {
     const qc = renderView()
     qc.setQueryData(['worklog', 'rollup', 'week'], ROLLUP)
 
     await userEvent.click(screen.getByRole('button', { name: 'By week' }))
 
     await waitFor(() => expect(screen.getByText('Rolled out the new queue')).toBeInTheDocument())
-    expect(screen.getByText('CI was flaky all week')).toBeInTheDocument()
+
+    const card = screen
+      .getByRole('heading', { level: 3, name: 'Aug 17 – Aug 23' })
+      .closest<HTMLElement>('.card')!
+    expect(within(card).getByText('CI was flaky all week')).toBeInTheDocument()
+    // The per-period numbers the table used to carry now sit on the card.
+    expect(within(card).getByText('Energy').parentElement).toHaveTextContent('Energy 4.5')
+    expect(within(card).getByText('Days').parentElement).toHaveTextContent('Days 2')
+    // Also the category badge on the entry row below; the stats line comes first.
+    expect(within(card).getAllByText('Shipped')[0].parentElement).toHaveTextContent('Shipped 1')
   })
 })
