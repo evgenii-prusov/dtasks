@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProjects } from '../../api/hooks'
-import { isDefaultProject, type Project, type Task } from '../../api/types'
+import { isDefaultProject, isInboxProject, type Project, type Task } from '../../api/types'
 import { HOTKEYS } from '../hotkeys/bindings'
 import { score } from './score'
 
@@ -63,8 +63,8 @@ export function useCommandItems(query: string): { groups: CommandGroup[]; flat: 
     const projectItems: CommandItem[] = projects.map((p: Project) => ({
       id: `project:${p.id}`,
       kind: 'project',
-      label: isDefaultProject(p) ? t('quickAdd.noProject') : p.name,
-      hint: p.group,
+      label: isInboxProject(p) ? t('inbox.title') : isDefaultProject(p) ? t('quickAdd.noProject') : p.name,
+      hint: isInboxProject(p) ? undefined : p.group,
       target: { type: 'project', projectId: p.id },
     }))
 
@@ -73,7 +73,7 @@ export function useCommandItems(query: string): { groups: CommandGroup[]; flat: 
         id: `task:${task.id}`,
         kind: 'task' as const,
         label: task.title,
-        hint: isDefaultProject(p) ? undefined : p.name,
+        hint: isDefaultProject(p) ? undefined : isInboxProject(p) ? t('inbox.title') : p.name,
         muted: task.completed,
         target: { type: 'task' as const, projectId: p.id, taskId: task.id },
       })),

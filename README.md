@@ -5,12 +5,17 @@ Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats
 
 **Core ideas:**
 
+- **Inbox** — one place to park an idea without deciding anything about it. Quick
+  add with no `#tag` files here rather than asking Work or Personal; Review then
+  opens on the Inbox, where each parked task is filed into a project (or
+  scheduled, or dropped).
 - **Today** — the day's working set, with a **Must Have** section (max 2 tasks,
   marked 🔥) so you always know where to start.
 - **Plan** — browse every open task grouped by project and assign it to Today or
   This Week; the 2-must-have limit is enforced by the backend.
-- **Review** — walk through all projects against a single session-wide countdown
-  (5 min × number of projects). Description, open tasks (checkable, editable
+- **Review** — walk through the Inbox and then all projects, against a single
+  session-wide countdown (5 min × number of phases). The Inbox comes first, with
+  a "File to…" picker on every parked task. Description, open tasks (checkable, editable
   inline, reorderable), completed tasks, and editable notes per project.
 - **Habits** — GitHub-style contribution grid (16 weeks) with three states per
   day (none / minimal / complete), streak and total counters, click any past
@@ -105,6 +110,13 @@ see [`docs/deploy.md`](docs/deploy.md).
 Rules mirrored from the design: marking a task Must Have also assigns it to
 Today; removing it from Today clears Must Have; at most 2 active Must Have
 tasks per day.
+
+Every account has exactly one Inbox: a server-managed project named `Inbox` in a
+group of its own, always returned first by `GET /api/projects`. It is created on
+demand, so accounts that predate it get one on their next read, and it cannot be
+renamed, moved between groups, or deleted (`POST /api/projects` also refuses the
+`Inbox` group). Filing a parked task is an ordinary
+`PATCH /api/tasks/{id} {"project_id": …}`.
 
 Full auth design (sessions, OAuth flow, account-linking rules): [`docs/auth.md`](docs/auth.md).
 

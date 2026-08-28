@@ -12,7 +12,7 @@ import {
 } from '../api/hooks'
 import { useTheme } from '../theme'
 import { groupLabel, useLanguage } from '../i18n'
-import { isDefaultProject } from '../api/types'
+import { isDefaultProject, isInboxProject } from '../api/types'
 import { setNavCause, track } from '../lib/analytics'
 import { Ic, type IconName } from './Icon'
 import { Kbd } from './Kbd'
@@ -85,9 +85,15 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
   const mustCount = mustHaveCount(projects)
   const todayCount = allTasks.filter((t) => t.assigned_today && !t.completed).length
 
+  // The Inbox is a project, but it is not one of the groups you file into --
+  // it gets its own entry above them, next to the other views.
+  const inbox = projects.find(isInboxProject)
+  const inboxCount = inbox ? inbox.tasks.filter((t) => !t.completed).length : 0
+
   const groups = new Map<string, typeof projects>()
   for (const g of DEFAULT_GROUPS) groups.set(g, [])
   for (const p of projects) {
+    if (isInboxProject(p)) continue
     if (!groups.has(p.group)) groups.set(p.group, [])
     groups.get(p.group)!.push(p)
   }
@@ -156,6 +162,26 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
           <Kbd chord={HOTKEYS.palette.chords[0]} />
         </span>
       </button>
+
+      {inbox && (
+        <Link
+          to="/projects/$projectId"
+          params={{ projectId: String(inbox.id) }}
+          className="nav"
+          activeProps={{ className: 'nav on' }}
+          onClick={() => {
+            setNavCause('sidebar')
+            close()
+          }}
+        >
+          <Ic n="inbox" s={14} /> {t('inbox.title')}
+          {inboxCount > 0 && (
+            <span className="nav-badge" title={t('inbox.badgeTooltip', { count: inboxCount })}>
+              {inboxCount}
+            </span>
+          )}
+        </Link>
+      )}
 
       <NavLink
         to="/"

@@ -11,7 +11,7 @@ from litestar import Litestar, Request, Response, delete, get, patch, post, put
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
-from sqlalchemy import or_, select, update
+from sqlalchemy import case, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -42,6 +42,30 @@ from .schemas import (
 from .worklog import worklog_router
 
 MUST_HAVE_LIMIT = 2
+
+#: The one place a task can be parked without deciding where it belongs. A single
+#: server-managed project, in a group of its own so it is never one of the
+#: Work/Personal choices the user is trying to avoid making.
+INBOX_PROJECT_NAME = "Inbox"
+INBOX_GROUP = "Inbox"
+
+#: Name reserved for the per-group catch-all projects.
+DEFAULT_PROJECT_NAME = "..."
+
+
+def _projects_ordered(user_id: int):
+    """Every project of ``user_id``, Inbox first, then by position.
+
+    The Inbox is the first thing you look at -- when planning, and as the first
+    phase of a review -- so its place in the list is a property of the query
+    rather than of whatever position row it happens to hold.
+    """
+    return (
+        select(Project)
+        .where(Project.user_id == user_id)
+        .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
+        .order_by(case((Project.group == INBOX_GROUP, 0), else_=1), Project.position)
+    )
 
 
 @asynccontextmanager
@@ -121,9 +145,43 @@ async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, u
 
 async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
     added = False
+    inbox = (
+        (
+            await session.execute(
+                select(Project).where(Project.user_id == user_id, Project.group == INBOX_GROUP).limit(1)
+            )
+        )
+        .scalars()
+        .first()
+    )
+
+    if inbox is None:
+        positions = (
+            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
+            .scalars()
+            .all()
+        )
+        # Below every existing project, so an account that predates the Inbox gets
+        # it at the front of the list rather than tacked onto the end.
+        session.add(
+            Project(
+                user_id=user_id,
+                name=INBOX_PROJECT_NAME,
+                group=INBOX_GROUP,
+                description="Unsorted ideas. Park them here, decide later.",
+                position=min(positions, default=0) - 1,
+                tasks=[],
+            )
+        )
+        added = True
+
     work_proj = (
         await session.execute(
-            select(Project).where(Project.user_id == user_id, Project.name == "...", Project.group == "Work")
+            select(Project).where(
+                Project.user_id == user_id,
+                Project.name == DEFAULT_PROJECT_NAME,
+                Project.group == "Work",
+            )
         )
     ).scalar_one_or_none()
 
@@ -136,7 +194,7 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
         next_pos = max(positions, default=-1) + 1
         work_proj = Project(
             user_id=user_id,
-            name="...",
+            name=DEFAULT_PROJECT_NAME,
             group="Work",
             description="Default project for Work tasks.",
             position=next_pos,
@@ -148,7 +206,9 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
     personal_proj = (
         await session.execute(
             select(Project).where(
-                Project.user_id == user_id, Project.name == "...", Project.group == "Personal"
+                Project.user_id == user_id,
+                Project.name == DEFAULT_PROJECT_NAME,
+                Project.group == "Personal",
             )
         )
     ).scalar_one_or_none()
@@ -162,7 +222,7 @@ async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
         next_pos = max(positions, default=-1) + 1
         personal_proj = Project(
             user_id=user_id,
-            name="...",
+            name=DEFAULT_PROJECT_NAME,
             group="Personal",
             description="Default project for Personal tasks.",
             position=next_pos,
@@ -232,18 +292,7 @@ async def _ensure_recurring_occurrences(session: AsyncSession, user_id: int) -> 
 async def list_projects(session: AsyncSession, user: User) -> list[ProjectOut]:
     await _ensure_default_projects(session, user.id)
     await _ensure_recurring_occurrences(session, user.id)
-    projects = (
-        (
-            await session.execute(
-                select(Project)
-                .where(Project.user_id == user.id)
-                .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
-                .order_by(Project.position)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    projects = (await session.execute(_projects_ordered(user.id))).scalars().all()
     return [project_out(p) for p in projects]
 
 
@@ -252,8 +301,10 @@ async def create_project(data: ProjectCreate, session: AsyncSession, user: User)
     name = data.name.strip()
     if not name:
         raise ClientException(detail="name must not be empty")
-    if name == "...":
+    if name == DEFAULT_PROJECT_NAME:
         raise ClientException(detail="Project name '...' is reserved for default projects")
+    if data.group == INBOX_GROUP:
+        raise ClientException(detail="There is only one Inbox, and it is managed for you")
     positions = (
         (await session.execute(select(Project.position).where(Project.user_id == user.id))).scalars().all()
     )
@@ -275,8 +326,15 @@ async def update_project(
     project_id: int, data: ProjectPatch, session: AsyncSession, user: User
 ) -> ProjectOut:
     project = await _get_project(session, project_id, user.id)
-    if project.name == "...":
-        if data.name is not UNSET and data.name != "...":
+    if project.group == INBOX_GROUP:
+        # Description and notes stay editable -- only its identity is fixed, so the
+        # Inbox cannot be renamed into a project or moved out of its own group.
+        if data.name is not UNSET and data.name != project.name:
+            raise ClientException(detail="The Inbox cannot be renamed")
+        if data.group is not UNSET and data.group != project.group:
+            raise ClientException(detail="The Inbox cannot change groups")
+    if project.name == DEFAULT_PROJECT_NAME:
+        if data.name is not UNSET and data.name != DEFAULT_PROJECT_NAME:
             raise ClientException(detail="Default projects cannot be renamed")
         if data.group is not UNSET and data.group != project.group:
             raise ClientException(detail="Default projects cannot change groups")
@@ -291,7 +349,9 @@ async def update_project(
 @delete("/api/projects/{project_id:int}", status_code=204)
 async def delete_project(project_id: int, session: AsyncSession, user: User) -> None:
     project = await _get_project(session, project_id, user.id)
-    if project.name == "...":
+    if project.group == INBOX_GROUP:
+        raise ClientException(detail="The Inbox cannot be deleted")
+    if project.name == DEFAULT_PROJECT_NAME:
         raise ClientException(detail="Default projects cannot be deleted")
     await session.delete(project)
     await session.commit()
@@ -325,18 +385,7 @@ async def reorder_project(
         )
     await session.commit()
 
-    all_projects = (
-        (
-            await session.execute(
-                select(Project)
-                .where(Project.user_id == user.id)
-                .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
-                .order_by(Project.position)
-            )
-        )
-        .scalars()
-        .all()
-    )
+    all_projects = (await session.execute(_projects_ordered(user.id))).scalars().all()
     return [project_out(p) for p in all_projects]
 
 

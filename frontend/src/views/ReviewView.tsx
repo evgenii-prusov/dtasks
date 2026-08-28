@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateRecurrence } from '../api/hooks'
 import { useCreateTask } from '../api/hooks'
 import { useProjects } from '../api/hooks'
 import { useUpdateProject } from '../api/hooks'
 import { useUpdateTask } from '../api/hooks'
+import {
+  inboxFirst,
+  isDefaultProject,
+  isInboxProject,
+  type Project,
+  type Task,
+} from '../api/types'
 import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
@@ -16,6 +23,44 @@ import { useTaskNav } from '../lib/taskNav'
 
 const MINUTES_PER_PROJECT = 5
 
+/**
+ * The triage control an Inbox task carries: pick where it actually belongs.
+ * Filing is the whole job of the Inbox phase, so it sits on the row itself
+ * rather than behind the row editor.
+ */
+function FileToProject({ task, targets }: { task: Task; targets: Project[] }) {
+  const { t } = useTranslation()
+  const updateTask = useUpdateTask()
+
+  const byGroup = targets.reduce<Record<string, Project[]>>((acc, p) => {
+    ;(acc[p.group] ??= []).push(p)
+    return acc
+  }, {})
+
+  return (
+    <select
+      className="sel max-w-[150px]"
+      value=""
+      aria-label={t('inbox.fileTo')}
+      onChange={(e) => {
+        const projectId = Number(e.target.value)
+        if (projectId) updateTask.mutate({ id: task.id, patch: { project_id: projectId } })
+      }}
+    >
+      <option value="">{t('inbox.fileTo')}</option>
+      {Object.entries(byGroup).map(([group, projects]) => (
+        <optgroup key={group} label={groupLabel(t, group)}>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {isDefaultProject(p) ? t('quickAdd.noProject') : p.name}
+            </option>
+          ))}
+        </optgroup>
+      ))}
+    </select>
+  )
+}
+
 export function ReviewView() {
   const { t } = useTranslation()
   const { data: projects = [], isLoading } = useProjects()
@@ -24,7 +69,10 @@ export function ReviewView() {
   const createRecurrence = useCreateRecurrence()
   const updateTask = useUpdateTask()
 
-  const total = MINUTES_PER_PROJECT * 60 * (projects.length || 1)
+  // The Inbox leads the walk: sorting what you parked comes before reviewing
+  // the projects it would have been filed into.
+  const phases = useMemo(() => inboxFirst(projects), [projects])
+  const total = MINUTES_PER_PROJECT * 60 * (phases.length || 1)
   const [idx, setIdx] = useState(0)
   const [left, setLeft] = useState<number | null>(null)
   const [running, setRunning] = useState(true)
@@ -35,13 +83,16 @@ export function ReviewView() {
   const newTaskRef = useRef<HTMLInputElement>(null)
   const nav = useTaskNav()
 
-  const p = projects[idx]
+  const p = phases[idx]
+  const isInboxPhase = p !== undefined && isInboxProject(p)
+  // Where an Inbox task can be filed: every real project, the Inbox excluded.
+  const fileTargets = phases.filter((proj) => !isInboxProject(proj))
   // The timer effect must not restart when these change -- it would drop the
   // interval and lose the countdown -- so it reads them through refs.
   const idxRef = useRef(idx)
   idxRef.current = idx
-  const projectCountRef = useRef(projects.length)
-  projectCountRef.current = projects.length
+  const projectCountRef = useRef(phases.length)
+  projectCountRef.current = phases.length
 
   useHotkey(
     HOTKEYS.newTask.chords,
@@ -65,7 +116,7 @@ export function ReviewView() {
   useHotkey(
     HOTKEYS.reviewNextProject.chords,
     () => {
-      if (idx < projects.length - 1) {
+      if (idx < phases.length - 1) {
         setIdx((i) => i + 1)
       } else {
         finishReview()
@@ -77,10 +128,10 @@ export function ReviewView() {
   // Initialize the session budget once projects with tasks arrive
   useEffect(() => {
     if (projects.some((proj) => proj.tasks.length > 0) && left === null) {
-      track('review.start', { project_count: projects.length })
+      track('review.start', { project_count: phases.length })
       setLeft(total)
     }
-  }, [projects, left, total])
+  }, [projects, phases.length, left, total])
 
   useEffect(() => {
     setNoteVal(p?.notes ?? '')
@@ -176,11 +227,13 @@ export function ReviewView() {
         <div>
           <div className="ph-title">{t('review.title')}</div>
           <div className="ph-sub">
-            {t('review.subtitle', {
-              current: idx + 1,
-              total: projects.length,
-              minutes: totalMins,
-            })}
+            {isInboxPhase
+              ? t('review.inboxPhase', { count: openTasks.length })
+              : t('review.subtitle', {
+                  current: idx + 1,
+                  total: phases.length,
+                  minutes: totalMins,
+                })}
           </div>
         </div>
         <div className="flex gap-2">
@@ -192,7 +245,7 @@ export function ReviewView() {
 
       {/* Progress track */}
       <div className="mb-[26px] flex gap-[5px]">
-        {projects.map((proj, i) => (
+        {phases.map((proj, i) => (
           <div
             key={proj.id}
             onClick={() => setIdx(i)}
@@ -209,11 +262,17 @@ export function ReviewView() {
           <div className="card">
             <div className="card-head">
               <h3>
-                <Ic n="folder" s={13} c="var(--accent)" />
-                <span className="text-[10px] font-normal text-ink-3">
-                  {groupLabel(t, p.group)} /
-                </span>{' '}
-                {p.name}
+                <Ic n={isInboxPhase ? 'inbox' : 'folder'} s={13} c="var(--accent)" />
+                {isInboxPhase ? (
+                  t('inbox.title')
+                ) : (
+                  <>
+                    <span className="text-[10px] font-normal text-ink-3">
+                      {groupLabel(t, p.group)} /
+                    </span>{' '}
+                    {p.name}
+                  </>
+                )}
               </h3>
               {greenOpen > 0 && (
                 <span className="badge b-green inline-flex items-center gap-1">
@@ -223,10 +282,16 @@ export function ReviewView() {
               )}
             </div>
 
-            {p.description && (
+            {isInboxPhase ? (
               <div className="border-b border-line px-4 py-[11px] text-[13px] leading-[1.7] text-ink-2">
-                {p.description}
+                {t('review.inboxHint')}
               </div>
+            ) : (
+              p.description && (
+                <div className="border-b border-line px-4 py-[11px] text-[13px] leading-[1.7] text-ink-2">
+                  {p.description}
+                </div>
+              )
             )}
 
             {/* Open tasks */}
@@ -244,7 +309,9 @@ export function ReviewView() {
                 </button>
               </div>
               {openTasks.length === 0 && !addingTask && (
-                <div className="px-4 pt-1 pb-3 text-xs text-ink-3">{t('review.allClear')}</div>
+                <div className="px-4 pt-1 pb-3 text-xs text-ink-3">
+                  {isInboxPhase ? t('review.inboxEmpty') : t('review.allClear')}
+                </div>
               )}
               {openTasks.map((task, ti) => (
                 <TaskRow
@@ -257,7 +324,8 @@ export function ReviewView() {
                   isFirst={ti === 0}
                   isLast={ti === openTasks.length - 1}
                   right={
-                    <div className="flex shrink-0 gap-[5px]">
+                    <div className="flex shrink-0 items-center gap-[5px]">
+                      {isInboxPhase && <FileToProject task={task} targets={fileTargets} />}
                       <button
                         className={`asgn ${task.assigned_today ? 'on' : ''}`}
                         onClick={() =>
@@ -322,19 +390,21 @@ export function ReviewView() {
               </div>
             )}
 
-            {/* Notes */}
-            <div className="px-4 py-3">
-              <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
-                {t('common.notes')}
+            {/* Notes -- project-level thinking; the Inbox is a queue, not a project. */}
+            {!isInboxPhase && (
+              <div className="px-4 py-3">
+                <div className="mb-[7px] text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
+                  {t('common.notes')}
+                </div>
+                <textarea
+                  className="input textarea min-h-20 text-[13px]"
+                  value={noteVal}
+                  onChange={(e) => setNoteVal(e.target.value)}
+                  onBlur={() => updateProject.mutate({ id: p.id, patch: { notes: noteVal } })}
+                  placeholder={t('review.notesPlaceholder')}
+                />
               </div>
-              <textarea
-                className="input textarea min-h-20 text-[13px]"
-                value={noteVal}
-                onChange={(e) => setNoteVal(e.target.value)}
-                onBlur={() => updateProject.mutate({ id: p.id, patch: { notes: noteVal } })}
-                placeholder={t('review.notesPlaceholder')}
-              />
-            </div>
+            )}
           </div>
         </div>
 
@@ -382,7 +452,7 @@ export function ReviewView() {
             >
               {t('review.prev')}
             </button>
-            {idx < projects.length - 1 ? (
+            {idx < phases.length - 1 ? (
               <button
                 className="btn btn-p btn-s w-full"
                 onClick={() => setIdx((i) => i + 1)}

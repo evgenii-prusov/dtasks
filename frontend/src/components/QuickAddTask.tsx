@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useCreateProject, useCreateRecurrence, useCreateTask, useProjects } from '../api/hooks'
-import { isDefaultProject, type Project } from '../api/types'
+import { isDefaultProject, isInboxProject, type Project } from '../api/types'
 import { track } from '../lib/analytics'
 import { weekdayShortLabels } from '../lib/dates'
 import { weekdaysToMask } from '../lib/recurrence'
@@ -29,7 +29,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
 
   const [title, setTitle] = useState('')
   const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null)
-  const [showPrompt, setShowPrompt] = useState(false)
   const [repeating, setRepeating] = useState(false)
   const [weekdays, setWeekdays] = useState(new Set<number>([0, 1, 2, 3, 4, 5, 6]))
 
@@ -63,16 +62,18 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     inputRef.current?.focus()
   }, [pendingTitle])
 
-  // Find default projects (named '...')
+  // Find default projects (named '...') and the one Inbox
+  const inboxProj = projects.find(isInboxProject)
   const defaultWorkProj = projects.find((p) => isDefaultProject(p) && p.group === 'Work')
   const defaultPersonalProj = projects.find((p) => isDefaultProject(p) && p.group === 'Personal')
 
-  const userProjects = projects.filter((p) => !isDefaultProject(p))
+  const userProjects = projects.filter((p) => !isDefaultProject(p) && !isInboxProject(p))
 
-  // The two catch-all projects, offered by the #-menu under a readable label
-  // instead of their reserved "..." name. These are the everyday destinations,
-  // so they lead the list -- "#" then Enter files under Work.
+  // The server-managed destinations, offered by the #-menu under readable labels
+  // instead of their reserved names. The Inbox leads -- "#" then Enter parks the
+  // task without deciding anything -- followed by the two catch-alls.
   const defaultChoices = [
+    { project: inboxProj, group: 'Inbox', label: t('quickAdd.inboxDefault') },
     { project: defaultWorkProj, group: 'Work', label: t('quickAdd.workDefault') },
     { project: defaultPersonalProj, group: 'Personal', label: t('quickAdd.personalDefault') },
   ].filter((c): c is typeof c & { project: Project } => c.project !== undefined)
@@ -112,6 +113,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   }
 
   const projectLabel = (p: Project) => {
+    if (isInboxProject(p)) return t('inbox.title')
     if (!isDefaultProject(p)) return `#${p.name}`
     return p.group === 'Work' ? t('quickAdd.workDefault') : t('quickAdd.personalDefault')
   }
@@ -156,13 +158,14 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     setShowAutocomplete(false)
   }
 
-  const handleAdd = async (groupOverride?: 'Work' | 'Personal', preselectedProjectId?: number) => {
+  const handleAdd = async (preselectedProjectId?: number) => {
     const rawTitle = title.trim()
     if (!rawTitle) return
     if (repeating && weekdays.size === 0) return
 
     let cleanTitle = rawTitle
     let targetProjectId: number | null = preselectedProjectId ?? selectedProjectId
+    let resolved: 'preselected' | 'tag' | 'inbox' = targetProjectId !== null ? 'preselected' : 'tag'
 
     if (targetProjectId !== null) {
       // Project already known — strip any trailing #tag from the (possibly stale) title
@@ -177,76 +180,47 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
         try {
           const newProj = await createProject.mutateAsync({
             name: parsed.newProjectName,
-            group: groupOverride || 'Work',
+            group: 'Work',
           })
           targetProjectId = newProj.id
         } catch {
           // Fallback if creation fails
         }
       }
-    }
 
-    if (targetProjectId !== null) {
-      // `resolved` says which route through the #tag rules the user actually
-      // took, which is the useful thing about quick add -- derived from the
-      // parse result rather than measured inside the (pure) parser.
-      track('quickadd.submit', {
-        resolved: (preselectedProjectId ?? selectedProjectId) !== null ? 'preselected' : 'tag',
-        had_hash: rawTitle.includes('#'),
-        repeating,
-        weekday_count: repeating ? weekdays.size : 0,
-      })
-      if (repeating) {
-        createRecurrence.mutate({
-          projectId: targetProjectId,
-          rule: {
-            title: cleanTitle,
-            weekdays: weekdaysToMask(weekdays),
-          },
-        })
-      } else {
-        createTask.mutate({
-          projectId: targetProjectId,
-          task: { title: cleanTitle },
-        })
+      if (targetProjectId === null) {
+        // Nothing named a project. Parking an idea must never cost a
+        // Work-vs-Personal decision, so it goes to the Inbox and gets sorted
+        // in the Inbox phase of a review.
+        targetProjectId = inboxProj?.id ?? null
+        resolved = 'inbox'
       }
-      reset()
-      return
     }
 
-    // No project chosen
-    const targetGroup = groupOverride
-    if (!targetGroup) {
-      // It's ambiguous, ask the user!
-      track('quickadd.group_prompt_shown', { had_hash: rawTitle.includes('#') })
-      setShowPrompt(true)
-      return
-    }
+    if (targetProjectId === null) return
 
+    // `resolved` says which route through the #tag rules the user actually
+    // took, which is the useful thing about quick add -- derived from the
+    // parse result rather than measured inside the (pure) parser.
     track('quickadd.submit', {
-      resolved: 'default',
+      resolved,
       had_hash: rawTitle.includes('#'),
       repeating,
       weekday_count: repeating ? weekdays.size : 0,
     })
-
-    // Clear prompt and assign to default project of the chosen group
-    const defaultProj = targetGroup === 'Work' ? defaultWorkProj : defaultPersonalProj
-    if (defaultProj) {
-      if (repeating) {
-        createRecurrence.mutate({
-          projectId: defaultProj.id,
-          rule: {
-            title: cleanTitle,
-            weekdays: weekdaysToMask(weekdays),
-          },
-        })
-      } else {
-        createTask.mutate({
-          projectId: defaultProj.id,
-          task: { title: cleanTitle },
-        })
-      }
+    if (repeating) {
+      createRecurrence.mutate({
+        projectId: targetProjectId,
+        rule: {
+          title: cleanTitle,
+          weekdays: weekdaysToMask(weekdays),
+        },
+      })
+    } else {
+      createTask.mutate({
+        projectId: targetProjectId,
+        task: { title: cleanTitle },
+      })
     }
     reset()
   }
@@ -254,7 +228,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const reset = () => {
     setTitle('')
     setSelectedProjectId(null)
-    setShowPrompt(false)
     setShowAutocomplete(false)
     setRepeating(false)
     setWeekdays(new Set([0, 1, 2, 3, 4, 5, 6]))
@@ -270,10 +243,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
               className="input w-full animate-[fadeIn_0.2s_ease]"
               title={t('common.newTaskHotkey')}
               value={title}
-              onChange={(e) => {
-                setTitle(e.target.value)
-                if (showPrompt) setShowPrompt(false)
-              }}
+              onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
                 if (showAutocomplete && autocompleteOptions.length > 0) {
                   if (e.key === 'ArrowDown') {
@@ -294,7 +264,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
                     // Pass the project ID directly to avoid reading stale selectedProjectId state.
                     if (!opt.isNew && opt.project) {
                       const cleanTitle = title.replace(/(?:^|\s)#([^\s#]*)$/, '').trim()
-                      if (cleanTitle) handleAdd(undefined, opt.project.id)
+                      if (cleanTitle) handleAdd(opt.project.id)
                     }
                     return
                   }
@@ -368,6 +338,12 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
           </button>
         </div>
 
+        {selectedProjectId === null && title.trim() !== '' && !tagQuery && (
+          <div className="text-[11px] text-ink-3 animate-[fadeIn_0.15s_ease]">
+            {t('quickAdd.inboxHint')}
+          </div>
+        )}
+
         {selectedProjectId !== null && (() => {
           const proj = projects.find((p) => p.id === selectedProjectId)
           return proj ? (
@@ -398,38 +374,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
                 {label}
               </button>
             ))}
-          </div>
-        )}
-
-        {showPrompt && (
-          <div className="flex items-center gap-3 px-3 py-2 rounded bg-surface-2 border border-line text-[13px] text-ink-2 animate-[fadeIn_0.2s_ease]">
-            <span className="font-medium">{t('quickAdd.chooseSection')}</span>
-            <div className="flex gap-1.5">
-              <button
-                className="btn btn-g btn-s bg-surface hover:bg-surface-2"
-                onClick={() => {
-                  track('quickadd.group_prompt_choice', { group: 'Work' })
-                  handleAdd('Work')
-                }}
-              >
-                {t('quickAdd.work')}
-              </button>
-              <button
-                className="btn btn-g btn-s bg-surface hover:bg-surface-2"
-                onClick={() => {
-                  track('quickadd.group_prompt_choice', { group: 'Personal' })
-                  handleAdd('Personal')
-                }}
-              >
-                {t('quickAdd.personal')}
-              </button>
-              <button
-                className="btn btn-g btn-s border-none text-ink-3 hover:text-ink"
-                onClick={() => setShowPrompt(false)}
-              >
-                {t('common.cancel')}
-              </button>
-            </div>
           </div>
         )}
       </div>

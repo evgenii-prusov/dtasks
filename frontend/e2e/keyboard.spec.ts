@@ -73,7 +73,7 @@ test('a task can be created, scheduled and completed without the mouse', async (
   await expect(page.locator('.undo-toast')).toBeVisible()
 })
 
-test('# files a task under a default section without the Work/Personal prompt', async ({
+test('# files a task under a section without ever asking Work or Personal', async ({
   page,
 }) => {
   await signup(page)
@@ -82,7 +82,9 @@ test('# files a task under a default section without the Work/Personal prompt', 
   const quickAdd = page.getByPlaceholder(/Quick add task/)
   await quickAdd.fill('Daily standup #')
 
-  // Both defaults lead the dropdown, so Work is one Enter away.
+  // The Inbox leads the dropdown -- one Enter parks a thought -- with the two
+  // group defaults behind it.
+  await expect(page.getByRole('button', { name: /Inbox/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Work \(Default\)/ })).toBeVisible()
   await expect(page.getByRole('button', { name: /Personal \(Default\)/ })).toBeVisible()
   await page.keyboard.press('Enter')
@@ -95,7 +97,7 @@ test('# files a task under a default section without the Work/Personal prompt', 
   await expect(page.getByRole('button', { name: /Work \(Default\)/ })).toHaveCount(0)
   await page.keyboard.press('Enter')
 
-  // Both landed in their default project, which Plan lists under its group.
+  // One parked in the Inbox, one filed under Personal; Plan lists both.
   await page.keyboard.press('Escape')
   await page.keyboard.press('g')
   await page.keyboard.press('p')

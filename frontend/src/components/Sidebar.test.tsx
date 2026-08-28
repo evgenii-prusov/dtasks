@@ -28,6 +28,50 @@ beforeEach(() => {
 })
 afterEach(() => vi.restoreAllMocks())
 
+describe('Sidebar Inbox', () => {
+  const inbox: Project = {
+    id: 7,
+    name: 'Inbox',
+    group: 'Inbox',
+    description: '',
+    notes: '',
+    position: -1,
+    tasks: [
+      {
+        id: 1,
+        project_id: 7,
+        title: 'Parked idea',
+        notes: '',
+        complexity: 'low',
+        assigned_today: false,
+        assigned_week: false,
+        must_have: false,
+        is_green: false,
+        completed: false,
+        completed_at: null,
+        position: 0,
+        recurrence_rule_id: null,
+        occurrence_date: null,
+      },
+    ],
+    recurrences: [],
+  }
+
+  it('links to the Inbox with a count of what is waiting', () => {
+    renderSidebar([inbox])
+
+    const link = screen.getByRole('link', { name: /Inbox/ })
+    expect(link).toHaveTextContent('1')
+  })
+
+  it('keeps the Inbox out of the filing groups', () => {
+    renderSidebar([inbox])
+
+    // One Inbox entry, and no "Inbox" group header alongside Work and Personal.
+    expect(screen.getAllByText(/^Inbox$/)).toHaveLength(1)
+  })
+})
+
 describe('Sidebar project groups', () => {
   it('shows the Work and Personal group headers even with no projects', () => {
     renderSidebar([])

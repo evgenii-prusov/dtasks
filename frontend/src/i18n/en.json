@@ -123,7 +123,10 @@
     "budgetLine1": "Session budget",
     "budgetLine2": "for all projects",
     "emptyTitle": "No tasks yet",
-    "emptyBody": "Create a project and add tasks to start reviewing."
+    "emptyBody": "Create a project and add tasks to start reviewing.",
+    "inboxPhase": "Inbox · {{count}} to sort",
+    "inboxHint": "Decide where each one lives, or schedule it. Anything left stays in the Inbox.",
+    "inboxEmpty": "Inbox zero ✓"
   },
   "habits": {
     "title": "Habits",
@@ -256,11 +259,10 @@
     "placeholder": "Quick add task…",
     "projectLabel": "Project",
     "noProject": "No project",
+    "inboxDefault": "Inbox",
+    "inboxHint": "No project? It goes to the Inbox.",
     "workDefault": "Work (Default)",
     "personalDefault": "Personal (Default)",
-    "chooseSection": "Is this for Work or Personal?",
-    "work": "Work",
-    "personal": "Personal",
     "submit": "Add",
     "createProject": "Create project \"{{name}}\""
   },
@@ -307,5 +309,13 @@
     "help": "Show this list",
     "close": "Close or cancel",
     "goWorkLog": "Go to Work Log"
+  },
+  "inbox": {
+    "title": "Inbox",
+    "subtitle": "Park an idea now, decide where it belongs later.",
+    "empty": "Inbox zero — nothing waiting.",
+    "badgeTooltip": "{{count}} unsorted in the Inbox",
+    "fileTo": "File to…",
+    "keepHere": "Keep in Inbox"
   }
 }

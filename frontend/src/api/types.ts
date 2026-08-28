@@ -50,6 +50,20 @@ export function isDefaultProject(project: Pick<Project, 'name'>): boolean {
   return project.name === DEFAULT_PROJECT_NAME
 }
 
+// The Inbox is one server-managed project in a group of its own, always sorted
+// first. It exists so parking an idea never costs a Work-vs-Personal decision;
+// the choice is made later, in the Inbox phase of a review.
+export const INBOX_GROUP = 'Inbox'
+
+export function isInboxProject(project: Pick<Project, 'group'>): boolean {
+  return project.group === INBOX_GROUP
+}
+
+/** The Inbox first, then everything else in the order the server gave. */
+export function inboxFirst(projects: Project[]): Project[] {
+  return [...projects].sort((a, b) => Number(isInboxProject(b)) - Number(isInboxProject(a)))
+}
+
 export interface Habit {
   id: number
   name: string
