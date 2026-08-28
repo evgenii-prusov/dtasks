@@ -8,6 +8,16 @@ import type { Project } from '../api/types'
 
 const projects: Project[] = [
   {
+    id: 4,
+    name: 'Inbox',
+    group: 'Inbox',
+    description: 'Unsorted ideas. Park them here, decide later.',
+    notes: '',
+    position: -1,
+    tasks: [],
+    recurrences: [],
+  },
+  {
     id: 1,
     name: '...',
     group: 'Work',
@@ -80,23 +90,17 @@ describe('QuickAddTask', () => {
     expect(screen.getByRole('button', { name: /add/i })).toBeInTheDocument()
   })
 
-  it('shows group confirmation prompt when no project is chosen', async () => {
+  it('files a task with no project in the Inbox, without asking Work or Personal', async () => {
     renderQuickAddTask()
 
     await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'One-off Task')
+    // Parking an idea asks nothing -- no Work/Personal choice stands in the way.
+    expect(screen.queryByText(/Work or Personal/i)).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /add/i }))
-
-    // Prompt should be visible
-    expect(screen.getByText('Is this for Work or Personal?')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /work/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /personal/i })).toBeInTheDocument()
-
-    // Click Work to assign to the Work default project (id = 1)
-    await userEvent.click(screen.getByRole('button', { name: /work/i }))
 
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/projects/1/tasks',
+        '/api/projects/4/tasks',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ title: 'One-off Task' }),
@@ -105,12 +109,41 @@ describe('QuickAddTask', () => {
     )
   })
 
-  it('assigns task to Personal default project when Personal is selected in prompt', async () => {
+  it('says where an unfiled task will land', async () => {
     renderQuickAddTask()
 
-    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Personal One-off')
-    await userEvent.click(screen.getByRole('button', { name: /add/i }))
-    await userEvent.click(screen.getByRole('button', { name: /personal/i }))
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Half an idea')
+    expect(screen.getByText('No project? It goes to the Inbox.')).toBeInTheDocument()
+  })
+
+  it('files under the Inbox when #inbox is typed out', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Read that paper #inbox')
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/projects/4/tasks',
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ title: 'Read that paper' }),
+        }),
+      ),
+    )
+    // The Inbox is never mistaken for a project that needs creating.
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      '/api/projects',
+      expect.objectContaining({ method: 'POST' }),
+    )
+  })
+
+  it('assigns task to the Personal default when it is picked from the dropdown', async () => {
+    renderQuickAddTask()
+
+    await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Personal One-off #pers')
+    await userEvent.click(screen.getByRole('button', { name: /Personal \(Default\)/i }))
+    await userEvent.click(screen.getByRole('button', { name: /^add$/i }))
 
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -196,7 +229,7 @@ describe('QuickAddTask', () => {
     )
   })
 
-  it('submits without Work/Personal prompt when # alone is typed and project selected via keyboard', async () => {
+  it('submits straight away when # alone is typed and a project is selected via keyboard', async () => {
     renderQuickAddTask()
 
     const input = screen.getByPlaceholderText('Quick add task…')
@@ -205,11 +238,9 @@ describe('QuickAddTask', () => {
 
     expect(screen.getByRole('button', { name: /Real Work Project/i })).toBeInTheDocument()
 
-    // Arrow past the two defaults to the user project, then Enter: should select
-    // it AND submit, NOT show the Work/Personal prompt
-    await userEvent.keyboard('{ArrowDown}{ArrowDown}{Enter}')
-
-    expect(screen.queryByText('Is this for Work or Personal?')).not.toBeInTheDocument()
+    // Arrow past the three server-managed destinations to the user project, then
+    // Enter: should select it AND submit
+    await userEvent.keyboard('{ArrowDown}{ArrowDown}{ArrowDown}{Enter}')
 
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
@@ -222,7 +253,7 @@ describe('QuickAddTask', () => {
     )
   })
 
-  it('offers the Work and Personal defaults at the top of the # dropdown', async () => {
+  it('leads the # dropdown with the Inbox, then the Work and Personal defaults', async () => {
     renderQuickAddTask()
 
     await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Buy groceries #')
@@ -230,25 +261,24 @@ describe('QuickAddTask', () => {
     const options = screen
       .getAllByRole('button')
       .map((b) => b.textContent ?? '')
-      .filter((text) => /\(Default\)|Real Work Project/.test(text))
+      .filter((text) => /Inbox|\(Default\)|Real Work Project/.test(text))
     expect(options).toEqual([
+      expect.stringContaining('Inbox'),
       expect.stringContaining('Work (Default)'),
       expect.stringContaining('Personal (Default)'),
       expect.stringContaining('Real Work Project'),
     ])
   })
 
-  it('files under the Work default when # is followed by Enter', async () => {
+  it('files in the Inbox when # is followed by Enter', async () => {
     renderQuickAddTask()
 
     await userEvent.type(screen.getByPlaceholderText('Quick add task…'), 'Buy groceries #')
     await userEvent.keyboard('{Enter}')
 
-    expect(screen.queryByText('Is this for Work or Personal?')).not.toBeInTheDocument()
-
     await waitFor(() =>
       expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/projects/1/tasks',
+        '/api/projects/4/tasks',
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify({ title: 'Buy groceries' }),

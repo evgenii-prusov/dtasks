@@ -34,7 +34,9 @@ async def test_signup_creates_account_with_starter_data(anon_client: AsyncTestCl
     assert me.json()["email"] == "alice@example.com"
 
     projects = (await anon_client.get("/api/projects")).json()
-    assert len(projects) == 6
+    # 4 demo projects + the two "..." catch-alls + the Inbox.
+    assert len(projects) == 7
+    assert projects[0]["group"] == "Inbox"
     habits = (await anon_client.get("/api/habits")).json()
     assert len(habits) == 4
 

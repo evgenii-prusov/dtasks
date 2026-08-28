@@ -12,6 +12,15 @@ async def seed_starter_data(session: AsyncSession, user_id: int) -> None:
     """Give a freshly signed-up user a small demo workspace. Does not commit."""
     projects = [
         Project(
+            # Ordered ahead of everything else (see ``_projects_ordered``): the
+            # Inbox is where an idea lands when you don't want to file it yet.
+            name="Inbox",
+            group="Inbox",
+            position=-1,
+            description="Unsorted ideas. Park them here, decide later.",
+            tasks=[],
+        ),
+        Project(
             name="...",
             group="Work",
             position=0,

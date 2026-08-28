@@ -105,9 +105,8 @@ WHERE name = 'task.update' AND json_extract(props, '$.fields') = '["completed"]'
 | `palette.select` | An item was run | `kind`, `rank`, `query_length` |
 | `palette.dismiss` | Closed without picking | `query_length`, `had_results` |
 | `help.open` | Shortcuts overlay opened | `via` |
-| `quickadd.submit` | | `resolved`, `had_hash`, `repeating`, `weekday_count` |
+| `quickadd.submit` | | `resolved` (`preselected`/`tag`/`inbox`), `had_hash`, `repeating`, `weekday_count` |
 | `quickadd.autocomplete_shown` / `_select` | `#tag` dropdown | `option_count` / `is_new` |
-| `quickadd.group_prompt_shown` / `_choice` | Work/Personal prompt | `had_hash` / `group` |
 | `undo.shown`, `undo.used` | Undo toast | |
 | `review.start`, `review.finish` | Review session | `project_count`, `reached_index` |
 | `habit.cell_click` | Heatmap cell cycled | `state_from`, `state_to`, `days_ago` |

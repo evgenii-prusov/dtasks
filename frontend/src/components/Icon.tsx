@@ -6,6 +6,7 @@ export type IconName =
   | 'review'
   | 'habits'
   | 'folder'
+  | 'inbox'
   | 'plus'
   | 'moon'
   | 'sun'
@@ -52,6 +53,18 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       <rect x="1" y="9" width="4" height="4" rx="1" fill={c} opacity=".6" />
       <rect x="6" y="9" width="4" height="4" rx="1" fill={c} />
       <rect x="11" y="9" width="4" height="4" rx="1" fill={c} opacity=".6" />
+    </>
+  ),
+  inbox: (
+    <>
+      <path
+        d="M2 9.5 3.8 3.3A1 1 0 0 1 4.76 2.6h6.48a1 1 0 0 1 .96.7L14 9.5V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9.5z"
+        stroke={c}
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+        fill="none"
+      />
+      <path d="M2 9.5h3.2l.9 1.7h3.8l.9-1.7H14" stroke={c} strokeWidth="1.4" fill="none" />
     </>
   ),
   folder: (

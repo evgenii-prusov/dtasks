@@ -5,6 +5,7 @@ import { useCreateRecurrence } from '../api/hooks'
 import { useCreateTask } from '../api/hooks'
 import { useProjects } from '../api/hooks'
 import { useUpdateTask } from '../api/hooks'
+import { isInboxProject } from '../api/types'
 import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
@@ -256,11 +257,17 @@ export function PlanView() {
           <div key={p.id} className="card">
             <div className="card-head">
               <h3>
-                <Ic n="folder" s={13} c="var(--accent)" />
-                <span className="text-[10px] font-normal text-ink-3">
-                  {groupLabel(t, p.group)} /
-                </span>{' '}
-                {p.name}
+                <Ic n={isInboxProject(p) ? 'inbox' : 'folder'} s={13} c="var(--accent)" />
+                {isInboxProject(p) ? (
+                  t('inbox.title')
+                ) : (
+                  <>
+                    <span className="text-[10px] font-normal text-ink-3">
+                      {groupLabel(t, p.group)} /
+                    </span>{' '}
+                    {p.name}
+                  </>
+                )}
               </h3>
               <button
                 className="btn btn-g btn-s"
@@ -271,7 +278,9 @@ export function PlanView() {
             </div>
 
             {open.length === 0 && addingTo !== p.id && (
-              <div className="px-4 py-3 text-xs text-ink-3">{t('plan.noOpenTasks')}</div>
+              <div className="px-4 py-3 text-xs text-ink-3">
+                {isInboxProject(p) ? t('inbox.empty') : t('plan.noOpenTasks')}
+              </div>
             )}
 
             {open.map((task, i) => (

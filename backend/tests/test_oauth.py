@@ -337,7 +337,7 @@ async def test_callback_new_user_with_valid_invite_is_created_seeded_and_logged_
     assert me.json()["email"] == "newperson@example.com"
 
     projects = (await anon_client.get("/api/projects")).json()
-    assert len(projects) == 6
+    assert len(projects) == 7
     habits = (await anon_client.get("/api/habits")).json()
     assert len(habits) == 4
 

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useRouterState } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import { useCreateTask, useProjects } from '../api/hooks'
-import { isDefaultProject } from '../api/types'
+import { isDefaultProject, isInboxProject } from '../api/types'
 import {
   GROUP_ORDER,
   useCommandItems,
@@ -104,28 +104,33 @@ export function CommandPalette({ onClose }: { onClose: () => void }) {
   const createTaskFromQuery = () => {
     const title = query.trim()
     if (!title) return
-    const userProjects = projects.filter((p) => !isDefaultProject(p))
+    const userProjects = projects.filter((p) => !isDefaultProject(p) && !isInboxProject(p))
     // Same "#Work"/"#Personal" shorthand the quick-add dropdown offers.
     const defaultAliases = projects
-      .filter(isDefaultProject)
+      .filter((p) => isDefaultProject(p) || isInboxProject(p))
       .map((project) => ({
         project,
-        aliases: [
-          project.group,
-          t(project.group === 'Work' ? 'quickAdd.workDefault' : 'quickAdd.personalDefault'),
-        ],
+        aliases: isInboxProject(project)
+          ? [project.group, t('inbox.title')]
+          : [
+              project.group,
+              t(project.group === 'Work' ? 'quickAdd.workDefault' : 'quickAdd.personalDefault'),
+            ],
       }))
     const parsed = parseTaskInput(title, userProjects, defaultAliases)
 
-    // Unambiguous: an explicit #tag, or we are already inside a project.
-    const projectId = parsed.projectId ?? currentProjectId
+    // Unambiguous: an explicit #tag, or we are already inside a project. With
+    // nothing naming a project, the Inbox takes it -- the palette is the fastest
+    // way to park a thought, and parking must not ask where it belongs.
+    const inbox = projects.find(isInboxProject)
+    const projectId = parsed.projectId ?? currentProjectId ?? inbox?.id ?? null
     if (projectId !== null && !parsed.newProjectName) {
       createTask.mutate({ projectId, task: { title: parsed.cleanTitle } })
       return
     }
 
-    // Otherwise hand the raw text to QuickAddTask, which owns the
-    // tag-autocreate and Work/Personal flows.
+    // A #tag naming a project that does not exist yet: QuickAddTask owns
+    // creating it.
     setPendingQuickAdd(title)
     navigate({ to: '/' })
   }

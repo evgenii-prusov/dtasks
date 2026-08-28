@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import pytest
 from litestar.testing import AsyncTestClient
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.models import Task
+from app.models import Project, Task
 
 pytestmark = pytest.mark.anyio
 
@@ -140,3 +140,76 @@ async def test_cannot_create_reserved_name_project(client: AsyncTestClient) -> N
     resp = await client.post("/api/projects", json={"name": "...", "group": "Work"})
     assert resp.status_code == 400
     assert "reserved for default projects" in resp.json()["detail"]
+
+
+async def test_inbox_exists_and_comes_first(client: AsyncTestClient) -> None:
+    projects = (await client.get("/api/projects")).json()
+    assert projects[0]["group"] == "Inbox"
+    assert projects[0]["name"] == "Inbox"
+    # Exactly one, however many groups the account has.
+    assert len([p for p in projects if p["group"] == "Inbox"]) == 1
+
+
+async def test_inbox_is_backfilled_for_an_account_that_predates_it(
+    client: AsyncTestClient, db: async_sessionmaker
+) -> None:
+    projects = (await client.get("/api/projects")).json()
+    inbox_id = projects[0]["id"]
+
+    # Simulate the pre-Inbox world: drop the row, then let the next read restore it.
+    async with db() as session:
+        await session.execute(delete(Project).where(Project.id == inbox_id))
+        await session.commit()
+
+    restored = (await client.get("/api/projects")).json()
+    assert restored[0]["group"] == "Inbox"
+    # Ahead of the projects that already existed, not appended after them.
+    assert restored[0]["position"] < min(p["position"] for p in restored[1:])
+
+
+async def test_inbox_stays_first_after_reordering_other_projects(client: AsyncTestClient) -> None:
+    created = (await client.post("/api/projects", json={"name": "Later", "group": "Work"})).json()
+    reordered = (await client.post(f"/api/projects/{created['id']}/reorder", json={"direction": "up"})).json()
+    assert reordered[0]["group"] == "Inbox"
+
+
+async def test_inbox_cannot_be_renamed_moved_or_deleted(client: AsyncTestClient) -> None:
+    inbox = (await client.get("/api/projects")).json()[0]
+
+    resp = await client.patch(f"/api/projects/{inbox['id']}", json={"name": "Ideas"})
+    assert resp.status_code == 400
+    assert "cannot be renamed" in resp.json()["detail"]
+
+    resp = await client.patch(f"/api/projects/{inbox['id']}", json={"group": "Work"})
+    assert resp.status_code == 400
+    assert "cannot change groups" in resp.json()["detail"]
+
+    resp = await client.delete(f"/api/projects/{inbox['id']}")
+    assert resp.status_code == 400
+    assert "cannot be deleted" in resp.json()["detail"]
+
+    # Its notes stay editable -- a review phase writes them like any other.
+    resp = await client.patch(f"/api/projects/{inbox['id']}", json={"notes": "triage weekly"})
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "triage weekly"
+
+
+async def test_cannot_create_a_second_inbox(client: AsyncTestClient) -> None:
+    resp = await client.post("/api/projects", json={"name": "Other Inbox", "group": "Inbox"})
+    assert resp.status_code == 400
+    assert "only one Inbox" in resp.json()["detail"]
+
+
+async def test_tasks_can_be_parked_in_the_inbox_and_filed_later(client: AsyncTestClient) -> None:
+    projects = (await client.get("/api/projects")).json()
+    inbox = projects[0]
+    target = next(p for p in projects if p["group"] == "Work" and p["name"] != "...")
+
+    created = (await client.post(f"/api/projects/{inbox['id']}/tasks", json={"title": "Half an idea"})).json()
+    assert created["project_id"] == inbox["id"]
+
+    moved = (await client.patch(f"/api/tasks/{created['id']}", json={"project_id": target["id"]})).json()
+    assert moved["project_id"] == target["id"]
+
+    after = (await client.get("/api/projects")).json()
+    assert after[0]["tasks"] == []

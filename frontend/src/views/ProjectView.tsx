@@ -9,7 +9,7 @@ import {
   useUpdateProject,
 } from '../api/hooks'
 import { groupLabel } from '../i18n'
-import { isDefaultProject, type Project } from '../api/types'
+import { isDefaultProject, isInboxProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
@@ -25,7 +25,9 @@ export function ProjectView({ project }: { project: Project }) {
   const createRecurrence = useCreateRecurrence()
   const { data: allProjects = [] } = useProjects()
 
-  const isDefault = isDefaultProject(project)
+  const isInbox = isInboxProject(project)
+  // Both are server-managed: neither can be renamed or deleted.
+  const isDefault = isDefaultProject(project) || isInbox
 
   const removeProject = () => {
     if (confirm(t('project.confirmDelete', { name: project.name }))) {
@@ -78,7 +80,7 @@ export function ProjectView({ project }: { project: Project }) {
       <div className="ph">
         <div>
           <div className="mb-1 text-[10px] font-semibold uppercase tracking-[.07em] text-ink-3">
-            {groupLabel(t, project.group)}
+            {isInbox ? t('inbox.subtitle') : groupLabel(t, project.group)}
           </div>
           {editingName ? (
             <input
@@ -92,6 +94,11 @@ export function ProjectView({ project }: { project: Project }) {
               onBlur={saveName}
               autoFocus
             />
+          ) : isInbox ? (
+            <div className="ph-title flex items-center gap-2">
+              <Ic n="inbox" s={18} c="var(--accent)" />
+              {t('inbox.title')}
+            </div>
           ) : isDefault ? (
             <div className="ph-title">{t('quickAdd.noProject')}</div>
           ) : (
@@ -196,7 +203,9 @@ export function ProjectView({ project }: { project: Project }) {
           />
         )}
         {open.length === 0 && !addingTask && (
-          <div className="px-4 py-[13px] text-xs text-ink-3">{t('project.allDone')}</div>
+          <div className="px-4 py-[13px] text-xs text-ink-3">
+            {isInbox ? t('inbox.empty') : t('project.allDone')}
+          </div>
         )}
       </div>
 
