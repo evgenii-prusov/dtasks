@@ -1,9 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createAppRouter } from './router'
-import type { User } from './api/types'
+import type { Project, User } from './api/types'
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -12,16 +13,27 @@ function json(body: unknown, status = 200) {
   })
 }
 
-function mockApi(user: User | null) {
+function mockApi(user: User | null, projects: Project[] = []) {
   vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
     const url = String(input)
     if (url.includes('/api/auth/me')) {
       return user ? json(user) : json({ detail: 'Unauthorized' }, 401)
     }
-    if (url.includes('/api/projects')) return json([])
+    if (url.includes('/api/projects')) return json(projects)
     if (url.includes('/api/habits')) return json([])
     return json({ detail: 'Not found' }, 404)
   })
+}
+
+const inbox: Project = {
+  id: 5,
+  name: 'Inbox',
+  group: 'Inbox',
+  description: '',
+  notes: '',
+  position: -1,
+  tasks: [],
+  recurrences: [],
 }
 
 function renderAt(path: string) {
@@ -69,5 +81,29 @@ describe('route guard', () => {
 
     expect(await screen.findByText('Plan my day')).toBeInTheDocument()
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
+})
+
+describe('g i', () => {
+  it('jumps to the Inbox, wherever it happens to live', async () => {
+    mockApi({ id: 1, email: 'user@example.com' }, [inbox])
+    const router = renderAt('/habits')
+
+    expect(await screen.findByText('user@example.com')).toBeInTheDocument()
+
+    await userEvent.keyboard('gi')
+
+    await waitFor(() => expect(router.state.location.pathname).toBe('/projects/5'))
+  })
+
+  it('stays put when the account has no Inbox yet', async () => {
+    mockApi({ id: 1, email: 'user@example.com' }, [])
+    const router = renderAt('/habits')
+
+    expect(await screen.findByText('user@example.com')).toBeInTheDocument()
+
+    await userEvent.keyboard('gi')
+
+    expect(router.state.location.pathname).toBe('/habits')
   })
 })

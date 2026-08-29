@@ -65,6 +65,9 @@ export function useCommandItems(query: string): { groups: CommandGroup[]; flat: 
       kind: 'project',
       label: isInboxProject(p) ? t('inbox.title') : isDefaultProject(p) ? t('quickAdd.noProject') : p.name,
       hint: isInboxProject(p) ? undefined : p.group,
+      // The Inbox is a project row but reachable like a page, so it teaches its
+      // chord here the way the pages above do.
+      chord: isInboxProject(p) ? HOTKEYS.goInbox.chords[0] : undefined,
       target: { type: 'project', projectId: p.id },
     }))
 

@@ -26,6 +26,12 @@ test('g-sequences move between pages', async ({ page }) => {
   await page.keyboard.press('g')
   await page.keyboard.press('t')
   await expect(page.locator('.nav.on')).toHaveText(/Today/)
+
+  // The Inbox is a project route, but it answers the same kind of chord.
+  await page.keyboard.press('g')
+  await page.keyboard.press('i')
+  await expect(page.locator('.nav.on')).toHaveText(/Inbox/)
+  await expect(page.locator('.ph-title')).toContainText('Inbox')
 })
 
 test('the palette finds a project and navigates to it', async ({ page }) => {
