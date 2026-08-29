@@ -31,6 +31,7 @@ export interface HotkeyDef {
 
 export const HOTKEYS = {
   // ── Navigation ────────────────────────────────────────────────
+  goInbox: { chords: ['g i'], labelKey: 'hotkeys.goInbox', group: 'navigation' },
   goToday: { chords: ['g t'], labelKey: 'hotkeys.goToday', group: 'navigation' },
   goPlan: { chords: ['g p'], labelKey: 'hotkeys.goPlan', group: 'navigation' },
   goReview: { chords: ['g r'], labelKey: 'hotkeys.goReview', group: 'navigation' },

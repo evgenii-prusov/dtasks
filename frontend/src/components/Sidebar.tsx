@@ -175,9 +175,15 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
           }}
         >
           <Ic n="inbox" s={14} /> {t('inbox.title')}
-          {inboxCount > 0 && (
+          {inboxCount > 0 ? (
             <span className="nav-badge" title={t('inbox.badgeTooltip', { count: inboxCount })}>
               {inboxCount}
+            </span>
+          ) : (
+            // Same trade as NavLink: the badge and the chord share this slot,
+            // and what is waiting outranks teaching the shortcut.
+            <span className="ml-auto hidden opacity-60 md:inline-flex">
+              <Kbd chord={HOTKEYS.goInbox.chords[0]} />
             </span>
           )}
         </Link>
