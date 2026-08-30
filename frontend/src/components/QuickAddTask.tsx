@@ -10,15 +10,7 @@ import { clearPendingQuickAdd, usePendingQuickAdd } from '../lib/pendingQuickAdd
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
 import { Ic } from './Icon'
-
-interface AutocompleteOption {
-  isNew: boolean
-  /** What the option is called: a project name, a new tag, or a default label. */
-  name: string
-  /** True for the two catch-all "..." projects, which get a friendlier label. */
-  isDefault?: boolean
-  project?: Project
-}
+import { managedProjectAliases, useProjectTagMenu } from './ProjectTagMenu'
 
 export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}) {
   const { t, i18n } = useTranslation()
@@ -32,9 +24,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const [repeating, setRepeating] = useState(false)
   const [weekdays, setWeekdays] = useState(new Set<number>([0, 1, 2, 3, 4, 5, 6]))
 
-  const [showAutocomplete, setShowAutocomplete] = useState(false)
-  const [selectedIndex, setSelectedIndex] = useState(0)
-  const dropdownRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const pendingTitle = usePendingQuickAdd()
 
@@ -62,81 +51,43 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     inputRef.current?.focus()
   }, [pendingTitle])
 
-  // Find default projects (named '...') and the one Inbox
+  // Only real projects are tag targets; the server-managed ones come from the
+  // shared alias list, which the menu offers and `parseTaskInput` resolves.
   const inboxProj = projects.find(isInboxProject)
-  const defaultWorkProj = projects.find((p) => isDefaultProject(p) && p.group === 'Work')
-  const defaultPersonalProj = projects.find((p) => isDefaultProject(p) && p.group === 'Personal')
-
   const userProjects = projects.filter((p) => !isDefaultProject(p) && !isInboxProject(p))
-
-  // The server-managed destinations, offered by the #-menu under readable labels
-  // instead of their reserved names. The Inbox leads -- "#" then Enter parks the
-  // task without deciding anything -- followed by the two catch-alls.
-  const defaultChoices = [
-    { project: inboxProj, group: 'Inbox', label: t('quickAdd.inboxDefault') },
-    { project: defaultWorkProj, group: 'Work', label: t('quickAdd.workDefault') },
-    { project: defaultPersonalProj, group: 'Personal', label: t('quickAdd.personalDefault') },
-  ].filter((c): c is typeof c & { project: Project } => c.project !== undefined)
-
-  const defaultAliases = defaultChoices.map((c) => ({
+  const defaultAliases = managedProjectAliases(projects, t).map((c) => ({
     project: c.project,
     aliases: [c.group, c.label],
   }))
 
-  // Detect #tag query in title (at current end or before whitespace)
-  const hashMatch = title.match(/(?:^|\s)#([^\s#]*)$/)
-  const tagQuery = hashMatch ? hashMatch[1] : null
-
-  // Generate autocomplete options
-  const autocompleteOptions: AutocompleteOption[] = []
-  if (tagQuery !== null) {
-    const qLower = tagQuery.toLowerCase()
-    // Both the English group name and the translated label are searchable, so
-    // "#wo" and "#Рабо" each find the Work default.
-    defaultChoices
-      .filter(
-        (c) => c.group.toLowerCase().includes(qLower) || c.label.toLowerCase().includes(qLower),
-      )
-      .forEach((c) => {
-        autocompleteOptions.push({ isNew: false, isDefault: true, name: c.label, project: c.project })
-      })
-
-    const matching = userProjects.filter((p) => p.name.toLowerCase().includes(qLower))
-    matching.forEach((p) => {
-      autocompleteOptions.push({ isNew: false, name: p.name, project: p })
-    })
-
-    const hasExactMatch = userProjects.some((p) => p.name.toLowerCase() === qLower)
-    if (tagQuery.trim().length > 0 && !hasExactMatch) {
-      autocompleteOptions.push({ isNew: true, name: tagQuery.trim() })
-    }
-  }
+  const tagMenu = useProjectTagMenu({
+    value: title,
+    onValueChange: setTitle,
+    onPick: (project, viaKeyboard) => {
+      setSelectedProjectId(project.id)
+      // Picking with the keyboard on a titled task is the whole gesture: file
+      // it and submit, rather than making Enter mean two different things.
+      if (viaKeyboard) {
+        const cleanTitle = tagMenu.withoutTag(title)
+        if (cleanTitle) handleAdd(project.id)
+      }
+    },
+    // Quick add is where a tag may name a project that does not exist yet; the
+    // name stays in the text and `handleAdd` creates it on submit.
+    onCreate: () => {},
+    onShown: (option_count) => track('quickadd.autocomplete_shown', { option_count }),
+    onSelect: (option) =>
+      track('quickadd.autocomplete_select', {
+        is_new: option.isNew,
+        is_default: option.isDefault === true,
+      }),
+  })
 
   const projectLabel = (p: Project) => {
     if (isInboxProject(p)) return t('inbox.title')
     if (!isDefaultProject(p)) return `#${p.name}`
     return p.group === 'Work' ? t('quickAdd.workDefault') : t('quickAdd.personalDefault')
   }
-
-  useEffect(() => {
-    if (tagQuery !== null && autocompleteOptions.length > 0) {
-      track('quickadd.autocomplete_shown', { option_count: autocompleteOptions.length })
-      setShowAutocomplete(true)
-      setSelectedIndex(0)
-    } else {
-      setShowAutocomplete(false)
-    }
-  }, [tagQuery, autocompleteOptions.length])
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setShowAutocomplete(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
 
   const toggleWeekday = (day: number) => {
     setWeekdays((prev) => {
@@ -145,17 +96,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
       else next.add(day)
       return next
     })
-  }
-
-  const selectOption = (opt: AutocompleteOption) => {
-    track('quickadd.autocomplete_select', { is_new: opt.isNew, is_default: opt.isDefault === true })
-    if (opt.isNew) {
-      setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, ` #${opt.name}`).trimStart())
-    } else if (opt.project) {
-      setSelectedProjectId(opt.project.id)
-      setTitle((prev) => prev.replace(/(?:^|\s)#([^\s#]*)$/, '').trim())
-    }
-    setShowAutocomplete(false)
   }
 
   const handleAdd = async (preselectedProjectId?: number) => {
@@ -228,7 +168,6 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
   const reset = () => {
     setTitle('')
     setSelectedProjectId(null)
-    setShowAutocomplete(false)
     setRepeating(false)
     setWeekdays(new Set([0, 1, 2, 3, 4, 5, 6]))
   }
@@ -237,86 +176,29 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
     <div className="card p-3 mb-6 bg-surface !overflow-visible relative" data-hotkeys-off>
       <div className="flex flex-col gap-2">
         <div className="flex gap-2 items-center">
-          <div className="relative flex-1" ref={dropdownRef}>
+          <div className="relative flex-1">
             <input
-              ref={inputRef}
+              ref={(el) => {
+                inputRef.current = el
+                tagMenu.anchorRef.current = el
+              }}
               className="input w-full animate-[fadeIn_0.2s_ease]"
               title={t('common.newTaskHotkey')}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               onKeyDown={(e) => {
-                if (showAutocomplete && autocompleteOptions.length > 0) {
-                  if (e.key === 'ArrowDown') {
-                    e.preventDefault()
-                    setSelectedIndex((prev) => (prev + 1) % autocompleteOptions.length)
-                    return
-                  }
-                  if (e.key === 'ArrowUp') {
-                    e.preventDefault()
-                    setSelectedIndex((prev) => (prev - 1 + autocompleteOptions.length) % autocompleteOptions.length)
-                    return
-                  }
-                  if (e.key === 'Enter' || e.key === 'Tab') {
-                    e.preventDefault()
-                    const opt = autocompleteOptions[selectedIndex]
-                    selectOption(opt)
-                    // For existing projects with a non-empty title, submit immediately.
-                    // Pass the project ID directly to avoid reading stale selectedProjectId state.
-                    if (!opt.isNew && opt.project) {
-                      const cleanTitle = title.replace(/(?:^|\s)#([^\s#]*)$/, '').trim()
-                      if (cleanTitle) handleAdd(opt.project.id)
-                    }
-                    return
-                  }
-                }
+                // The menu answers Enter, Tab, Escape and the arrows while open.
+                if (tagMenu.onKeyDown(e)) return
                 if (e.key === 'Enter') handleAdd()
                 if (e.key === 'Escape') {
-                  if (showAutocomplete) setShowAutocomplete(false)
-                  else {
-                    reset()
-                    // Release focus so the hotkey can re-open the field.
-                    inputRef.current?.blur()
-                  }
+                  reset()
+                  // Release focus so the hotkey can re-open the field.
+                  inputRef.current?.blur()
                 }
               }}
               placeholder={t('quickAdd.placeholder')}
             />
-
-            {showAutocomplete && autocompleteOptions.length > 0 && (
-              <div className="absolute top-full left-0 z-50 mt-1 max-h-48 w-64 overflow-y-auto rounded-md border border-line bg-surface p-1 shadow-md animate-[fadeIn_0.15s_ease]">
-                {autocompleteOptions.map((opt, idx) => (
-                  <button
-                    key={opt.isNew ? `new-${opt.name}` : `proj-${opt.project!.id}`}
-                    type="button"
-                    className={`flex w-full items-center gap-2 rounded px-2.5 py-1.5 text-left text-xs transition-colors ${
-                      idx === selectedIndex
-                        ? 'bg-accent-2 text-accent font-medium'
-                        : 'hover:bg-surface-2 text-ink'
-                    }`}
-                    onClick={() => selectOption(opt)}
-                  >
-                    {opt.isNew ? (
-                      <>
-                        <Ic n="plus" s={12} />
-                        <span>{t('quickAdd.createProject', { name: opt.name })}</span>
-                      </>
-                    ) : opt.isDefault ? (
-                      <>
-                        <Ic n="folder" s={12} />
-                        <span className="flex-1">{opt.name}</span>
-                        <span className="text-[10px] text-ink-3 uppercase">{opt.project!.group}</span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="font-semibold text-ink-3">#</span>
-                        <span className="flex-1">{opt.project!.name}</span>
-                        <span className="text-[10px] text-ink-3 uppercase">{opt.project!.group}</span>
-                      </>
-                    )}
-                  </button>
-                ))}
-              </div>
-            )}
+            {tagMenu.menu}
           </div>
 
           <button
@@ -338,7 +220,7 @@ export function QuickAddTask({ autoFocus = false }: { autoFocus?: boolean } = {}
           </button>
         </div>
 
-        {selectedProjectId === null && title.trim() !== '' && !tagQuery && (
+        {selectedProjectId === null && title.trim() !== '' && !tagMenu.open && (
           <div className="text-[11px] text-ink-3 animate-[fadeIn_0.15s_ease]">
             {t('quickAdd.inboxHint')}
           </div>
