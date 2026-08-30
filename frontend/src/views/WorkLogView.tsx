@@ -37,7 +37,13 @@ import {
   parseISODate,
   todayISO,
 } from '../lib/dates'
-import { CATEGORY_LABEL_KEYS, bucketLabel, groupByDay, trailingRange } from '../lib/worklog'
+import {
+  CATEGORY_LABEL_KEYS,
+  bucketLabel,
+  currentBucketKey,
+  groupByDay,
+  trailingRange,
+} from '../lib/worklog'
 import { ENTRY_CATEGORIES } from '../api/types'
 
 type Tab = 'today' | 'week' | 'month'
@@ -242,7 +248,7 @@ function PeriodStrip({
   onJump: (bucket: WorkLogBucket) => void
 }) {
   const { t, i18n } = useTranslation()
-  const currentKey = buckets[buckets.length - 1]?.key
+  const currentKey = currentBucketKey(buckets, todayISO())
 
   return (
     <div className="card p-4">
