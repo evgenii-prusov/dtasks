@@ -1,4 +1,4 @@
-import type { EntryCategory, LinkKind, WorkLogEntry } from '../api/types'
+import type { EntryCategory, LinkKind, WorkLogBucket, WorkLogEntry } from '../api/types'
 import type { LabelKey } from './hotkeys/bindings'
 import { parseISODate } from './dates'
 
@@ -61,6 +61,28 @@ export function bucketLabel(start: string, end: string, period: 'week' | 'month'
   const to = parseISODate(end)
   const opts: Intl.DateTimeFormatOptions = { day: 'numeric', month: 'short' }
   return `${from.toLocaleDateString(locale, opts)} – ${to.toLocaleDateString(locale, opts)}`
+}
+
+/**
+ * The bucket `today` falls in -- the one the strip marks as current.
+ *
+ * Not simply the last bucket: the rollup window deliberately reaches a day past
+ * the server's own date, so an entry from a client as far ahead as UTC+14 is
+ * never dropped (see ``_default_rollup_range``). On the last day of a week, or
+ * of a month, that adds an empty trailing bucket for the *next* period, and
+ * marking it would point at an empty future cell while today's entries sat in
+ * the one before it.
+ *
+ * Falls back to the last bucket when today is outside the range entirely, which
+ * is what a window that does not reach today should mark.
+ */
+export function currentBucketKey(
+  buckets: Pick<WorkLogBucket, 'key' | 'start' | 'end'>[],
+  today: string,
+): string | undefined {
+  // ISO dates compare correctly as strings, so no parsing is needed here.
+  const holdingToday = buckets.find((b) => b.start <= today && today <= b.end)
+  return (holdingToday ?? buckets[buckets.length - 1])?.key
 }
 
 /** Last `n` ISO days ending today, as the range the entries list asks for. */
