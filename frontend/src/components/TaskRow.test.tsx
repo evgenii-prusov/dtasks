@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TaskRow } from './TaskRow'
 import { TaskNavProvider } from '../lib/taskNav'
 import { HotkeyProvider } from '../lib/hotkeys/HotkeyProvider'
-import type { Task } from '../api/types'
+import type { Project, Task } from '../api/types'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }),
@@ -182,5 +182,117 @@ describe('TaskRow inline editing', () => {
     await waitFor(() =>
       expect(document.activeElement).toBe(document.querySelector('[data-task-row="2"]')),
     )
+  })
+})
+
+describe('TaskRow # project menu', () => {
+  const project = (id: number, name: string, group = 'Work'): Project => ({
+    id,
+    name,
+    group,
+    description: '',
+    notes: '',
+    position: id,
+    tasks: [],
+    recurrences: [],
+  })
+
+  const projects = [
+    project(9, 'Inbox', 'Inbox'),
+    project(7, '...', 'Work'),
+    project(3, 'Platform migration'),
+  ]
+
+  /** The body of the last PATCH to the task -- other calls carry no body. */
+  function lastPatchBody(): Record<string, unknown> {
+    const patch = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.filter(([url, init]) => url === '/api/tasks/1' && init?.method === 'PATCH')
+      .at(-1)
+    return JSON.parse((patch![1] as RequestInit).body as string)
+  }
+
+  /** The row as the Inbox page renders it: editable, with projects loaded. */
+  async function openEditorWithProjects(user: ReturnType<typeof userEvent.setup>) {
+    const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+    qc.setQueryData(['projects'], projects)
+    render(
+      <QueryClientProvider client={qc}>
+        <TaskRow task={{ ...task, project_id: 9 }} editable checkable />
+      </QueryClientProvider>,
+    )
+    const row = document.querySelector('[data-task-row]') as HTMLElement
+    row.focus()
+    await user.keyboard('{Enter}')
+    return screen.getByLabelText('common.title') as HTMLInputElement
+  }
+
+  it('offers matching projects while a #tag is typed', async () => {
+    const user = userEvent.setup()
+    const title = await openEditorWithProjects(user)
+
+    await user.click(title)
+    await user.keyboard('{End} #plat')
+
+    expect(screen.getByRole('button', { name: /Platform migration/ })).toBeInTheDocument()
+    // Nothing to create from a row editor: only existing projects are offered.
+    expect(screen.queryByText(/createProject/)).not.toBeInTheDocument()
+  })
+
+  it('moves the task to the picked project on save, and drops the tag', async () => {
+    const user = userEvent.setup()
+    const title = await openEditorWithProjects(user)
+
+    await user.click(title)
+    await user.keyboard('{End} #plat')
+    await user.click(screen.getByRole('button', { name: /Platform migration/ }))
+
+    // The tag leaves the title -- it named a destination, it is not part of it.
+    expect(title.value).toBe('A task')
+
+    await user.click(screen.getByText('common.save'))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/tasks/1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: expect.stringContaining('"project_id":3'),
+        }),
+      ),
+    )
+    expect(lastPatchBody().title).toBe('A task')
+  })
+
+  it('picks with the keyboard, without submitting the row', async () => {
+    const user = userEvent.setup()
+    const title = await openEditorWithProjects(user)
+
+    await user.click(title)
+    await user.keyboard('{End} #plat{Enter}')
+
+    // Enter chose the project; it did not also save and close the editor.
+    expect(screen.getByLabelText('common.title')).toBeInTheDocument()
+    expect(globalThis.fetch).not.toHaveBeenCalledWith(
+      '/api/tasks/1',
+      expect.objectContaining({ method: 'PATCH' }),
+    )
+  })
+
+  it('leaves the task where it is when the tag matches nothing', async () => {
+    const user = userEvent.setup()
+    const title = await openEditorWithProjects(user)
+
+    await user.click(title)
+    await user.keyboard('{End} #nosuchproject{Enter}')
+
+    // No menu to consume the Enter, so it saved the row -- with the text as typed.
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/tasks/1',
+        expect.objectContaining({ method: 'PATCH' }),
+      ),
+    )
+    expect(lastPatchBody().project_id).toBeUndefined()
   })
 })

@@ -354,12 +354,12 @@ export function ReviewView() {
               ))}
               {addingTask && (
                 <AddTaskForm
-                  onAdd={(task) => {
-                    createTask.mutate({ projectId: p.id, task })
+                  onAdd={(task, tagged) => {
+                    createTask.mutate({ projectId: tagged ?? p.id, task })
                     setAddingTask(false)
                   }}
-                  onAddRecurring={(rule) => {
-                    createRecurrence.mutate({ projectId: p.id, rule })
+                  onAddRecurring={(rule, tagged) => {
+                    createRecurrence.mutate({ projectId: tagged ?? p.id, rule })
                     setAddingTask(false)
                   }}
                   onCancel={() => setAddingTask(false)}

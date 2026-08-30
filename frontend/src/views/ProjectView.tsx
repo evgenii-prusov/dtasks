@@ -190,12 +190,12 @@ export function ProjectView({ project }: { project: Project }) {
         ))}
         {addingTask && (
           <AddTaskForm
-            onAdd={(task) => {
-              createTask.mutate({ projectId: project.id, task })
+            onAdd={(task, tagged) => {
+              createTask.mutate({ projectId: tagged ?? project.id, task })
               setAddingTask(false)
             }}
-            onAddRecurring={(rule) => {
-              createRecurrence.mutate({ projectId: project.id, rule })
+            onAddRecurring={(rule, tagged) => {
+              createRecurrence.mutate({ projectId: tagged ?? project.id, rule })
               setAddingTask(false)
             }}
             onCancel={() => setAddingTask(false)}

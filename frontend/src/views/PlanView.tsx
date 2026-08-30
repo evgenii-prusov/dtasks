@@ -350,12 +350,12 @@ export function PlanView() {
 
             {addingTo === p.id && (
               <AddTaskForm
-                onAdd={(task) => {
-                  createTask.mutate({ projectId: p.id, task })
+                onAdd={(task, tagged) => {
+                  createTask.mutate({ projectId: tagged ?? p.id, task })
                   setAddingTo(null)
                 }}
-                onAddRecurring={(rule) => {
-                  createRecurrence.mutate({ projectId: p.id, rule })
+                onAddRecurring={(rule, tagged) => {
+                  createRecurrence.mutate({ projectId: tagged ?? p.id, rule })
                   setAddingTo(null)
                 }}
                 onCancel={() => setAddingTo(null)}

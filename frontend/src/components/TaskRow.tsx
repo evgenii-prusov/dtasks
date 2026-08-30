@@ -7,7 +7,7 @@ import { useProjects } from '../api/hooks'
 import { useReorderTask } from '../api/hooks'
 import { useUpdateRecurrence } from '../api/hooks'
 import { useUpdateTask } from '../api/hooks'
-import type { Complexity, Project, Task } from '../api/types'
+import { isDefaultProject, isInboxProject, type Complexity, type Project, type Task } from '../api/types'
 import { track } from '../lib/analytics'
 import { weekdayShortLabels } from '../lib/dates'
 import { describeRecurrence, maskToWeekdays, weekdaysToMask } from '../lib/recurrence'
@@ -15,6 +15,7 @@ import { useIsActiveRow, useTaskNav } from '../lib/taskNav'
 import { isTypingTarget } from '../lib/hotkeys/keyEvent'
 import { useHotkeyApi } from '../lib/hotkeys/HotkeyProvider'
 import { Ic } from './Icon'
+import { useProjectTagMenu } from './ProjectTagMenu'
 import { useShowUndoToast } from './UndoToast'
 
 export function TaskRow({
@@ -197,6 +198,19 @@ export function TaskRow({
     setEditing(false)
   }
   const cancel = () => setEditing(false)
+
+  // `#` in the title names the project to move to -- the same idiom quick add
+  // uses to file a new task. It sets the target the Save below already applies,
+  // so there is one move path rather than two. Existing projects only: creating
+  // one while renaming a task would be a surprising second action.
+  const tagMenu = useProjectTagMenu({
+    value: title,
+    onValueChange: setTitle,
+    onPick: (project) => {
+      setSelectedProjectId(project.id)
+      titleRef.current?.focus()
+    },
+  })
 
   /**
    * Cmd/Ctrl+↓ and Cmd/Ctrl+↑ move between the title and the description while
@@ -512,12 +526,17 @@ export function TaskRow({
         {checkable && <div className="cb mt-[3px]" />}
         <div className="min-w-0 flex-1">
           <input
-            ref={titleRef}
+            ref={(el) => {
+              titleRef.current = el
+              tagMenu.anchorRef.current = el
+            }}
             className="input mb-[5px] px-2 py-[5px] text-[13px]"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             aria-label={t('common.title')}
             onKeyDown={(e) => {
+              // The menu answers Enter, Escape and the arrows while it is open.
+              if (tagMenu.onKeyDown(e)) return
               if (e.key === 'Escape' || e.key === 'Esc') {
                 e.preventDefault()
                 e.stopPropagation()
@@ -531,6 +550,7 @@ export function TaskRow({
               }
             }}
           />
+          {tagMenu.menu}
           <textarea
             ref={notesRef}
             className="input textarea mb-1.5 min-h-11 text-xs"
@@ -586,6 +606,30 @@ export function TaskRow({
             >
               {assignedWeek ? '✓' : '+'} {t('task.scheduleWeek')}
             </button>
+            {selectedProjectId !== task.project_id && (
+              // Picking with `#` is otherwise invisible until the row moves, and
+              // in Review there is no project select below to reflect it.
+              <span className="inline-flex items-center gap-1 text-[11px] text-accent">
+                <Ic n="folder" s={11} />
+                {(() => {
+                  const target = projects.find((p) => p.id === selectedProjectId)
+                  if (!target) return null
+                  return isInboxProject(target)
+                    ? t('inbox.title')
+                    : isDefaultProject(target)
+                      ? t('quickAdd.noProject')
+                      : target.name
+                })()}
+                <button
+                  type="button"
+                  className="text-ink-3 hover:text-ink"
+                  onClick={() => setSelectedProjectId(task.project_id)}
+                  title={t('common.cancel')}
+                >
+                  <Ic n="x" s={9} />
+                </button>
+              </span>
+            )}
             <div className="flex-1" />
             <button className="btn btn-g btn-s" onClick={cancel}>
               {t('common.cancel')}
