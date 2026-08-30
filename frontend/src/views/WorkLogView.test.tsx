@@ -268,7 +268,10 @@ describe('WorkLogView rollup tabs', () => {
 
     const tile = await screen.findByRole('button', { name: /Aug 17 – Aug 23/ })
     expect(tile).toHaveTextContent('2')
-    // Two entries lands on the first volume step, and the newest bucket is marked.
+    // Two entries lands on the first volume step. This fixture's range stops
+    // well before today, so the newest bucket is marked by fallback; which
+    // bucket is current when the range does reach today is
+    // `currentBucketKey`'s own test.
     expect(tile.className).toContain('v1')
     expect(tile.className).toContain('current')
     expect(tile).toHaveAccessibleName(/2 entries/)

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketLabel, groupByDay, inferLinkKind, trailingRange } from './worklog'
+import { bucketLabel, currentBucketKey, groupByDay, inferLinkKind, trailingRange } from './worklog'
 import { unloggedCompletedTasks } from '../api/hooks'
 import type { Project, Task, WorkLogEntry } from '../api/types'
 
@@ -150,5 +150,50 @@ describe('unloggedCompletedTasks', () => {
 
   it('ignores an open task with no completion timestamp', () => {
     expect(unloggedCompletedTasks([project([done(1, null)])], [], localDay)).toEqual([])
+  })
+})
+
+describe('currentBucketKey', () => {
+  // Only the three fields the choice is made from; the rest of a bucket is noise here.
+  const week = (key: string, start: string, end: string) => ({ key, start, end })
+
+  const weeks = [
+    week('2026-W34', '2026-08-17', '2026-08-23'),
+    week('2026-W35', '2026-08-24', '2026-08-30'),
+  ]
+
+  it('marks the bucket holding today', () => {
+    expect(currentBucketKey(weeks, '2026-08-26')).toBe('2026-W35')
+    expect(currentBucketKey(weeks, '2026-08-20')).toBe('2026-W34')
+  })
+
+  it('counts the first and last day of a bucket as inside it', () => {
+    expect(currentBucketKey(weeks, '2026-08-24')).toBe('2026-W35')
+    expect(currentBucketKey(weeks, '2026-08-30')).toBe('2026-W35')
+  })
+
+  it('skips the empty next-week bucket the window trails on a Sunday', () => {
+    // Sunday Aug 30 is the last day of W35, so the server's window -- which
+    // reaches the bucket containing tomorrow -- also emits W36. Marking that
+    // one would point at an empty future week.
+    const withTrailing = [...weeks, week('2026-W36', '2026-08-31', '2026-09-06')]
+    expect(currentBucketKey(withTrailing, '2026-08-30')).toBe('2026-W35')
+  })
+
+  it('does the same for a month window on the last day of the month', () => {
+    const months = [
+      week('2026-07', '2026-07-01', '2026-07-31'),
+      week('2026-08', '2026-08-01', '2026-08-31'),
+      week('2026-09', '2026-09-01', '2026-09-30'),
+    ]
+    expect(currentBucketKey(months, '2026-08-31')).toBe('2026-08')
+  })
+
+  it('falls back to the last bucket when today is outside the range', () => {
+    expect(currentBucketKey(weeks, '2026-09-14')).toBe('2026-W35')
+  })
+
+  it('has nothing to mark in an empty rollup', () => {
+    expect(currentBucketKey([], '2026-08-30')).toBeUndefined()
   })
 })
