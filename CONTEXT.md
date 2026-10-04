@@ -39,10 +39,17 @@ _Avoid_: summary, report
 ## Aiming the work
 
 **Competency**:
-Something a target job asks the user to have shown, either a behaviour
-("owned a system end to end, including on-call") or a technical area
-("container orchestration"). The user maintains a short list of them.
+Something a target job asks the user to have shown: a Staff-level behaviour
+("owned a system end to end, including on-call") or a broad technical area
+("container orchestration"), never a single tool or language. A behaviour is how
+the user worked and a technical area is what they worked on, so one piece of
+work often shows both. The user maintains a short list of them.
 _Avoid_: skill, trait, signal, requirement
+
+**Staff Bar**:
+The user's own one- or two-line description of what a Competency looks like at
+the level they are aiming for.
+_Avoid_: expectation, rubric, description
 
 **Goal**:
 An outcome the user commits to so as to build evidence for one or more
