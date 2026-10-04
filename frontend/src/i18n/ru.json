@@ -23,6 +23,12 @@
     "notes": "Заметки",
     "openTasks": "Открытые задачи",
     "completed": "Выполненные",
+    "showCompleted": "Показать ({{count}})",
+    "hideCompleted": "Скрыть",
+    "searchCompleted": "Поиск по выполненным…",
+    "searchCompletedNoResults": "Нет выполненных задач по запросу «{{query}}»",
+    "clearSearch": "Очистить поиск",
+    "countOf": "{{shown}} из {{total}}",
     "undo": "Отменить",
     "lowComplexity": "Низкая сложность",
     "highComplexity": "Высокая сложность",
@@ -158,9 +164,7 @@
     "allDone": "Все задачи выполнены! 🎉",
     "notesPlaceholder": "Заметки, ссылки, идеи…",
     "moveUp": "Переместить проект выше",
-    "moveDown": "Переместить проект ниже",
-    "showCompleted": "Показать ({{count}})",
-    "hideCompleted": "Скрыть"
+    "moveDown": "Переместить проект ниже"
   },
   "report": {
     "title": "Отчёт",

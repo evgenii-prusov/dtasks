@@ -15,6 +15,7 @@ import {
 import { groupLabel } from '../i18n'
 import { Ic } from '../components/Icon'
 import { AddTaskForm } from '../components/AddTaskForm'
+import { CompletedTasks } from '../components/CompletedTasks'
 import { TaskRow } from '../components/TaskRow'
 import { track } from '../lib/analytics'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
@@ -368,26 +369,26 @@ export function ReviewView() {
               )}
             </div>
 
-            {/* Done tasks */}
+            {/* Done tasks -- folded, and keyed so every phase starts that way. */}
             {doneTasks.length > 0 && (
-              <div className="border-b border-line">
-                <div className="px-4 pt-2.5 pb-1.5 text-[10px] font-bold uppercase tracking-[.07em] text-ink-3">
-                  {t('common.completed')} ({doneTasks.length})
-                </div>
-                {doneTasks.map((t) => (
-                  <div key={t.id} className="flex gap-2 border-t border-line px-4 py-1">
+              <CompletedTasks
+                key={p.id}
+                tasks={doneTasks}
+                variant="section"
+                renderTask={(task) => (
+                  <div className="flex gap-2 border-t border-line px-4 py-1">
                     <span className="mt-0.5 text-[11px] text-accent">✓</span>
                     <span className="text-[13px] text-ink-3 line-through">
-                      {t.is_green && (
+                      {task.is_green && (
                         <span className="mr-1 inline-flex align-[-1px] opacity-60">
                           <Ic n="leaf" s={11} c="var(--green)" />
                         </span>
                       )}
-                      {t.title}
+                      {task.title}
                     </span>
                   </div>
-                ))}
-              </div>
+                )}
+              />
             )}
 
             {/* Notes -- project-level thinking; the Inbox is a queue, not a project. */}

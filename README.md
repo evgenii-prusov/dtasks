@@ -16,7 +16,8 @@ Claude Design prototype in `project/FlowTask.html` (design transcripts in `chats
 - **Review** — walk through the Inbox and then all projects, against a single
   session-wide countdown (5 min × number of phases). The Inbox comes first, with
   a "File to…" picker on every parked task. Description, open tasks (checkable, editable
-  inline, reorderable), completed tasks, and editable notes per project.
+  inline, reorderable), completed tasks (folded until opened, searchable by title),
+  and editable notes per project.
 - **Habits** — GitHub-style contribution grid (16 weeks) with three states per
   day (none / minimal / complete), streak and total counters, click any past
   cell to cycle its state.

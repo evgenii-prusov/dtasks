@@ -13,10 +13,18 @@ import { isDefaultProject, isInboxProject, type Project } from '../api/types'
 import { Ic } from '../components/Icon'
 import { TaskRow } from '../components/TaskRow'
 import { AddTaskForm } from '../components/AddTaskForm'
+import { CompletedTasks } from '../components/CompletedTasks'
 import { HOTKEYS } from '../lib/hotkeys/bindings'
 import { useHotkey } from '../lib/hotkeys/useHotkey'
 
-export function ProjectView({ project }: { project: Project }) {
+export function ProjectView({
+  project,
+  revealTaskId,
+}: {
+  project: Project
+  /** A task a palette jump is about to focus; a finished one opens its list. */
+  revealTaskId?: number
+}) {
   const { t } = useTranslation()
   const navigate = useNavigate()
   const updateProject = useUpdateProject()
@@ -42,7 +50,6 @@ export function ProjectView({ project }: { project: Project }) {
   const [notes, setNotes] = useState(project.notes)
   const [editingName, setEditingName] = useState(false)
   const [name, setName] = useState(project.name)
-  const [showCompleted, setShowCompleted] = useState(true)
   const newTaskRef = useRef<HTMLInputElement>(null)
 
   useHotkey(HOTKEYS.newTask.chords, () => {
@@ -57,7 +64,6 @@ export function ProjectView({ project }: { project: Project }) {
     setAddingTask(false)
     setEditDesc(false)
     setEditingName(false)
-    setShowCompleted(true)
   }, [project.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const startRename = () => {
@@ -210,25 +216,13 @@ export function ProjectView({ project }: { project: Project }) {
       </div>
 
       {done.length > 0 && (
-        <div className="card">
-          <div className="card-head">
-            <h3 className="text-ink-3">
-              {t('common.completed')} ({done.length})
-            </h3>
-            <button
-              className="btn btn-g btn-s"
-              onClick={() => setShowCompleted((s) => !s)}
-            >
-              <Ic n={showCompleted ? 'chevron-up' : 'chevron-down'} s={12} />
-              {showCompleted
-                ? t('project.hideCompleted')
-                : t('project.showCompleted', { count: done.length })}
-            </button>
-          </div>
-          {showCompleted && done.map((t) => (
-            <TaskRow key={t.id} task={t} checkable />
-          ))}
-        </div>
+        <CompletedTasks
+          key={project.id}
+          tasks={done}
+          variant="card"
+          revealTaskId={revealTaskId}
+          renderTask={(task) => <TaskRow task={task} checkable />}
+        />
       )}
 
       <div className="card">
