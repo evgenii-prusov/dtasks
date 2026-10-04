@@ -59,7 +59,7 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 
 ## Git Branching Convention
 
-Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.beads-hooks/`, `core.hooksPath=.beads-hooks`) and by GitHub branch protection on `main`. This is enforced mechanically — not just documented — so it applies regardless of which tool or agent runs `git commit`/`git push` (Claude Code, agy, Codex, plain `git`/`gh` CLI).
+Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.beads-hooks/`, `core.hooksPath=.beads-hooks`; a fresh clone does not inherit that setting, so `.claude/hooks/session-start.sh` sets it for Claude Code sessions) and by GitHub branch protection on `main`. This is enforced mechanically — not just documented — so it applies regardless of which tool or agent runs `git commit`/`git push` (Claude Code, agy, Codex, plain `git`/`gh` CLI).
 
 - **Before your first commit for any change**, create/switch to a feature branch: `git checkout -b <descriptive-name>`. Don't wait until you're ready to push — branching after the fact requires history surgery (moving commits off `main`).
 - Land changes via `git push -u origin <branch>` + `gh pr create`.
@@ -70,7 +70,7 @@ Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.be
 Beads issue data lives in two layers, kept in sync differently depending which way work is flowing:
 
 1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Synced via `bd dolt push`/`bd dolt pull` against the `origin` Dolt remote, which is **DoltHub** (`https://doltremoteapi.dolthub.com/evgenii/dolt01`, browsable at https://www.dolthub.com/repositories/evgenii/dolt01) — not the git remote.
-2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git via normal `refs/heads/*`. A pre-commit hook regenerates it automatically before each commit.
+2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git via normal `refs/heads/*`. Every `bd` write re-exports and stages it, and the pre-commit hook re-exports and re-stages it, so it rides along in the next commit (`export.auto`, `export.git-add` and a 1s `export.interval` in the tracked `.beads/config.yaml`). Keep `export.git-add` on: without it a commit records a stale export and leaves the fresh one unstaged.
 
 ### Handing new/updated issues TO a remote or cloud agent
 

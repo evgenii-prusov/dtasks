@@ -70,3 +70,7 @@ sync.remote: "https://doltremoteapi.dolthub.com/evgenii/dolt01"
 export.auto: true
 sync:
     remote: "https://doltremoteapi.dolthub.com/evgenii/dolt01"
+
+export.git-add: true
+
+export.interval: 1s
