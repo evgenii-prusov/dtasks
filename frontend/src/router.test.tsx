@@ -4,7 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createAppRouter } from './router'
-import type { Project, User } from './api/types'
+import type { Project, Task, User } from './api/types'
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -81,6 +81,37 @@ describe('route guard', () => {
 
     expect(await screen.findByText('Plan my day')).toBeInTheDocument()
     await waitFor(() => expect(router.state.location.pathname).toBe('/'))
+  })
+})
+
+const finishedTask: Task = {
+  id: 51,
+  project_id: 5,
+  title: 'Booked the dentist',
+  notes: '',
+  complexity: 'low',
+  assigned_today: false,
+  assigned_week: false,
+  must_have: false,
+  is_green: false,
+  completed: true,
+  completed_at: '2026-10-01T09:00:00Z',
+  position: 0,
+  recurrence_rule_id: null,
+  occurrence_date: null,
+}
+
+describe('a palette jump to a task', () => {
+  // The palette finds finished tasks too, and the completed list is folded: the
+  // jump has to open it, or there is no row to land on.
+  it('opens the completed list for a finished task and lands on its row', async () => {
+    mockApi({ id: 1, email: 'user@example.com' }, [{ ...inbox, tasks: [finishedTask] }])
+    const router = renderAt('/projects/5?task=51')
+
+    const row = await screen.findByLabelText('Booked the dentist')
+    await waitFor(() => expect(row).toHaveAttribute('data-active'))
+    // The param is spent once it has landed, so a reload does not repeat the jump.
+    await waitFor(() => expect(router.state.location.search).toEqual({}))
   })
 })
 

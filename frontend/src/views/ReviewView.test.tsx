@@ -41,6 +41,10 @@ function project(id: number, name: string): Project {
 
 const projects = [project(1, 'Alpha'), project(2, 'Beta'), project(3, 'Gamma')]
 
+function finished(id: number, projectId: number, title: string): Task {
+  return { ...task(id, projectId, title), completed: true, completed_at: '2026-10-01T09:00:00Z' }
+}
+
 /** The Inbox as the server sends it: its own group, one project, sorted first. */
 function inboxProject(tasks: Task[]): Project {
   return {
@@ -165,5 +169,73 @@ describe('ReviewView Inbox phase', () => {
 
     expect(currentProject()).toContain('Alpha')
     expect(screen.queryByRole('combobox', { name: 'File to…' })).not.toBeInTheDocument()
+  })
+})
+
+describe('ReviewView completed tasks', () => {
+  /** Alpha with one finished task of its own, so every phase has a list to fold. */
+  const alpha = { ...project(1, 'Alpha'), tasks: [task(10, 1, 'Alpha task'), finished(11, 1, 'Alpha shipped')] }
+  const inbox = inboxProject([
+    task(90, 9, 'Parked idea'),
+    finished(91, 9, 'Booked the dentist'),
+    finished(92, 9, 'Sent the tax form'),
+  ])
+
+  it('folds them away by default, leaving the open tasks in view', () => {
+    renderView([alpha, inbox])
+
+    expect(screen.getByText('Parked idea')).toBeInTheDocument()
+    expect(screen.getByText('Completed (2)')).toBeInTheDocument()
+    expect(screen.queryByText('Booked the dentist')).not.toBeInTheDocument()
+    expect(screen.queryByText('Sent the tax form')).not.toBeInTheDocument()
+  })
+
+  it('opens the whole list on request, and searches it', async () => {
+    renderView([alpha, inbox])
+
+    await userEvent.click(screen.getByRole('button', { name: /Show \(2\)/ }))
+    expect(screen.getByText('Booked the dentist')).toBeInTheDocument()
+    expect(screen.getByText('Sent the tax form')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Search completed…' }), 'tax')
+    expect(screen.getByText('Sent the tax form')).toBeInTheDocument()
+    expect(screen.queryByText('Booked the dentist')).not.toBeInTheDocument()
+  })
+
+  it('starts every phase folded, whatever the last one was left as', async () => {
+    renderView([alpha, inbox])
+
+    await userEvent.click(screen.getByRole('button', { name: /Show \(2\)/ }))
+    expect(screen.getByText('Booked the dentist')).toBeInTheDocument()
+
+    await userEvent.keyboard('{ArrowRight}')
+    expect(currentProject()).toContain('Alpha')
+    expect(screen.getByText('Completed (1)')).toBeInTheDocument()
+    expect(screen.queryByText('Alpha shipped')).not.toBeInTheDocument()
+
+    // And back again: the Inbox does not remember it was open.
+    await userEvent.click(screen.getByRole('button', { name: /Prev/ }))
+    expect(currentProject()).toContain('Inbox')
+    expect(screen.queryByText('Booked the dentist')).not.toBeInTheDocument()
+  })
+
+  it('adds no second heading, which the phase title is read from', () => {
+    renderView([alpha, inbox])
+
+    expect(screen.getAllByRole('heading', { level: 3 })).toHaveLength(1)
+  })
+
+  it('leaves the ArrowRight hotkey alone until the search field is focused', async () => {
+    renderView([alpha, inbox])
+    await userEvent.click(screen.getByRole('button', { name: /Show \(2\)/ }))
+
+    await userEvent.click(screen.getByRole('textbox', { name: 'Search completed…' }))
+    await userEvent.keyboard('{ArrowRight}')
+    expect(currentProject()).toContain('Inbox')
+
+    // Escape clears nothing here, so it just hands the keyboard back.
+    await userEvent.keyboard('{Escape}')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(currentProject()).toContain('Alpha')
   })
 })

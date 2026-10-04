@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -37,13 +37,16 @@ const project: Project = {
   recurrences: [],
 }
 
-function renderView() {
+function renderView(
+  shown: Project = project,
+  props: Partial<ComponentProps<typeof ProjectView>> = {},
+) {
   const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
-  qc.setQueryData(['projects'], [project])
+  qc.setQueryData(['projects'], [shown])
   const wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={qc}>{children}</QueryClientProvider>
   )
-  render(<ProjectView project={project} />, { wrapper })
+  return render(<ProjectView project={shown} {...props} />, { wrapper })
 }
 
 beforeEach(() => {
@@ -93,6 +96,79 @@ describe('ProjectView rename', () => {
 
     expect(globalThis.fetch).not.toHaveBeenCalled()
     expect(screen.getByText('Demo Project')).toBeInTheDocument()
+  })
+})
+
+describe('ProjectView completed tasks', () => {
+  const [open] = project.tasks
+  const finished = (id: number, title: string) => ({
+    ...open,
+    id,
+    title,
+    completed: true,
+    completed_at: '2026-10-01T09:00:00Z',
+  })
+  const withDone: Project = {
+    ...project,
+    tasks: [open, finished(2, 'Washed the car'), finished(3, 'Booked the dentist')],
+  }
+
+  it('folds them away by default, leaving the open tasks in view', () => {
+    renderView(withDone)
+
+    expect(screen.getByText('A task')).toBeInTheDocument()
+    expect(screen.getByText('Completed (2)')).toBeInTheDocument()
+    expect(screen.queryByText('Washed the car')).not.toBeInTheDocument()
+    expect(screen.queryByText('Booked the dentist')).not.toBeInTheDocument()
+  })
+
+  it('opens the whole list on request, and searches it', async () => {
+    renderView(withDone)
+
+    await userEvent.click(screen.getByRole('button', { name: /Show \(2\)/ }))
+    expect(screen.getByText('Washed the car')).toBeInTheDocument()
+    expect(screen.getByText('Booked the dentist')).toBeInTheDocument()
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Search completed…' }), 'wash')
+    expect(screen.getByText('Washed the car')).toBeInTheDocument()
+    expect(screen.queryByText('Booked the dentist')).not.toBeInTheDocument()
+  })
+
+  it('opens onto a finished task a palette jump is aimed at', () => {
+    renderView(withDone, { revealTaskId: 3 })
+
+    expect(screen.getByLabelText('Booked the dentist')).toBeInTheDocument()
+  })
+
+  it('folds again when the page moves on to another project', async () => {
+    const other: Project = {
+      ...withDone,
+      id: 8,
+      name: 'Other Project',
+      tasks: [{ ...finished(4, 'Paid the rent'), project_id: 8 }],
+    }
+    const { rerender } = renderView(withDone)
+    await userEvent.click(screen.getByRole('button', { name: /Show \(2\)/ }))
+    expect(screen.getByText('Washed the car')).toBeInTheDocument()
+
+    // The router keeps one ProjectView mounted across /projects/:id changes.
+    rerender(<ProjectView project={other} />)
+
+    expect(screen.getByText('Completed (1)')).toBeInTheDocument()
+    expect(screen.queryByText('Paid the rent')).not.toBeInTheDocument()
+  })
+
+  it('stays folded for a jump to a task that is still open', () => {
+    renderView(withDone, { revealTaskId: 1 })
+
+    expect(screen.getByText('A task')).toBeInTheDocument()
+    expect(screen.queryByText('Washed the car')).not.toBeInTheDocument()
+  })
+
+  it('shows no completed card at all when nothing is finished', () => {
+    renderView()
+
+    expect(screen.queryByText(/^Completed/)).not.toBeInTheDocument()
   })
 })
 

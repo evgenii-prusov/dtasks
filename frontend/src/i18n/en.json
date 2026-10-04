@@ -23,6 +23,12 @@
     "notes": "Notes",
     "openTasks": "Open tasks",
     "completed": "Completed",
+    "showCompleted": "Show ({{count}})",
+    "hideCompleted": "Hide",
+    "searchCompleted": "Search completed…",
+    "searchCompletedNoResults": "No completed tasks match \"{{query}}\"",
+    "clearSearch": "Clear search",
+    "countOf": "{{shown}} of {{total}}",
     "undo": "Undo",
     "lowComplexity": "Low complexity",
     "highComplexity": "High complexity",
@@ -156,9 +162,7 @@
     "allDone": "All tasks done! 🎉",
     "notesPlaceholder": "Notes, links, ideas…",
     "moveUp": "Move project up",
-    "moveDown": "Move project down",
-    "showCompleted": "Show ({{count}})",
-    "hideCompleted": "Hide"
+    "moveDown": "Move project down"
   },
   "report": {
     "title": "Report",

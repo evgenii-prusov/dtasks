@@ -167,7 +167,7 @@ function ProjectRouteComponent() {
   }, [jumpToTaskId, project, nav, navigate])
 
   if (!project) return null
-  return <ProjectView project={project} />
+  return <ProjectView project={project} revealTaskId={jumpToTaskId} />
 }
 
 interface ProjectSearch {
