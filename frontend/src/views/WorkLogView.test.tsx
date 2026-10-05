@@ -172,6 +172,27 @@ describe('WorkLogView capture tab', () => {
 
     expect(screen.getByRole('combobox')).toHaveValue('pr')
   })
+
+  it("PUTs the day's note when Save note is pressed", async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (_url, init) => new Response(init?.method === 'PUT' ? String(init.body) : '[]', { status: 200 }),
+    )
+    renderView()
+
+    await userEvent.type(screen.getByLabelText('Note'), 'Third review loop')
+    await userEvent.click(screen.getByRole('button', { name: 'Save note' }))
+
+    const puts = () => fetchSpy.mock.calls.filter(([, init]) => init?.method === 'PUT')
+    await waitFor(() => expect(puts()).toHaveLength(1))
+    const [url, init] = puts()[0]
+    expect(url).toBe('/api/worklog/day')
+    expect(JSON.parse(String(init?.body))).toEqual({
+      day: TODAY,
+      energy: 0,
+      friction: 0,
+      note: 'Third review loop',
+    })
+  })
 })
 
 describe('WorkLogView editing', () => {

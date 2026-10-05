@@ -27,6 +27,33 @@ test.describe('Work Log', () => {
     await page.getByRole('group', { name: 'Energy' }).getByRole('button', { name: '4' }).click();
     await page.getByRole('group', { name: 'Friction' }).getByRole('button', { name: '2' }).click();
 
+    // Note the day. The Save button is on the card from the start; it just has
+    // nothing to do yet. (This rides along in the existing test rather than
+    // having its own: signup and login share a 20-a-minute rate limit and the
+    // suite is already at that edge, so one more signup fails whichever test
+    // happens to run last.)
+    const dayCard = page.locator('.card').filter({ hasText: 'How was today?' });
+    const dayNote = dayCard.getByLabel('Note');
+    const daySave = dayCard.getByRole('button', { name: 'Save note' });
+    const dayStatus = dayCard.getByRole('status');
+    await expect(daySave).toBeDisabled();
+
+    // Clicking away stores the note...
+    await dayNote.fill('Third review loop on the same PR');
+    await expect(dayStatus).toHaveText('Unsaved changes');
+    const [stored] = await Promise.all([
+      page.waitForResponse((r) => r.request().method() === 'PUT' && r.url().endsWith('/api/worklog/day')),
+      dayCard.getByRole('heading', { name: 'How was today?' }).click(),
+    ]);
+    expect(stored.ok()).toBe(true);
+    await expect(dayStatus).toHaveText('Saved');
+
+    // ...and so does the button.
+    await dayNote.fill('Third review loop, then a fourth');
+    await daySave.click();
+    await expect(dayStatus).toHaveText('Saved');
+    await expect(daySave).toBeDisabled();
+
     await page.getByRole('button', { name: /Log something/ }).click();
     await page.getByPlaceholder('What did you do?').fill('Cut checkout latency');
     await page.getByPlaceholder(/What was broken/).fill('p95 was over a second');
@@ -47,12 +74,14 @@ test.describe('Work Log', () => {
       'https://github.com/acme/api/pull/1421',
     );
 
-    // The signal and the entry must both survive a reload.
+    // The signal, its note and the entry must all survive a reload.
     await page.reload();
     await expect(page.locator('.task-row').filter({ hasText: 'Cut checkout latency' })).toBeVisible();
     await expect(
       page.getByRole('group', { name: 'Energy' }).getByRole('button', { name: '4' }),
     ).toHaveAttribute('aria-pressed', 'true');
+    await expect(dayNote).toHaveValue('Third review loop, then a fourth');
+    await expect(dayStatus).toHaveText('Saved');
 
     // The weekly rollup should count it in the current bucket.
     await page.getByRole('button', { name: 'By week' }).click();
