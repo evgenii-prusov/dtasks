@@ -266,6 +266,35 @@ async def _ensure_recurring_occurrences(session: AsyncSession, user_id: int) -> 
     if not rules:
         return
     for rule in rules:
+        # A series has at most one open occurrence. If an earlier one was never
+        # completed, carry it forward to today rather than stacking a fresh copy
+        # beside it -- otherwise every missed day leaves another duplicate on
+        # Today. Older extras (left by the stacking behaviour this replaces) are
+        # dropped; completed occurrences are history and stay untouched.
+        stale_open = (
+            (
+                await session.execute(
+                    select(Task)
+                    .where(
+                        Task.recurrence_rule_id == rule.id,
+                        Task.completed.is_(False),
+                        Task.occurrence_date < today,
+                    )
+                    .order_by(Task.occurrence_date.desc(), Task.id.desc())
+                )
+            )
+            .scalars()
+            .all()
+        )
+        if stale_open:
+            keep, *extras = stale_open
+            for extra in extras:
+                await session.delete(extra)
+            keep.occurrence_date = today
+            keep.assigned_today = True
+            keep.assigned_week = False
+            rule.last_generated_date = today
+            continue
         positions = (
             (await session.execute(select(Task.position).where(Task.project_id == rule.project_id)))
             .scalars()

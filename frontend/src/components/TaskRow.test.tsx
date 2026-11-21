@@ -296,3 +296,51 @@ describe('TaskRow # project menu', () => {
     expect(lastPatchBody().project_id).toBeUndefined()
   })
 })
+
+describe('TaskRow recurring series', () => {
+  it('can stop a series even when the caller passes no project', async () => {
+    const user = userEvent.setup()
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const qc = new QueryClient({ defaultOptions: { queries: { staleTime: Infinity } } })
+    const rule = {
+      id: 5,
+      project_id: 7,
+      title: 'A task',
+      notes: '',
+      complexity: 'low' as const,
+      is_green: false,
+      weekdays: 0b1111111,
+    }
+    qc.setQueryData<Project[]>(
+      ['projects'],
+      [
+        {
+          id: 7,
+          name: 'Work',
+          group: 'Work',
+          description: '',
+          notes: '',
+          position: 0,
+          tasks: [],
+          recurrences: [rule],
+        },
+      ],
+    )
+    // As Plan, Review and the project page render it: no `project` prop.
+    render(
+      <QueryClientProvider client={qc}>
+        <TaskRow task={{ ...task, recurrence_rule_id: 5 }} editable checkable />
+      </QueryClientProvider>,
+    )
+
+    await user.click(screen.getByText('↺'))
+    await user.click(screen.getByText('task.stopRepeating'))
+
+    await waitFor(() =>
+      expect(globalThis.fetch).toHaveBeenCalledWith(
+        '/api/recurrences/5',
+        expect.objectContaining({ method: 'DELETE' }),
+      ),
+    )
+  })
+})
