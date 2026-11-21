@@ -60,7 +60,13 @@ export function TaskRow({
   const [selectedProjectId, setSelectedProjectId] = useState(task.project_id)
   const [swiped, setSwiped] = useState(false)
 
-  const rule = project?.recurrences.find((r) => r.id === task.recurrence_rule_id)
+  const { data: projects = [] } = useProjects()
+  // Not every caller passes `project` (Plan, Review, the project page), and
+  // without the rule there is no ↺ badge -- so no way to edit the series or
+  // stop it repeating. Fall back to the cached project list.
+  const rule = (project ?? projects.find((p) => p.id === task.project_id))?.recurrences.find(
+    (r) => r.id === task.recurrence_rule_id,
+  )
   const [editingSeries, setEditingSeries] = useState(false)
   const [seriesTitle, setSeriesTitle] = useState('')
   const [seriesComplexity, setSeriesComplexity] = useState<Complexity>('low')
@@ -264,7 +270,6 @@ export function TaskRow({
     })
   }
 
-  const { data: projects = [] } = useProjects()
   const mustCount = mustHaveCount(projects)
 
   const toggleGreen = () => {
