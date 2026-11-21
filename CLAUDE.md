@@ -2,7 +2,52 @@
 
 This file provides instructions and context for AI coding agents working on this project.
 
-<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:6cd5cc61 -->
+
+## Git Branching Convention
+
+Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.beads/hooks/`, `core.hooksPath=.beads/hooks`) and by GitHub branch protection on `main`. This is enforced mechanically — not just documented — so it applies regardless of which tool or agent runs `git commit`/`git push` (Claude Code, agy, Codex, plain `git`/`gh` CLI).
+
+- **Before your first commit for any change**, create/switch to a feature branch: `git checkout -b <descriptive-name>`. Don't wait until you're ready to push — branching after the fact requires history surgery (moving commits off `main`).
+- Land changes via `git push -u origin <branch>` + `gh pr create`.
+- If the pre-commit/pre-push hook fires, that's the intended behavior — branch instead of bypassing it. Rare, deliberate exceptions: `ALLOW_MAIN_COMMIT=1 git commit ...` / `ALLOW_MAIN_PUSH=1 git push ...`.
+
+
+## Build & Test
+
+Use the make targets — they carry the environment (dev invite code, schema
+migration, ports, pidfiles) that starting things by hand does not.
+
+```bash
+make install                  # uv sync + npm install
+make start / stop / status    # run both servers in the background
+make logs                     # tail both logs
+make test                     # backend pytest + frontend vitest and Playwright
+make test-e2e                 # Playwright only; it starts the servers itself
+make db-upgrade               # alembic upgrade head against the dev database
+```
+
+Notes for a fresh environment:
+
+- Never background a server by hand. `make start` writes pidfiles and logs to
+  `.run/`; a hand-rolled `&` loses the process and the output with it.
+- The dev invite code is `test-invite-code`. Signup needs it, and only the make
+  targets set it.
+- Skipping `make db-upgrade` gives you a backend that starts, binds the port,
+  and then fails every request with `no such table: users` — the dev database
+  has no schema of its own.
+- `npx playwright test` boots the backend and Vite itself; do not start them
+  first.
+
+## Architecture Overview
+
+_Add a brief overview of your project architecture_
+
+## Conventions & Patterns
+
+_Add your project-specific conventions here_
+
+
+<!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:1105d646 -->
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -22,7 +67,7 @@ bd close <id>         # Complete work
 - Run `bd prime` for detailed command reference and session close protocol
 - Use `bd remember` for persistent knowledge — do NOT use MEMORY.md files
 
-**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/SYNC_CONCEPTS.md for details and anti-patterns.
+**Architecture in one line:** issues live in a local Dolt DB; sync uses `refs/dolt/data` on your git remote; `.beads/issues.jsonl` is a passive export. See https://github.com/gastownhall/beads/blob/main/docs/core-concepts/sync-concepts.md for details and anti-patterns.
 
 ## Agent Context Profiles
 
@@ -56,83 +101,3 @@ This protocol applies when ending a Beads implementation workflow. It is subordi
 - Do not commit or push without clear authority from the active profile or the current user request.
 - If a required sync or push is blocked, stop and report the exact command and error.
 <!-- END BEADS INTEGRATION -->
-
-## Git Branching Convention
-
-Direct commits and pushes to `main` are blocked by a repo-tracked git hook (`.beads-hooks/`, `core.hooksPath=.beads-hooks`) and by GitHub branch protection on `main`. This is enforced mechanically — not just documented — so it applies regardless of which tool or agent runs `git commit`/`git push` (Claude Code, agy, Codex, plain `git`/`gh` CLI).
-
-- **Before your first commit for any change**, create/switch to a feature branch: `git checkout -b <descriptive-name>`. Don't wait until you're ready to push — branching after the fact requires history surgery (moving commits off `main`).
-- Land changes via `git push -u origin <branch>` + `gh pr create`.
-- If the pre-commit/pre-push hook fires, that's the intended behavior — branch instead of bypassing it. Rare, deliberate exceptions: `ALLOW_MAIN_COMMIT=1 git commit ...` / `ALLOW_MAIN_PUSH=1 git push ...`.
-
-## Remote/Cloud Execution Sync
-
-Beads issue data lives in two layers, kept in sync differently depending which way work is flowing:
-
-1. **Dolt DB** (`.beads/embeddeddolt`) — the actual source of truth `bd` reads from. Synced via `bd dolt push`/`bd dolt pull` against the `origin` Dolt remote, which is **DoltHub** (`https://doltremoteapi.dolthub.com/evgenii/dolt01`, browsable at https://www.dolthub.com/repositories/evgenii/dolt01) — not the git remote.
-2. **Git-tracked export** (`.beads/issues.jsonl`) — a passive, human-diffable mirror committed to git via normal `refs/heads/*`. A pre-commit hook regenerates it automatically before each commit.
-
-### Handing new/updated issues TO a remote or cloud agent
-
-Run all four:
-
-```bash
-git checkout -b <feature-branch>     # never push straight to main
-git add .beads/issues.jsonl
-git commit -m "..."
-bd dolt push                          # pushes the real Dolt data to DoltHub
-git push -u origin <feature-branch>
-gh pr create ...                      # if the remote executor needs main
-```
-
-If only `git push` happens (no `bd dolt push`), the remote clone's `bd` database will be missing the issue even though `issues.jsonl` looks up to date — this is the most common way this workflow silently breaks.
-
-### Issues created/updated BY a remote or cloud agent (e.g. Claude Cloud's default sandbox)
-
-**`bd dolt push` generally will not work here — don't attempt it, and don't retry it.** `bd dolt push`/`pull` against DoltHub requires DoltHub credentials (`dolt login`, or `DOLT_REMOTE_USER`/`DOLT_REMOTE_PASSWORD` env vars) to be present in the environment running the command. A fresh cloud/remote sandbox won't have these by default. Unless DoltHub credentials have been explicitly provisioned into the sandbox, treat this as a sandboxing boundary, not a misconfiguration to fix with more scope.
-
-- The remote/cloud session should only touch the git side: commit `.beads/issues.jsonl`, push its own branch, open a PR.
-- After merging that PR, a human (or any session with real git+Dolt push credentials, e.g. a local machine) must reconcile the durable Dolt DB:
-  ```bash
-  git checkout main && git pull
-  bd import              # upsert new/changed issues from the merged issues.jsonl into the local Dolt DB
-  bd dolt push            # sync the real Dolt DB from an environment that can actually push
-  ```
-  This is the one legitimate use of `bd import` outside normal operation — it's recovering Dolt state after a sync path (`bd dolt push`) that was structurally blocked, not treating JSONL as a substitute source of truth.
-
-## Build & Test
-
-Use the make targets — they carry the environment (dev invite code, schema
-migration, ports, pidfiles) that starting things by hand does not.
-
-```bash
-make install                  # uv sync + npm install
-make start / stop / status    # run both servers in the background
-make logs                     # tail both logs
-make test                     # backend pytest + frontend vitest and Playwright
-make test-e2e                 # Playwright only; it starts the servers itself
-make db-upgrade               # alembic upgrade head against the dev database
-```
-
-Notes for a fresh environment:
-
-- Never background a server by hand. `make start` writes pidfiles and logs to
-  `.run/`; a hand-rolled `&` loses the process and the output with it.
-- The dev invite code is `test-invite-code`. Signup needs it, and only the make
-  targets set it.
-- Skipping `make db-upgrade` gives you a backend that starts, binds the port,
-  and then fails every request with `no such table: users` — the dev database
-  has no schema of its own.
-- `npx playwright test` boots the backend and Vite itself; do not start them
-  first.
-- `bd` may not exist in a cloud sandbox. If it is missing, skip the beads
-  workflow above and describe follow-up work in the PR instead — do not try to
-  install it or sync Dolt.
-
-## Architecture Overview
-
-_Add a brief overview of your project architecture_
-
-## Conventions & Patterns
-
-_Add your project-specific conventions here_

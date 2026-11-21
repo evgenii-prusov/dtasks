@@ -19,11 +19,6 @@ frontend/dist/
 *.log
 .run/
 
-# Beads / Dolt files (added by bd init)
-.dolt/
-*.db
-.beads-credential-key
-.beads/proxieddb/
 
 #IDEA
 .idea/
@@ -39,4 +34,10 @@ infra/terraform.tfvars
 infra/*.tfplan
 infra/crash.log
 infra/crash.*.log
-.beads/interactions.jsonl
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+*.gate.lock*
