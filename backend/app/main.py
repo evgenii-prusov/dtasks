@@ -18,6 +18,8 @@ from sqlalchemy.orm import selectinload
 from . import db
 from .analytics import AnalyticsMiddleware, annotate, ingest_events
 from .auth import auth_router, session_auth, session_store
+from .mcp_server import mcp_enabled, mcp_route_handlers
+from .mcp_server import running as mcp_running
 from .models import Base, Habit, HabitLog, Project, RecurrenceRule, Task, User
 from .schemas import (
     UNSET,
@@ -76,7 +78,11 @@ async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
     if os.environ.get("DTASKS_AUTO_CREATE_SCHEMA") == "1":
         async with db.engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-    yield
+    if mcp_enabled():
+        async with mcp_running():
+            yield
+    else:
+        yield
     await db.engine.dispose()
 
 
@@ -697,6 +703,8 @@ route_handlers: list = [
     ingest_events,
     worklog_router,
 ]
+if mcp_enabled():
+    route_handlers.extend(mcp_route_handlers)
 if FRONTEND_DIST.is_dir():
     route_handlers.append(create_static_files_router(path="/", directories=[FRONTEND_DIST], html_mode=True))
 

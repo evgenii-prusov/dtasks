@@ -78,6 +78,21 @@ fallback, register explicit Litestar routes for them.
 4. Allow → authorization code (short-lived, single use) issued to the
    registered redirect URI.
 
+Implementation (`backend/app/mcp_auth.py`): the SDK's `/authorize` stores the
+request and redirects to `/oauth/consent?request=<id>` (SPA route). The page
+calls, with session auth:
+
+- `GET /api/mcp/authorizations/{id}` → `{client_name}`; 404 if unknown/expired.
+- `POST /api/mcp/authorizations/{id}` `{approve: bool}` → `{redirect_url}`;
+  the SPA then navigates the browser to `redirect_url` (code on Allow,
+  `error=access_denied` on Deny).
+
+OAuth endpoints live at the root: `/register`, `/authorize`, `/token`,
+`/revoke`, plus the two `/.well-known/...` metadata documents
+(`backend/app/mcp_server.py` forwards them to the SDK's Starlette app).
+DCR client secrets are stored as-is inside the client's JSON (`mcp_clients`);
+they only matter for confidential clients, and Claude uses PKCE.
+
 ### 3.4 Tokens
 
 - Opaque random strings; only a hash (SHA-256) is stored.

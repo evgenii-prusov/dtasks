@@ -250,3 +250,66 @@ class WorkLogDay(Base):
     energy: Mapped[int] = mapped_column(Integer, default=0)  # 0 unset | 1 drained .. 5 strong
     friction: Mapped[int] = mapped_column(Integer, default=0)  # 0 unset | 1 smooth .. 5 blocked
     note: Mapped[str] = mapped_column(Text, default="")  # what got in the way
+
+
+# --- MCP connector: OAuth authorization server state (docs/mcp.md §3) ---------
+#
+# Expiries are epoch seconds (ints), matching the MCP SDK's token models and
+# sidestepping SQLite's habit of returning naive datetimes.
+
+
+class McpClient(Base):
+    """An OAuth client registered through Dynamic Client Registration (§3.2)."""
+
+    __tablename__ = "mcp_clients"
+
+    client_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # The SDK's OAuthClientInformationFull, serialized as JSON: it owns the schema.
+    info: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+
+
+class McpAuthRequest(Base):
+    """An /authorize request waiting for consent, then an unredeemed code (§3.3).
+
+    One row covers both stages: ``code_hash`` and ``grant_id`` are set when the
+    user clicks Allow, and the row is deleted when the code is redeemed.
+    """
+
+    __tablename__ = "mcp_auth_requests"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("mcp_clients.client_id", ondelete="CASCADE"))
+    params: Mapped[str] = mapped_column(Text)  # the SDK's AuthorizationParams as JSON
+    expires_at: Mapped[int] = mapped_column(Integer)
+    grant_id: Mapped[int | None] = mapped_column(
+        ForeignKey("mcp_grants.id", ondelete="CASCADE"), nullable=True
+    )
+    code_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, unique=True)
+
+
+class McpGrant(Base):
+    """One user's consent for one client; what "Connected apps" lists (§3.5)."""
+
+    __tablename__ = "mcp_grants"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    client_id: Mapped[str] = mapped_column(ForeignKey("mcp_clients.client_id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class McpToken(Base):
+    """An access or refresh token; only its SHA-256 is stored (§3.4)."""
+
+    __tablename__ = "mcp_tokens"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    grant_id: Mapped[int] = mapped_column(ForeignKey("mcp_grants.id", ondelete="CASCADE"), index=True)
+    kind: Mapped[str] = mapped_column(String(10))  # access | refresh
+    expires_at: Mapped[int] = mapped_column(Integer)
+    # Refresh tokens only: set when rotated. Kept so a replay can be recognised
+    # and the whole grant revoked.
+    rotated: Mapped[bool] = mapped_column(Boolean, default=False)

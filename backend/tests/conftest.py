@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+import base64
+import hashlib
 import os
+import secrets
 import tempfile
 from collections.abc import AsyncIterator, Awaitable, Callable
+from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from litestar.testing import AsyncTestClient
@@ -23,6 +28,7 @@ os.environ.setdefault("DTASKS_PUBLIC_URL", "http://localhost:5173")
 # Tests have no migration step of their own; opt into the lifespan's create_all
 # (prod instead runs `alembic upgrade head` before the app starts).
 os.environ.setdefault("DTASKS_AUTO_CREATE_SCHEMA", "1")
+os.environ.setdefault("DTASKS_MCP_ENABLED", "1")
 
 from app import db as app_db  # noqa: E402
 from app import main  # noqa: E402
@@ -114,3 +120,81 @@ async def make_client(db: async_sessionmaker) -> AsyncIterator[MakeClient]:
     yield _make
     if primary is not None:
         await primary.__aexit__(None, None, None)
+
+
+# --- MCP connector (docs/mcp.md) -------------------------------------------
+
+CLAUDE_REDIRECT_URI = "https://claude.ai/api/mcp/auth_callback"
+
+
+async def register_mcp_client(client: AsyncTestClient, redirect_uri: str = CLAUDE_REDIRECT_URI):
+    return await client.post(
+        "/register",
+        json={"client_name": "Claude", "redirect_uris": [redirect_uri], "token_endpoint_auth_method": "none"},
+    )
+
+
+async def connect_claude(client: AsyncTestClient) -> dict[str, Any]:
+    """Walk the OAuth flow the way claude.ai does, approving as ``client``'s user.
+
+    Returns the token response plus ``client_id``, for refresh calls.
+    """
+    registration = (await register_mcp_client(client)).json()
+    verifier = secrets.token_urlsafe(48)
+    challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).rstrip(b"=").decode()
+
+    authorize = await client.get(
+        "/authorize",
+        params={
+            "response_type": "code",
+            "client_id": registration["client_id"],
+            "redirect_uri": CLAUDE_REDIRECT_URI,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+            "state": "xyz",
+            "scope": "dtasks",
+        },
+        follow_redirects=False,
+    )
+    assert authorize.status_code == 302, authorize.text
+    request_id = parse_qs(urlparse(authorize.headers["location"]).query)["request"][0]
+
+    consent = await client.post(f"/api/mcp/authorizations/{request_id}", json={"approve": True})
+    assert consent.status_code == 200, consent.text
+    code = parse_qs(urlparse(consent.json()["redirect_url"]).query)["code"][0]
+
+    token = await client.post(
+        "/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "redirect_uri": CLAUDE_REDIRECT_URI,
+            "client_id": registration["client_id"],
+            "code_verifier": verifier,
+        },
+    )
+    assert token.status_code == 200, token.text
+    return token.json() | {"client_id": registration["client_id"]}
+
+
+async def refresh(client: AsyncTestClient, tokens: dict[str, Any], refresh_token: str | None = None):
+    return await client.post(
+        "/token",
+        data={
+            "grant_type": "refresh_token",
+            "refresh_token": refresh_token or tokens["refresh_token"],
+            "client_id": tokens["client_id"],
+        },
+    )
+
+
+async def mcp_call(client: AsyncTestClient, access_token: str, method: str, params: dict | None = None):
+    """One JSON-RPC request to /mcp, as a stateless Streamable HTTP client sends it."""
+    return await client.post(
+        "/mcp",
+        json={"jsonrpc": "2.0", "id": 1, "method": method, "params": params or {}},
+        headers={
+            "Authorization": f"Bearer {access_token}",
+            "Accept": "application/json, text/event-stream",
+        },
+    )
