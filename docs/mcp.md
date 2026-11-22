@@ -187,7 +187,9 @@ iPhone app.
 | `DTASKS_PUBLIC_URL` | Existing; used as OAuth issuer / resource URL |
 
 User setup: claude.ai → Settings → Connectors → Add custom connector → URL
-`https://<DOMAIN>/mcp` → Connect → dtasks login → Allow.
+`https://<DOMAIN>/mcp` → Connect → dtasks login → Allow. Operator steps and
+smoke checks: `docs/deploy.md` "MCP connector (Claude)". Locally, `make start`
+runs the backend with the connector enabled and Vite proxies its paths.
 
 **Follow-up (separate bead):** per-user timezone, so "today" matches the
 user's local day across the app and the MCP tools.

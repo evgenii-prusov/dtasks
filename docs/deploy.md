@@ -64,11 +64,38 @@ the `GIT_SHA` build arg.
 | `DTASKS_PUBLIC_URL`    | `docker-compose.yml` (`app`)  | Fixed to `https://${DOMAIN}` — external origin used to build OAuth callback URLs |
 | `DTASKS_GOOGLE_CLIENT_ID` / `DTASKS_GOOGLE_CLIENT_SECRET` | `.env` | Google OAuth client credentials; unset disables the Google login button |
 | `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET` | `.env` | GitHub OAuth app credentials; unset disables the GitHub login button |
+| `DTASKS_MCP_ENABLED`   | `.env`                        | `1` serves the Claude MCP connector (`/mcp` + OAuth endpoints); see "MCP connector" below |
+| `DTASKS_MCP_REDIRECT_ALLOWLIST` | `.env` (optional)    | Comma-separated OAuth redirect URIs allowed at client registration; defaults to Claude's callbacks |
+| `DTASKS_MCP_RATE_LIMIT` | `.env` (optional)            | Requests/minute per IP on `/register`, `/authorize`, `/token`, `/revoke` (default 120); separate from the login limit |
 
 `.env` is gitignored — it never gets committed. `DTASKS_DB_PATH`/`DTASKS_SESSION_DIR`
 are intentionally hardcoded in `docker-compose.yml` rather than `.env`: they must
 point inside the `dtasks-data` volume for persistence to work, so there's no
 legitimate reason to override them per-deploy.
+
+## MCP connector (Claude)
+
+Lets users drive dtasks from Claude on the web and the Claude mobile apps
+(design: `docs/mcp.md`). Nothing to register with a third party: dtasks is
+its own OAuth server and Claude registers itself on first connect.
+
+1. Set `DTASKS_MCP_ENABLED=1` in `.env`, then `docker compose up -d`. Migration
+   `0010` (the `mcp_*` tables) runs on start like every other.
+2. Check discovery from outside:
+   ```sh
+   curl -s https://<DOMAIN>/.well-known/oauth-authorization-server   # JSON, issuer = https://<DOMAIN>
+   curl -si -X POST https://<DOMAIN>/mcp | head -1                     # 401, with a WWW-Authenticate header
+   ```
+   The dinfra Caddy site block proxies the whole domain, so `/mcp`,
+   `/authorize`, `/token`, `/register`, `/revoke` and `/.well-known/...`
+   reach the app with no Caddy change.
+3. On claude.ai: **Settings → Connectors → Add custom connector**, URL
+   `https://<DOMAIN>/mcp`, then **Connect**. Log in to dtasks if asked and click
+   **Allow**. The connector then appears in the Claude iOS/Android apps too.
+4. To cut Claude off: dtasks sidebar → **Connected apps** → **Disconnect**.
+
+Turning the flag off again unmounts the endpoints; existing grants stay in the
+database and work again if it is turned back on.
 
 ## OAuth providers
 
