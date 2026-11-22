@@ -21,6 +21,7 @@ from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 
 from .mcp_auth import SCOPE, DtasksAuthProvider, mcp_consent_router, public_url, resource_url
+from .mcp_tools import register_tools
 
 
 def mcp_enabled() -> bool:
@@ -42,6 +43,7 @@ server = MCPServer(
         revocation_options=RevocationOptions(enabled=True),
     ),
 )
+register_tools(server)
 
 # Built per lifespan: the SDK's session manager can be started only once per
 # instance, and tests start the app many times.
