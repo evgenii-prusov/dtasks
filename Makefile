@@ -47,9 +47,10 @@ dev-backend: db-upgrade ## Run backend in the foreground (Ctrl+C to stop)
 # What Playwright's webServer starts. Two differences from dev-backend: no
 # --reload, whose child process outlives the SIGTERM Playwright sends at
 # teardown and leaves the port held; and `exec`, so the signal reaches uvicorn
-# instead of the wrapping shell.
+# instead of the wrapping shell. Also a lifted login rate limit: every spec signs
+# up from the same IP, and the suite outgrew the default 20 a minute.
 e2e-backend: db-upgrade ## Backend for Playwright (no reload, clean teardown)
-	cd backend && exec env DTASKS_INVITE_CODE=test-invite-code DTASKS_MCP_ENABLED=1 uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT)
+	cd backend && exec env DTASKS_INVITE_CODE=test-invite-code DTASKS_MCP_ENABLED=1 DTASKS_AUTH_RATE_LIMIT=1000 uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT)
 
 dev-frontend: ## Run frontend dev server in the foreground (Ctrl+C to stop)
 	cd frontend && npm run dev
