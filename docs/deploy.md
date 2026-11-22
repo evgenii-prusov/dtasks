@@ -62,6 +62,7 @@ the `GIT_SHA` build arg.
 | `DTASKS_DB_PATH`       | `docker-compose.yml` (`app`)  | Fixed to `/data/dtasks.sqlite`, inside the `dtasks-data` volume |
 | `DTASKS_SESSION_DIR`   | `docker-compose.yml` (`app`)  | Fixed to `/data/sessions`, inside the same volume |
 | `DTASKS_PUBLIC_URL`    | `docker-compose.yml` (`app`)  | Fixed to `https://${DOMAIN}` — external origin used to build OAuth callback URLs |
+| `FORWARDED_ALLOW_IPS`  | `docker-compose.yml` (`app`)  | Fixed to `*` — uvicorn trusts Caddy's `X-Forwarded-For`, so rate limits count per user IP, not Caddy's |
 | `DTASKS_GOOGLE_CLIENT_ID` / `DTASKS_GOOGLE_CLIENT_SECRET` | `.env` | Google OAuth client credentials; unset disables the Google login button |
 | `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET` | `.env` | GitHub OAuth app credentials; unset disables the GitHub login button |
 | `DTASKS_MCP_ENABLED`   | `.env`                        | `1` serves the Claude MCP connector (`/mcp` + OAuth endpoints); see "MCP connector" below |
