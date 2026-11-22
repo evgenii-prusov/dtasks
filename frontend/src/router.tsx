@@ -24,6 +24,9 @@ import { ProjectView } from './views/ProjectView'
 import { ReportView } from './views/ReportView'
 import { WorkLogView } from './views/WorkLogView'
 import { WelcomeView } from './views/WelcomeView'
+import { ConsentView } from './views/ConsentView'
+import { ConnectedAppsView } from './views/ConnectedAppsView'
+import { rememberReturnTo, takeReturnTo } from './lib/returnTo'
 import { currentUserQueryOptions, useProjects } from './api/hooks'
 import { createQueryClient } from './queryClient'
 
@@ -111,6 +114,34 @@ const authedRoute = createRoute({
     } catch {
       throw redirect({ to: '/welcome' })
     }
+    // Back to the page that sent the user to log in (see consentRoute).
+    const returnTo = takeReturnTo()
+    if (returnTo) throw redirect({ href: returnTo })
+  },
+})
+
+interface ConsentSearch {
+  request?: string
+}
+
+// Outside the app layout: a page Claude sends the browser to, not one you navigate to.
+const consentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/oauth/consent',
+  validateSearch: (search: Record<string, unknown>): ConsentSearch => ({
+    request: typeof search.request === 'string' ? search.request : undefined,
+  }),
+  beforeLoad: async ({ context, location }) => {
+    try {
+      await context.queryClient.ensureQueryData(currentUserQueryOptions)
+    } catch {
+      rememberReturnTo(location.href)
+      throw redirect({ to: '/welcome' })
+    }
+  },
+  component: function ConsentRouteComponent() {
+    const { request } = consentRoute.useSearch()
+    return <ConsentView requestId={request ?? ''} />
   },
 })
 
@@ -150,6 +181,12 @@ const worklogRoute = createRoute({
   component: WorkLogView,
 })
 
+const connectedAppsRoute = createRoute({
+  getParentRoute: () => authedRoute,
+  path: '/connected-apps',
+  component: ConnectedAppsView,
+})
+
 function ProjectRouteComponent() {
   const { projectId } = projectRoute.useParams()
   const { task: jumpToTaskId } = projectRoute.useSearch()
@@ -187,6 +224,7 @@ const projectRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   welcomeRoute,
+  consentRoute,
   authedRoute.addChildren([
     todayRoute,
     planRoute,
@@ -194,6 +232,7 @@ const routeTree = rootRoute.addChildren([
     habitsRoute,
     reportRoute,
     worklogRoute,
+    connectedAppsRoute,
     projectRoute,
   ]),
 ])

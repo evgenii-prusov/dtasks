@@ -16,6 +16,7 @@ export type IconName =
   | 'trash'
   | 'logout'
   | 'globe'
+  | 'plug'
   | 'leaf'
   | 'search'
   | 'x'
@@ -150,6 +151,16 @@ const paths = (c: string): Record<IconName, ReactNode> => ({
       <ellipse cx="8" cy="8" rx="2.7" ry="6" stroke={c} strokeWidth="1.2" fill="none" />
       <path d="M2 8h12" stroke={c} strokeWidth="1.2" fill="none" />
     </>
+  ),
+  plug: (
+    <path
+      d="M6 2v3M10 2v3M4.5 5h7v2.5a3.5 3.5 0 0 1-7 0V5ZM8 11v3"
+      stroke={c}
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      fill="none"
+    />
   ),
   leaf: (
     <path

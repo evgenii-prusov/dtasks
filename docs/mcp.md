@@ -105,9 +105,16 @@ they only matter for confidential clients, and Claude uses PKCE.
 
 ### 3.5 Connected apps
 
-A "Connected apps" section in Settings lists the user's grants (client name,
-created, last used) with a Revoke button. Backed by
-`GET /api/mcp/grants` and `DELETE /api/mcp/grants/{id}` (session auth).
+A "Connected apps" page (`/connected-apps`, linked from the sidebar) lists the
+user's grants (client name, connected, last used) with a Disconnect button, and
+shows the connector URL to paste into Claude. Backed by `GET /api/mcp/grants`
+and `DELETE /api/mcp/grants/{id}` (session auth). The `/api/mcp/*` endpoints
+are mounted even when `DTASKS_MCP_ENABLED` is off, so the page loads (empty).
+
+Logged-out consent: `/oauth/consent` stores its URL in sessionStorage before
+redirecting to `/welcome`; the authenticated layout sends the user back to it
+after login. sessionStorage (not a URL param) survives the Google/GitHub round
+trip, which always lands on `/` (`frontend/src/lib/returnTo.ts`).
 
 ## 4. Tools (v1)
 

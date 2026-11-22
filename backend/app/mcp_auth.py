@@ -16,6 +16,7 @@ from datetime import UTC, datetime
 
 import msgspec
 from litestar import Router, get, post
+from litestar import delete as delete_route
 from litestar.exceptions import NotFoundException
 from mcp.server.auth.provider import (
     AccessToken,
@@ -320,4 +321,47 @@ async def decide_authorization(
     return ConsentOut(construct_redirect_uri(redirect_uri, code=code, state=params.state))
 
 
-mcp_consent_router = Router(path="/api/mcp", route_handlers=[get_authorization, decide_authorization])
+# --- connected apps (§3.5) -------------------------------------------------
+
+
+class GrantOut(msgspec.Struct):
+    id: int
+    client_name: str
+    created_at: datetime
+    last_used_at: datetime | None
+
+
+@get("/grants")
+async def list_grants(session: AsyncSession, user: User) -> list[GrantOut]:
+    rows = await session.execute(
+        select(McpGrant, McpClient)
+        .join(McpClient, McpGrant.client_id == McpClient.client_id)
+        .where(McpGrant.user_id == user.id, McpGrant.revoked_at.is_(None))
+        .order_by(McpGrant.created_at.desc())
+    )
+    return [
+        GrantOut(
+            id=grant.id,
+            client_name=_client_name(client),
+            created_at=grant.created_at,
+            last_used_at=grant.last_used_at,
+        )
+        for grant, client in rows.all()
+    ]
+
+
+@delete_route("/grants/{grant_id:int}", status_code=204)
+async def revoke_grant(grant_id: int, session: AsyncSession, user: User) -> None:
+    grant = await session.get(McpGrant, grant_id)
+    if grant is None or grant.user_id != user.id or grant.revoked_at is not None:
+        raise NotFoundException(detail="Connected app not found")
+    await _revoke_grant(session, grant.id)
+
+
+# Session-auth endpoints the SPA calls. Mounted even with the connector disabled:
+# with no OAuth routes there is nothing to consent to, and the Connected apps
+# page should still load (empty) rather than 404.
+mcp_consent_router = Router(
+    path="/api/mcp",
+    route_handlers=[get_authorization, decide_authorization, list_grants, revoke_grant],
+)

@@ -351,6 +351,12 @@ export function Sidebar({ isOpen, onClose }: { isOpen?: boolean; onClose?: () =>
           >
             {user.email}
           </div>
+          <NavLink
+            to="/connected-apps"
+            icon="plug"
+            label={t('nav.connectedApps')}
+            onClick={close}
+          />
           <button className="nav" onClick={() => logout.mutate()} disabled={logout.isPending}>
             <Ic n="logout" s={14} />
             {t('sidebar.logout')}
