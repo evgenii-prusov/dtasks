@@ -25,6 +25,9 @@ export default defineConfig({
       // Not 8000: sibling local projects (e.g. dcash) default there too.
       // Keep in sync with Makefile's DEV_BACKEND_PORT.
       '/api': 'http://localhost:8010',
+      // MCP connector endpoints (docs/mcp.md), served by the backend at the root.
+      '^/(mcp|authorize|token|register|revoke)(\\?|$)': 'http://localhost:8010',
+      '/.well-known/oauth-': 'http://localhost:8010',
     },
   },
 })

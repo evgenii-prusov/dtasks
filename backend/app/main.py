@@ -17,6 +17,7 @@ from sqlalchemy.orm import selectinload
 from . import db
 from .analytics import AnalyticsMiddleware, annotate, ingest_events
 from .auth import auth_router, session_auth, session_store
+from .mcp_auth import mcp_consent_router
 from .mcp_server import mcp_enabled, mcp_route_handlers
 from .mcp_server import running as mcp_running
 from .models import Base, Habit, Project, RecurrenceRule, Task, User
@@ -406,6 +407,7 @@ route_handlers: list = [
     delete_habit,
     ingest_events,
     worklog_router,
+    mcp_consent_router,
 ]
 if mcp_enabled():
     route_handlers.extend(mcp_route_handlers)

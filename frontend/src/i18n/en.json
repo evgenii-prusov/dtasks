@@ -5,7 +5,8 @@
     "review": "Review",
     "habits": "Habits",
     "report": "Report",
-    "worklog": "Work Log"
+    "worklog": "Work Log",
+    "connectedApps": "Connected apps"
   },
   "groups": {
     "work": "Work",
@@ -322,5 +323,24 @@
     "badgeTooltip": "{{count}} unsorted in the Inbox",
     "fileTo": "File to…",
     "keepHere": "Keep in Inbox"
+  },
+  "connectedApps": {
+    "title": "Connected apps",
+    "intro": "Apps you've allowed to use your dtasks through MCP, like Claude on the web or your phone.",
+    "setup": "To connect Claude: Settings → Connectors → Add custom connector, and paste this URL:",
+    "empty": "No apps connected yet.",
+    "connected": "Connected {{date}}",
+    "lastUsed": "last used {{date}}",
+    "neverUsed": "not used yet",
+    "revoke": "Disconnect",
+    "revokeError": "Could not disconnect the app."
+  },
+  "consent": {
+    "title": "Connect {{client}} to dtasks",
+    "body": "{{client}} will be able to read and change your tasks, habits and work log. You can disconnect it at any time under Connected apps.",
+    "signedInAs": "Signed in as {{email}}",
+    "allow": "Allow",
+    "deny": "Deny",
+    "expired": "This connection request has expired or was already used. Start connecting again from the app."
   }
 }

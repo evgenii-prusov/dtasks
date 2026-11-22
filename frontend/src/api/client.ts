@@ -6,6 +6,8 @@ import type {
   Habit,
   HabitCreate,
   LoginPayload,
+  McpAuthorization,
+  McpGrant,
   Project,
   ProjectCreate,
   ProjectPatch,
@@ -83,6 +85,15 @@ export const api = {
     request<User>('/api/auth/login', { method: 'POST', body: JSON.stringify(payload) }),
   logout: () => request<void>('/api/auth/logout', { method: 'POST' }),
   authProviders: () => request<AuthProviders>('/api/auth/providers'),
+  getMcpAuthorization: (id: string) =>
+    request<McpAuthorization>(`/api/mcp/authorizations/${encodeURIComponent(id)}`),
+  decideMcpAuthorization: (id: string, approve: boolean) =>
+    request<{ redirect_url: string }>(`/api/mcp/authorizations/${encodeURIComponent(id)}`, {
+      method: 'POST',
+      body: JSON.stringify({ approve }),
+    }),
+  listMcpGrants: () => request<McpGrant[]>('/api/mcp/grants'),
+  revokeMcpGrant: (id: number) => request<void>(`/api/mcp/grants/${id}`, { method: 'DELETE' }),
   listProjects: () => request<Project[]>('/api/projects'),
   createProject: (project: ProjectCreate) =>
     request<Project>('/api/projects', { method: 'POST', body: JSON.stringify(project) }),

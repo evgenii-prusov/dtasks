@@ -237,3 +237,16 @@ export interface AuthProviders {
   google: boolean
   github: boolean
 }
+
+/** A pending MCP connector authorization awaiting the user's consent. */
+export interface McpAuthorization {
+  client_name: string
+}
+
+/** A client (e.g. Claude) the user has connected to dtasks over MCP. */
+export interface McpGrant {
+  id: number
+  client_name: string
+  created_at: string
+  last_used_at: string | null
+}

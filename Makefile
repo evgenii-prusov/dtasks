@@ -42,14 +42,15 @@ test-e2e: ## Run only the end-to-end tests (Playwright starts the servers itself
 	cd frontend && npx playwright test
 
 dev-backend: db-upgrade ## Run backend in the foreground (Ctrl+C to stop)
-	cd backend && DTASKS_INVITE_CODE=test-invite-code uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT) --reload
+	cd backend && DTASKS_INVITE_CODE=test-invite-code DTASKS_MCP_ENABLED=1 uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT) --reload
 
 # What Playwright's webServer starts. Two differences from dev-backend: no
 # --reload, whose child process outlives the SIGTERM Playwright sends at
 # teardown and leaves the port held; and `exec`, so the signal reaches uvicorn
-# instead of the wrapping shell.
+# instead of the wrapping shell. Also a lifted login rate limit: every spec signs
+# up from the same IP, and the suite outgrew the default 20 a minute.
 e2e-backend: db-upgrade ## Backend for Playwright (no reload, clean teardown)
-	cd backend && exec env DTASKS_INVITE_CODE=test-invite-code uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT)
+	cd backend && exec env DTASKS_INVITE_CODE=test-invite-code DTASKS_MCP_ENABLED=1 DTASKS_AUTH_RATE_LIMIT=1000 uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT)
 
 dev-frontend: ## Run frontend dev server in the foreground (Ctrl+C to stop)
 	cd frontend && npm run dev
@@ -59,7 +60,7 @@ start: db-upgrade ## Start backend + frontend in the background
 	@if [ -f $(RUN_DIR)/backend.pid ] && kill -0 $$(cat $(RUN_DIR)/backend.pid) 2>/dev/null; then \
 		echo "backend already running (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	else \
-		bash -c 'cd backend && exec env DTASKS_INVITE_CODE=test-invite-code uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT) --reload' > $(RUN_DIR)/backend.log 2>&1 & \
+		bash -c 'cd backend && exec env DTASKS_INVITE_CODE=test-invite-code DTASKS_MCP_ENABLED=1 uv run litestar --app app.main:app run --port $(DEV_BACKEND_PORT) --reload' > $(RUN_DIR)/backend.log 2>&1 & \
 		echo $$! > $(RUN_DIR)/backend.pid; \
 		echo "backend started (pid $$(cat $(RUN_DIR)/backend.pid))"; \
 	fi

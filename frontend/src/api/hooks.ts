@@ -443,3 +443,15 @@ export function unloggedCompletedTasks(
       .map((task) => ({ task, projectName: p.name })),
   )
 }
+
+export function useMcpGrants() {
+  return useQuery({ queryKey: ['mcpGrants'], queryFn: api.listMcpGrants })
+}
+
+export function useRevokeMcpGrant() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => api.revokeMcpGrant(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['mcpGrants'] }),
+  })
+}

@@ -41,15 +41,15 @@ async def test_reused_refresh_token_revokes_the_grant(client: AsyncTestClient) -
     assert (await mcp_call(client, rotated["access_token"], "tools/list")).status_code == 401
 
 
-async def test_revoked_token_is_rejected(client: AsyncTestClient) -> None:
+async def test_revoking_a_connected_app_cuts_off_its_tokens(client: AsyncTestClient) -> None:
     tokens = await connect_claude(client)
-    resp = await client.post(
-        "/revoke",
-        # The SDK's form model requires the field even for public clients.
-        data={"token": tokens["access_token"], "client_id": tokens["client_id"], "client_secret": ""},
-    )
-    assert resp.status_code == 200, resp.text
+    [app] = (await client.get("/api/mcp/grants")).json()
+    assert app["client_name"] == "Claude"
+
+    assert (await client.delete(f"/api/mcp/grants/{app['id']}")).status_code == 204
+    assert (await client.get("/api/mcp/grants")).json() == []
     assert (await mcp_call(client, tokens["access_token"], "tools/list")).status_code == 401
+    assert (await refresh(client, tokens)).status_code == 400
 
 
 async def test_a_token_only_reaches_its_own_users_tasks(make_client: MakeClient) -> None:

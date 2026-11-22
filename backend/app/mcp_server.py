@@ -20,7 +20,7 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 
-from .mcp_auth import SCOPE, DtasksAuthProvider, mcp_consent_router, public_url, resource_url
+from .mcp_auth import SCOPE, DtasksAuthProvider, public_url, resource_url
 from .mcp_tools import register_tools
 
 
@@ -94,5 +94,4 @@ mcp_route_handlers = [
     _route("/authorize", rate_limited=True),
     _route("/token", rate_limited=True),
     _route("/revoke", rate_limited=True),
-    mcp_consent_router,
 ]
