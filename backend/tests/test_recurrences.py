@@ -193,7 +193,7 @@ async def test_delete_missing_recurrence_returns_404(client: AsyncTestClient) ->
 
 def _shift_today(monkeypatch: pytest.MonkeyPatch, days: int) -> str:
     """Make the app believe it is ``days`` later; returns that date as ISO."""
-    import app.main as app_main
+    import app.planning as planning
 
     shifted = datetime.now(UTC) + timedelta(days=days)
 
@@ -202,7 +202,7 @@ def _shift_today(monkeypatch: pytest.MonkeyPatch, days: int) -> str:
         def now(cls, tz=None):  # type: ignore[override]
             return shifted if tz is None else shifted.astimezone(tz)
 
-    monkeypatch.setattr(app_main, "datetime", _ShiftedDatetime)
+    monkeypatch.setattr(planning, "datetime", _ShiftedDatetime)
     return shifted.date().isoformat()
 
 
