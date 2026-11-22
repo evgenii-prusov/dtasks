@@ -12,6 +12,11 @@ services:
       DTASKS_SESSION_DIR: /data/sessions
       DTASKS_SECURE_COOKIES: "1"
       DTASKS_PUBLIC_URL: https://${DOMAIN}
+      # Requests arrive from dinfra's Caddy, not from users. Trust its
+      # X-Forwarded-For so rate limits count per user IP rather than giving
+      # everyone Caddy's one bucket. Safe because no ports are published: only
+      # containers on the "web" network can reach the app.
+      FORWARDED_ALLOW_IPS: "*"
     volumes:
       - dtasks-data:/data
     expose:
