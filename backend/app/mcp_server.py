@@ -13,13 +13,13 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from litestar import Router, asgi
+from litestar.middleware.rate_limit import RateLimitConfig
 from litestar.types import Receive, Scope, Send
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.mcpserver import MCPServer
 from mcp.server.transport_security import TransportSecuritySettings
 from starlette.applications import Starlette
 
-from .auth import auth_rate_limit
 from .mcp_auth import SCOPE, DtasksAuthProvider, mcp_consent_router, public_url, resource_url
 
 
@@ -69,10 +69,18 @@ async def _forward(scope: Scope, receive: Receive, send: Send) -> None:
     await _starlette_app(scope, receive, send)  # type: ignore[arg-type]
 
 
+# Its own counter, not the login one: every user's /token refresh arrives from
+# Claude's servers, so sharing a bucket with logins would throttle both.
+_rate_limit = RateLimitConfig(
+    rate_limit=("minute", int(os.environ.get("DTASKS_MCP_RATE_LIMIT", "120"))),
+    store="mcp_rate_limit",
+)
+
+
 def _route(path: str, rate_limited: bool = False):
     handler = asgi(path, copy_scope=True, name=f"mcp:{path}")(_forward)
     if rate_limited:
-        return Router(path="/", route_handlers=[handler], middleware=[auth_rate_limit.middleware])
+        return Router(path="/", route_handlers=[handler], middleware=[_rate_limit.middleware])
     return handler
 
 

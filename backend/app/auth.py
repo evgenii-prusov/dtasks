@@ -112,7 +112,7 @@ async def me(request: Request[User, Any, Any]) -> UserOut:
 
 
 # Brute-force protection for credential endpoints only; /me is polled by the SPA.
-auth_rate_limit = RateLimitConfig(rate_limit=("minute", int(os.environ.get("DTASKS_AUTH_RATE_LIMIT", "20"))))
+_rate_limit = RateLimitConfig(rate_limit=("minute", int(os.environ.get("DTASKS_AUTH_RATE_LIMIT", "20"))))
 
 auth_router = Router(
     path="/api/auth",
@@ -120,7 +120,7 @@ auth_router = Router(
         Router(
             path="/",
             route_handlers=[signup, login, oauth_login, oauth_callback],
-            middleware=[auth_rate_limit.middleware],
+            middleware=[_rate_limit.middleware],
         ),
         logout,
         me,
