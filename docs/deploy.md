@@ -66,6 +66,7 @@ the `GIT_SHA` build arg.
 | `DTASKS_GITHUB_CLIENT_ID` / `DTASKS_GITHUB_CLIENT_SECRET` | `.env` | GitHub OAuth app credentials; unset disables the GitHub login button |
 | `DTASKS_MCP_ENABLED`   | `.env`                        | `1` serves the Claude MCP connector (`/mcp` + OAuth endpoints); see "MCP connector" below |
 | `DTASKS_MCP_REDIRECT_ALLOWLIST` | `.env` (optional)    | Comma-separated OAuth redirect URIs allowed at client registration; defaults to Claude's callbacks |
+| `DTASKS_MCP_RATE_LIMIT` | `.env` (optional)            | Requests/minute per IP on `/register`, `/authorize`, `/token`, `/revoke` (default 120); separate from the login limit |
 
 `.env` is gitignored — it never gets committed. `DTASKS_DB_PATH`/`DTASKS_SESSION_DIR`
 are intentionally hardcoded in `docker-compose.yml` rather than `.env`: they must
