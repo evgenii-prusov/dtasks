@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -11,7 +10,7 @@ from litestar import Litestar, Request, Response, delete, get, patch, post, put
 from litestar.config.cors import CORSConfig
 from litestar.exceptions import ClientException, NotFoundException
 from litestar.static_files import create_static_files_router
-from sqlalchemy import case, or_, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -20,7 +19,20 @@ from .analytics import AnalyticsMiddleware, annotate, ingest_events
 from .auth import auth_router, session_auth, session_store
 from .mcp_server import mcp_enabled, mcp_route_handlers
 from .mcp_server import running as mcp_running
-from .models import Base, Habit, HabitLog, Project, RecurrenceRule, Task, User
+from .models import Base, Habit, Project, RecurrenceRule, Task, User
+from .planning import (
+    DEFAULT_PROJECT_NAME,
+    INBOX_GROUP,
+    add_task,
+    apply_task_patch,
+    ensure_default_projects,
+    ensure_recurring_occurrences,
+    get_habit,
+    get_project,
+    get_task,
+    projects_ordered,
+    set_habit_state,
+)
 from .schemas import (
     UNSET,
     HabitCreate,
@@ -43,32 +55,6 @@ from .schemas import (
 )
 from .worklog import worklog_router
 
-MUST_HAVE_LIMIT = 2
-
-#: The one place a task can be parked without deciding where it belongs. A single
-#: server-managed project, in a group of its own so it is never one of the
-#: Work/Personal choices the user is trying to avoid making.
-INBOX_PROJECT_NAME = "Inbox"
-INBOX_GROUP = "Inbox"
-
-#: Name reserved for the per-group catch-all projects.
-DEFAULT_PROJECT_NAME = "..."
-
-
-def _projects_ordered(user_id: int):
-    """Every project of ``user_id``, Inbox first, then by position.
-
-    The Inbox is the first thing you look at -- when planning, and as the first
-    phase of a review -- so its place in the list is a property of the query
-    rather than of whatever position row it happens to hold.
-    """
-    return (
-        select(Project)
-        .where(Project.user_id == user_id)
-        .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
-        .order_by(case((Project.group == INBOX_GROUP, 0), else_=1), Project.position)
-    )
-
 
 @asynccontextmanager
 async def lifespan(app: Litestar) -> AsyncGenerator[None, None]:
@@ -90,39 +76,6 @@ def provide_user(request: Request[User, Any, Any]) -> User:
     return request.user
 
 
-async def _get_task(session: AsyncSession, task_id: int, user_id: int) -> Task:
-    task = (
-        await session.execute(
-            select(Task).join(Project).where(Task.id == task_id, Project.user_id == user_id)
-        )
-    ).scalar_one_or_none()
-    if task is None:
-        raise NotFoundException(detail="Task not found")
-    return task
-
-
-async def _get_project(session: AsyncSession, project_id: int, user_id: int) -> Project:
-    project = (
-        await session.execute(
-            select(Project)
-            .where(Project.id == project_id, Project.user_id == user_id)
-            .options(selectinload(Project.tasks), selectinload(Project.recurrence_rules))
-        )
-    ).scalar_one_or_none()
-    if project is None:
-        raise NotFoundException(detail="Project not found")
-    return project
-
-
-async def _get_habit(session: AsyncSession, habit_id: int, user_id: int) -> Habit:
-    habit = (
-        await session.execute(select(Habit).where(Habit.id == habit_id, Habit.user_id == user_id))
-    ).scalar_one_or_none()
-    if habit is None:
-        raise NotFoundException(detail="Habit not found")
-    return habit
-
-
 async def _get_recurrence_rule(session: AsyncSession, rule_id: int, user_id: int) -> RecurrenceRule:
     rule = (
         await session.execute(
@@ -134,200 +87,11 @@ async def _get_recurrence_rule(session: AsyncSession, rule_id: int, user_id: int
     return rule
 
 
-async def _active_must_have_count(session: AsyncSession, exclude_task_id: int, user_id: int) -> int:
-    rows = await session.execute(
-        select(Task.id)
-        .join(Project)
-        .where(
-            Task.must_have.is_(True),
-            Task.assigned_today.is_(True),
-            Task.completed.is_(False),
-            Task.id != exclude_task_id,
-            Project.user_id == user_id,
-        )
-    )
-    return len(rows.all())
-
-
-async def _ensure_default_projects(session: AsyncSession, user_id: int) -> None:
-    added = False
-    inbox = (
-        (
-            await session.execute(
-                select(Project).where(Project.user_id == user_id, Project.group == INBOX_GROUP).limit(1)
-            )
-        )
-        .scalars()
-        .first()
-    )
-
-    if inbox is None:
-        positions = (
-            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
-            .scalars()
-            .all()
-        )
-        # Below every existing project, so an account that predates the Inbox gets
-        # it at the front of the list rather than tacked onto the end.
-        session.add(
-            Project(
-                user_id=user_id,
-                name=INBOX_PROJECT_NAME,
-                group=INBOX_GROUP,
-                description="Unsorted ideas. Park them here, decide later.",
-                position=min(positions, default=0) - 1,
-                tasks=[],
-            )
-        )
-        added = True
-
-    work_proj = (
-        await session.execute(
-            select(Project).where(
-                Project.user_id == user_id,
-                Project.name == DEFAULT_PROJECT_NAME,
-                Project.group == "Work",
-            )
-        )
-    ).scalar_one_or_none()
-
-    if work_proj is None:
-        positions = (
-            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
-            .scalars()
-            .all()
-        )
-        next_pos = max(positions, default=-1) + 1
-        work_proj = Project(
-            user_id=user_id,
-            name=DEFAULT_PROJECT_NAME,
-            group="Work",
-            description="Default project for Work tasks.",
-            position=next_pos,
-            tasks=[],
-        )
-        session.add(work_proj)
-        added = True
-
-    personal_proj = (
-        await session.execute(
-            select(Project).where(
-                Project.user_id == user_id,
-                Project.name == DEFAULT_PROJECT_NAME,
-                Project.group == "Personal",
-            )
-        )
-    ).scalar_one_or_none()
-
-    if personal_proj is None:
-        positions = (
-            (await session.execute(select(Project.position).where(Project.user_id == user_id)))
-            .scalars()
-            .all()
-        )
-        next_pos = max(positions, default=-1) + 1
-        personal_proj = Project(
-            user_id=user_id,
-            name=DEFAULT_PROJECT_NAME,
-            group="Personal",
-            description="Default project for Personal tasks.",
-            position=next_pos,
-            tasks=[],
-        )
-        session.add(personal_proj)
-        added = True
-
-    if added:
-        await session.commit()
-
-
-async def _ensure_recurring_occurrences(session: AsyncSession, user_id: int) -> None:
-    """Lazily materialize today's Task occurrence for each due RecurrenceRule.
-
-    Guards generation with ``last_generated_date`` (a high-water mark) rather than
-    "does a live Task row exist for today" — the latter would resurrect an occurrence
-    the user just deleted, since the very next ['projects'] refetch would see no row
-    and recreate it. The high-water mark makes "delete today's occurrence" behave as
-    a real skip: last_generated_date already advanced past today, so it stays gone
-    until the next due day.
-    """
-    today = datetime.now(UTC).date()
-    weekday_bit = 1 << today.weekday()
-    rules = (
-        (
-            await session.execute(
-                select(RecurrenceRule).where(
-                    RecurrenceRule.user_id == user_id,
-                    RecurrenceRule.weekdays.op("&")(weekday_bit) != 0,
-                    or_(
-                        RecurrenceRule.last_generated_date.is_(None),
-                        RecurrenceRule.last_generated_date < today,
-                    ),
-                )
-            )
-        )
-        .scalars()
-        .all()
-    )
-    if not rules:
-        return
-    for rule in rules:
-        # A series has at most one open occurrence. If an earlier one was never
-        # completed, carry it forward to today rather than stacking a fresh copy
-        # beside it -- otherwise every missed day leaves another duplicate on
-        # Today. Older extras (left by the stacking behaviour this replaces) are
-        # dropped; completed occurrences are history and stay untouched.
-        stale_open = (
-            (
-                await session.execute(
-                    select(Task)
-                    .where(
-                        Task.recurrence_rule_id == rule.id,
-                        Task.completed.is_(False),
-                        Task.occurrence_date < today,
-                    )
-                    .order_by(Task.occurrence_date.desc(), Task.id.desc())
-                )
-            )
-            .scalars()
-            .all()
-        )
-        if stale_open:
-            keep, *extras = stale_open
-            for extra in extras:
-                await session.delete(extra)
-            keep.occurrence_date = today
-            keep.assigned_today = True
-            keep.assigned_week = False
-            rule.last_generated_date = today
-            continue
-        positions = (
-            (await session.execute(select(Task.position).where(Task.project_id == rule.project_id)))
-            .scalars()
-            .all()
-        )
-        session.add(
-            Task(
-                project_id=rule.project_id,
-                title=rule.title,
-                notes=rule.notes,
-                complexity=rule.complexity,
-                is_green=rule.is_green,
-                assigned_today=True,
-                recurrence_rule_id=rule.id,
-                occurrence_date=today,
-                position=max(positions, default=-1) + 1,
-            )
-        )
-        rule.last_generated_date = today
-    await session.commit()
-
-
 @get("/api/projects")
 async def list_projects(session: AsyncSession, user: User) -> list[ProjectOut]:
-    await _ensure_default_projects(session, user.id)
-    await _ensure_recurring_occurrences(session, user.id)
-    projects = (await session.execute(_projects_ordered(user.id))).scalars().all()
+    await ensure_default_projects(session, user.id)
+    await ensure_recurring_occurrences(session, user.id)
+    projects = (await session.execute(projects_ordered(user.id))).scalars().all()
     return [project_out(p) for p in projects]
 
 
@@ -360,7 +124,7 @@ async def create_project(data: ProjectCreate, session: AsyncSession, user: User)
 async def update_project(
     project_id: int, data: ProjectPatch, session: AsyncSession, user: User
 ) -> ProjectOut:
-    project = await _get_project(session, project_id, user.id)
+    project = await get_project(session, project_id, user.id)
     if project.group == INBOX_GROUP:
         # Description and notes stay editable -- only its identity is fixed, so the
         # Inbox cannot be renamed into a project or moved out of its own group.
@@ -383,7 +147,7 @@ async def update_project(
 
 @delete("/api/projects/{project_id:int}", status_code=204)
 async def delete_project(project_id: int, session: AsyncSession, user: User) -> None:
-    project = await _get_project(session, project_id, user.id)
+    project = await get_project(session, project_id, user.id)
     if project.group == INBOX_GROUP:
         raise ClientException(detail="The Inbox cannot be deleted")
     if project.name == DEFAULT_PROJECT_NAME:
@@ -398,7 +162,7 @@ async def reorder_project(
 ) -> list[ProjectOut]:
     if data.direction not in ("up", "down"):
         raise ClientException(detail="direction must be 'up' or 'down'")
-    project = await _get_project(session, project_id, user.id)
+    project = await get_project(session, project_id, user.id)
     projects_in_group = (
         (
             await session.execute(
@@ -420,27 +184,14 @@ async def reorder_project(
         )
     await session.commit()
 
-    all_projects = (await session.execute(_projects_ordered(user.id))).scalars().all()
+    all_projects = (await session.execute(projects_ordered(user.id))).scalars().all()
     return [project_out(p) for p in all_projects]
 
 
 @post("/api/projects/{project_id:int}/tasks")
 async def create_task(project_id: int, data: TaskCreate, session: AsyncSession, user: User) -> TaskOut:
-    project = await _get_project(session, project_id, user.id)
-    if data.complexity not in ("low", "high"):
-        raise ClientException(detail="complexity must be 'low' or 'high'")
-    task = Task(
-        project_id=project.id,
-        title=data.title.strip(),
-        notes=data.notes,
-        complexity=data.complexity,
-        is_green=data.is_green,
-        assigned_today=data.assigned_today,
-        assigned_week=data.assigned_week,
-        position=max((t.position for t in project.tasks), default=-1) + 1,
-    )
-    if not task.title:
-        raise ClientException(detail="title must not be empty")
+    project = await get_project(session, project_id, user.id)
+    task = add_task(project, data)
     session.add(task)
     await session.commit()
     return task_out(task)
@@ -450,7 +201,7 @@ async def create_task(project_id: int, data: TaskCreate, session: AsyncSession, 
 async def update_task(
     task_id: int, data: TaskPatch, session: AsyncSession, user: User, request: Request
 ) -> TaskOut:
-    task = await _get_task(session, task_id, user.id)
+    task = await get_task(session, task_id, user.id)
 
     # One route, five features: completing, scheduling, prioritizing, moving and
     # renaming all arrive as PATCH /api/tasks/{id}. Record which fields the patch
@@ -474,52 +225,14 @@ async def update_task(
         ],
     )
 
-    for field in (
-        "title",
-        "notes",
-        "complexity",
-        "assigned_week",
-        "is_green",
-    ):
-        value = getattr(data, field)
-        if value is not UNSET:
-            setattr(task, field, value)
-
-    if data.completed is not UNSET:
-        task.completed = data.completed
-        task.completed_at = datetime.now(UTC) if data.completed else None
-    if data.complexity is not UNSET and data.complexity not in ("low", "high"):
-        raise ClientException(detail="complexity must be 'low' or 'high'")
-
-    if data.assigned_today is not UNSET:
-        task.assigned_today = data.assigned_today
-        if not data.assigned_today:
-            task.must_have = False
-
-    if data.must_have is not UNSET:
-        if data.must_have:
-            count = await _active_must_have_count(session, exclude_task_id=task.id, user_id=user.id)
-            if count >= MUST_HAVE_LIMIT:
-                raise ClientException(
-                    detail=f"Max {MUST_HAVE_LIMIT} Must Have tasks per day.", status_code=409
-                )
-            task.must_have = True
-            task.assigned_today = True
-        else:
-            task.must_have = False
-
-    if data.project_id is not UNSET:
-        new_project = await _get_project(session, data.project_id, user.id)
-        task.project_id = new_project.id
-        task.position = max((t.position for t in new_project.tasks if t.id != task.id), default=-1) + 1
-
+    await apply_task_patch(session, task, data, user.id)
     await session.commit()
     return task_out(task)
 
 
 @delete("/api/tasks/{task_id:int}", status_code=204)
 async def delete_task(task_id: int, session: AsyncSession, user: User) -> None:
-    task = await _get_task(session, task_id, user.id)
+    task = await get_task(session, task_id, user.id)
     await session.delete(task)
     await session.commit()
 
@@ -530,8 +243,8 @@ async def reorder_task(
 ) -> list[TaskOut]:
     if data.direction not in ("up", "down"):
         raise ClientException(detail="direction must be 'up' or 'down'")
-    task = await _get_task(session, task_id, user.id)
-    project = await _get_project(session, task.project_id, user.id)
+    task = await get_task(session, task_id, user.id)
+    project = await get_project(session, task.project_id, user.id)
     tasks = sorted(project.tasks, key=lambda t: t.position)
     i = next(idx for idx, t in enumerate(tasks) if t.id == task.id)
     j = i - 1 if data.direction == "up" else i + 1
@@ -545,7 +258,7 @@ async def reorder_task(
 async def create_recurrence(
     project_id: int, data: RecurrenceRuleCreate, session: AsyncSession, user: User
 ) -> RecurrenceRuleOut:
-    project = await _get_project(session, project_id, user.id)
+    project = await get_project(session, project_id, user.id)
     if data.complexity not in ("low", "high"):
         raise ClientException(detail="complexity must be 'low' or 'high'")
     if not (0 < data.weekdays < 128):
@@ -646,23 +359,14 @@ async def set_habit_log(habit_id: int, data: HabitLogPayload, session: AsyncSess
     ).scalar_one_or_none()
     if habit is None:
         raise NotFoundException(detail="Habit not found")
-    if data.state not in (0, 1, 2):
-        raise ClientException(detail="state must be 0, 1 or 2")
-
-    existing = next((log for log in habit.logs if log.day == data.day), None)
-    if existing:
-        existing.state = data.state
-    else:
-        log = HabitLog(habit_id=habit.id, day=data.day, state=data.state)
-        session.add(log)
-        habit.logs.append(log)
+    set_habit_state(habit, data.day, data.state)
     await session.commit()
     return habit_out(habit)
 
 
 @delete("/api/habits/{habit_id:int}", status_code=204)
 async def delete_habit(habit_id: int, session: AsyncSession, user: User) -> None:
-    habit = await _get_habit(session, habit_id, user.id)
+    habit = await get_habit(session, habit_id, user.id)
     await session.delete(habit)
     await session.commit()
 
