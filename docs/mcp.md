@@ -122,23 +122,28 @@ and dreams, as opposed to reactive work (Dorofeev's "green tasks").
 
 | Tool | Purpose |
 | --- | --- |
-| `get_today` | Today's tasks plus today's habits with done/not-done |
-| `get_week` | This week's tasks |
-| `search_tasks(query, project?, include_completed?)` | Find tasks by text |
-| `list_projects` | Projects with ids and names |
-| `add_task(title, project, notes?, plan?, green?, must_have?, complexity?)` | Create a task |
-| `update_task(id, title?, notes?, project?, plan?, green?, must_have?, complexity?)` | Edit / re-plan / move a task |
-| `complete_task(id)` / `uncomplete_task(id)` | Toggle completion |
-| `list_habits` | Habits with recent log |
-| `log_habit(habit, date?, done)` | Mark a habit done/not done for a day |
-| `add_worklog_entry(text, date?)` | Add a work-log entry |
-| `get_worklog(from, to)` | Read work-log entries |
+| `get_today` | Today's tasks (open, plus finished today) and each habit's state today |
+| `get_week` | Open tasks planned this week (today's list is part of the week) |
+| `search_tasks(query, project?, include_completed?)` | Find tasks by text (max 50) |
+| `list_projects` | Projects with labels and open-task counts |
+| `add_task(title, project="Inbox", notes?, plan?, green?, must_have?, complexity?)` | Create a task |
+| `update_task(task_id, title?, notes?, project?, plan?, green?, must_have?, complexity?)` | Edit / re-plan / move a task |
+| `complete_task(task_id)` / `uncomplete_task(task_id)` | Toggle completion |
+| `list_habits` | Habits with their last 7 days |
+| `log_habit(habit, state="complete", day?)` | Set a habit's state (`none` / `minimal` / `complete`) for a day |
+| `add_worklog_entry(title, category, day?, context?, impact?)` | Add a work-log entry (`shipped` / `operational` / `glue` / `learning`) |
+| `get_worklog(start?, end?)` | Work-log entries, default last 14 days |
+
+`plan="today"` keeps the task's week flag (today's list sits inside the week);
+`week` and `backlog` set both flags explicitly. Every rule (must-have limit,
+validation) comes from `planning.py` / `worklog.py`, shared with the REST API.
 
 **References**
 
-- Projects and habits accept a **name (case-insensitive) or id**. No match or
-  ambiguous match → tool error listing the valid names, so Claude can retry or
-  ask the user.
+- Projects are referenced by label: `Inbox`, `Work` / `Personal` (that group's
+  default "..." project), `Group / Name`, a bare name, or an id — all
+  case-insensitive. Habits by name. No match or ambiguous match → tool error
+  listing the valid names, so Claude can retry or ask the user.
 - Tasks are referenced by `id` only (obtained from search/list results).
 
 ## 5. Dates

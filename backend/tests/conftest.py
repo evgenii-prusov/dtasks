@@ -199,3 +199,15 @@ async def mcp_call(client: AsyncTestClient, access_token: str, method: str, para
             "Accept": "application/json, text/event-stream",
         },
     )
+
+
+async def call_tool(client: AsyncTestClient, access_token: str, name: str, **arguments: Any) -> Any:
+    """Call an MCP tool; returns its structured result, or the error text if the tool failed."""
+    resp = await mcp_call(client, access_token, "tools/call", {"name": name, "arguments": arguments})
+    assert resp.status_code == 200, resp.text
+    result = resp.json()["result"]
+    if result["isError"]:
+        return result["content"][0]["text"]
+    structured = result["structuredContent"]
+    # The SDK wraps non-object return values (lists) as {"result": ...}.
+    return structured["result"] if set(structured) == {"result"} else structured

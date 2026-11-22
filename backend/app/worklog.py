@@ -177,24 +177,18 @@ def _links_from(payload: list[WorkLogLinkIn]) -> list[WorkLogLink]:
     return [WorkLogLink(kind=link.kind, url=link.url.strip(), label=link.label) for link in payload]
 
 
-# ── Entries ───────────────────────────────────────────────────────────────
-
-
-@get("/entries")
-async def list_entries(
-    session: AsyncSession,
-    user: User,
-    start: date | None = None,
-    end: date | None = None,
-) -> list[WorkLogEntryOut]:
+async def entries_between(
+    session: AsyncSession, user_id: int, start: date | None, end: date | None
+) -> list[WorkLogEntry]:
+    """``user_id``'s entries in [start, end], newest first; defaults to the last two weeks."""
     today = datetime.now(UTC).date()
     range_start, range_end = _resolve_range(start, end, today - timedelta(days=DEFAULT_ENTRY_DAYS - 1), today)
-    entries = (
+    return list(
         (
             await session.execute(
                 select(WorkLogEntry)
                 .where(
-                    WorkLogEntry.user_id == user.id,
+                    WorkLogEntry.user_id == user_id,
                     WorkLogEntry.day >= range_start,
                     WorkLogEntry.day <= range_end,
                 )
@@ -205,19 +199,18 @@ async def list_entries(
         .scalars()
         .all()
     )
-    return [worklog_entry_out(e) for e in entries]
 
 
-@post("/entries")
-async def create_entry(data: WorkLogEntryCreate, session: AsyncSession, user: User) -> WorkLogEntryOut:
+async def add_entry(session: AsyncSession, user_id: int, data: WorkLogEntryCreate) -> WorkLogEntry:
+    """Validate ``data`` and add it as a new entry of ``user_id``; caller commits."""
     title = _validate_title(data.title)
     category = _validate_category(data.category)
     links = _validate_links(data.links)
     if data.task_id is not None:
-        await _check_task_owned(session, data.task_id, user.id)
+        await _check_task_owned(session, data.task_id, user_id)
 
     entry = WorkLogEntry(
-        user_id=user.id,
+        user_id=user_id,
         day=data.day,
         category=category,
         title=title,
@@ -227,6 +220,25 @@ async def create_entry(data: WorkLogEntryCreate, session: AsyncSession, user: Us
         links=_links_from(links),
     )
     session.add(entry)
+    return entry
+
+
+# ── Entries ───────────────────────────────────────────────────────────────
+
+
+@get("/entries")
+async def list_entries(
+    session: AsyncSession,
+    user: User,
+    start: date | None = None,
+    end: date | None = None,
+) -> list[WorkLogEntryOut]:
+    return [worklog_entry_out(e) for e in await entries_between(session, user.id, start, end)]
+
+
+@post("/entries")
+async def create_entry(data: WorkLogEntryCreate, session: AsyncSession, user: User) -> WorkLogEntryOut:
+    entry = await add_entry(session, user.id, data)
     await session.commit()
     return worklog_entry_out(entry)
 
