@@ -28,7 +28,7 @@ path for machine clients (Claude).
 
 - Delete operations of any kind.
 - Managing projects, recurrence rules, creating habits, reordering, analytics.
-- Per-user timezones (see §7).
+- Per-user timezones (see §5).
 - Local/stdio MCP for Claude Desktop/Code (the remote server works there too).
 
 ## 2. Architecture
@@ -155,10 +155,16 @@ validation) comes from `planning.py` / `worklog.py`, shared with the REST API.
 
 ## 5. Dates
 
-Tools use the same UTC "today" as the rest of the app (see
-`backend/app/main.py`, recurrence generation). `date?` parameters default to
-UTC today. Known limitation: near local midnight, "today"/"yesterday" can be
-off by one for users east/west of UTC — tracked separately (§7).
+Tools use the same UTC "today" as recurrence generation
+(`backend/app/planning.py`). `day?` parameters default to UTC today, so in the
+hours between local and UTC midnight a defaulted day is off by one for users
+east or west of UTC. The web app is unaffected: habits and the work log send
+the browser's local date, and the Today/Week lists are flags, not dates.
+
+**Decision (2026-11): no per-user timezone.** The only impact is defaulted tool
+dates and recurring tasks appearing a few hours early or late around midnight;
+storing a timezone per user (migration, setting, DST/travel edge cases) isn't
+worth it at this scale. Revisit if users outside UTC report it.
 
 ## 6. Testing
 
@@ -190,6 +196,3 @@ User setup: claude.ai → Settings → Connectors → Add custom connector → U
 `https://<DOMAIN>/mcp` → Connect → dtasks login → Allow. Operator steps and
 smoke checks: `docs/deploy.md` "MCP connector (Claude)". Locally, `make start`
 runs the backend with the connector enabled and Vite proxies its paths.
-
-**Follow-up (separate bead):** per-user timezone, so "today" matches the
-user's local day across the app and the MCP tools.
