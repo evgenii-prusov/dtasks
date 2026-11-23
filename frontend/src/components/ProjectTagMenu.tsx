@@ -137,10 +137,22 @@ export function useProjectTagMenu({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, query, options.length])
 
-  // Fixed to the viewport, so a scroll would leave it detached from its field.
+  // Keep the highlighted row visible as the arrow keys move through a long list.
   useEffect(() => {
     if (!open) return
-    const hide = () => setDismissed(true)
+    const row = menuRef.current?.querySelectorAll('button')[selectedIndex]
+    row?.scrollIntoView?.({ block: 'nearest' })
+  }, [open, selectedIndex])
+
+  // Fixed to the viewport, so a page scroll would leave it detached from its field.
+  // A scroll inside the menu itself is the user browsing the list, not moving away.
+  useEffect(() => {
+    if (!open) return
+    const hide = (e: Event) => {
+      const target = e.target
+      if (target instanceof Node && menuRef.current?.contains(target)) return
+      setDismissed(true)
+    }
     window.addEventListener('scroll', hide, true)
     return () => window.removeEventListener('scroll', hide, true)
   }, [open])
